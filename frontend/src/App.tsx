@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Toaster, toast } from 'sonner'
 import { validateFile } from './utils/fileValidation'
 import { MainInputArea } from './input/main-area'
+import { GoogleCalendarAuth } from './components/GoogleCalendarAuth'
 import './App.css'
 
 // Import all greeting images dynamically
@@ -16,6 +17,7 @@ function App() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [extractedEvents, setExtractedEvents] = useState<any[]>([])
+  const [isCalendarAuthenticated, setIsCalendarAuthenticated] = useState(false)
 
   const processFile = useCallback(async (file: File) => {
     // Prevent duplicate processing
@@ -302,6 +304,9 @@ function App() {
             ))}
           </motion.div>
         )}
+
+        {/* Google Calendar Authentication */}
+        <GoogleCalendarAuth onAuthChange={setIsCalendarAuthenticated} />
       </div>
     </div>
   )
