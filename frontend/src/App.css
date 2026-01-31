@@ -300,6 +300,39 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Text Input Dock */
+.text-input-dock {
+  border-radius: 24px;
+  padding: 1rem;
+  min-height: 120px;
+  max-width: 600px;
+  width: 100%;
+}
+
+.text-input-area {
+  flex: 1;
+  min-height: 80px;
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(17, 112, 197, 0.2);
+  border-radius: 12px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 1rem;
+  color: #333;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--white);
+}
+
+.text-input-area:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(17, 112, 197, 0.1);
+}
+
+.text-input-area::placeholder {
+  color: #999;
+}
+
 /* Plus Button External */
 .plus-button-external {
   flex-shrink: 0;
@@ -371,6 +404,17 @@
 
 .dock-button.submit:hover {
   color: var(--white);
+}
+
+.dock-button.submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dock-button.submit:disabled:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .footer {
