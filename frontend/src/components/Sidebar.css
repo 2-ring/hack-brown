@@ -215,22 +215,76 @@
   padding: 0.625rem 0.625rem;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.15s ease;
   margin-bottom: 0.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .chat-entry:hover {
   background-color: #e8e8e8;
 }
 
+.chat-entry.active {
+  background-color: #e8e8e8;
+}
+
+.chat-entry.active:hover {
+  background-color: #e0e0e0;
+}
+
+.chat-entry.error {
+  opacity: 0.6;
+}
+
 .chat-entry-title {
   font-size: 0.875rem;
   color: #333;
-  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.4;
+  flex: 1;
+}
+
+.event-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background-color: #1170C5;
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #888;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.empty-state-hint {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #aaa;
 }
 
 /* Scrollbar styling */

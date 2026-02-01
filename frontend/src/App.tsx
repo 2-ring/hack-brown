@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Toaster, toast } from 'sonner'
 import { validateFile } from './utils/fileValidation'
@@ -9,14 +9,22 @@ import { Sidebar } from './components/Sidebar'
 import type { CalendarEvent } from './types/calendarEvent'
 import type { LoadingStateConfig } from './types/loadingState'
 import { LOADING_MESSAGES } from './types/loadingState'
+import type { Session } from './types/session'
+import {
+  createSession,
+  addAgentOutput,
+  updateProgress,
+  setExtractedEvents as setSessionExtractedEvents,
+  setCalendarEvents as setSessionCalendarEvents,
+  completeSession,
+  toSessionListItem,
+  sessionCache,
+} from './utils/sessionManager'
 import './App.css'
 
 // Import all greeting images dynamically
 const greetingImages = import.meta.glob('./assets/greetings/*.{png,jpg,jpeg,svg}', { eager: true, as: 'url' })
 const greetingImagePaths = Object.values(greetingImages) as string[]
-
-// Import wordmark for review state
-import wordmarkImage from './assets/Wordmark.png'
 
 type AppState = 'input' | 'loading' | 'review'
 
@@ -27,11 +35,20 @@ function App() {
   const [appState, setAppState] = useState<AppState>('input')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [extractedEvents, setExtractedEvents] = useState<any[]>([])
+  const [_extractedEvents, setExtractedEvents] = useState<any[]>([])
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
-  const [isCalendarAuthenticated, setIsCalendarAuthenticated] = useState(false)
+  const [_isCalendarAuthenticated, setIsCalendarAuthenticated] = useState(false)
   const [loadingConfig, setLoadingConfig] = useState<LoadingStateConfig[]>([{ message: 'Processing...' }])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Session management state
+  const [currentSession, setCurrentSession] = useState<Session | null>(null)
+  const [sessionHistory, setSessionHistory] = useState<Session[]>([])
+
+  // Sync session history from cache
+  useEffect(() => {
+    setSessionHistory(sessionCache.getAll())
+  }, [currentSession])
 
   const processFile = useCallback(async (file: File) => {
     // Prevent duplicate processing
@@ -58,12 +75,30 @@ function App() {
     setExtractedEvents([])
     setLoadingConfig([LOADING_MESSAGES.READING_FILE])
 
+    // CREATE NEW SESSION
+    let session = createSession('file', file.name, {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      timestamp: new Date(),
+    })
+    setCurrentSession(session)
+    sessionCache.save(session)
+
     try {
       // Step 1: Process the file (extract text or prepare for vision)
       const formData = new FormData()
       formData.append('file', file)
 
       setLoadingConfig([LOADING_MESSAGES.PROCESSING_FILE])
+      session = updateProgress(session, {
+        stage: 'processing_input',
+        message: 'Processing file...',
+      })
+      setCurrentSession(session)
+      sessionCache.save(session)
+
+      const processStart = Date.now()
       const processResponse = await fetch('http://localhost:5000/api/process', {
         method: 'POST',
         body: formData,
@@ -75,10 +110,27 @@ function App() {
       }
 
       const processResult = await processResponse.json()
+      const processDuration = Date.now() - processStart
+
+      // TRACK AGENT OUTPUT
+      session = addAgentOutput(
+        session,
+        'FileProcessing',
+        { fileName: file.name },
+        processResult,
+        true,
+        processDuration
+      )
+      setCurrentSession(session)
+      sessionCache.save(session)
 
       // Step 2: Extract events from processed input
       setLoadingConfig([LOADING_MESSAGES.EXTRACTING_EVENTS])
+      session = updateProgress(session, { stage: 'extracting_events' })
+      setCurrentSession(session)
+      sessionCache.save(session)
 
+      const extractStart = Date.now()
       const extractResponse = await fetch('http://localhost:5000/api/extract', {
         method: 'POST',
         headers: {
@@ -96,6 +148,20 @@ function App() {
       }
 
       const extractResult = await extractResponse.json()
+      const extractDuration = Date.now() - extractStart
+
+      // TRACK AGENT OUTPUT
+      session = addAgentOutput(
+        session,
+        'EventIdentification',
+        { input: processResult.text },
+        extractResult,
+        true,
+        extractDuration
+      )
+      session = setSessionExtractedEvents(session, extractResult.events || [])
+      setCurrentSession(session)
+      sessionCache.save(session)
 
       if (extractResult.has_events) {
         setExtractedEvents(extractResult.events)
@@ -110,6 +176,12 @@ function App() {
 
           // Show progress for multi-event processing
           setLoadingConfig([LOADING_MESSAGES.PROCESSING_EVENTS(eventNum, totalEvents)])
+          session = updateProgress(session, {
+            stage: 'extracting_facts',
+            currentEvent: eventNum,
+            totalEvents,
+          })
+          setCurrentSession(session)
 
           // Extract facts
           setLoadingConfig([{
@@ -117,6 +189,7 @@ function App() {
             icon: LOADING_MESSAGES.EXTRACTING_FACTS.icon
           }])
 
+          const factsStart = Date.now()
           const factsResponse = await fetch('http://localhost:5000/api/extract-facts', {
             method: 'POST',
             headers: {
@@ -133,13 +206,33 @@ function App() {
           }
 
           const facts = await factsResponse.json()
+          const factsDuration = Date.now() - factsStart
+
+          // TRACK AGENT OUTPUT
+          session = addAgentOutput(
+            session,
+            `FactExtraction_Event${eventNum}`,
+            { raw_text: event.raw_text, description: event.description },
+            facts,
+            true,
+            factsDuration
+          )
+          setCurrentSession(session)
+          sessionCache.save(session)
 
           // Format for calendar
           setLoadingConfig([{
             message: `Formatting event (${eventNum}/${totalEvents})...`,
             icon: LOADING_MESSAGES.FORMATTING_CALENDAR.icon
           }])
+          session = updateProgress(session, {
+            stage: 'formatting_calendar',
+            currentEvent: eventNum,
+            totalEvents,
+          })
+          setCurrentSession(session)
 
+          const calendarStart = Date.now()
           const calendarResponse = await fetch('http://localhost:5000/api/format-calendar', {
             method: 'POST',
             headers: {
@@ -153,18 +246,37 @@ function App() {
           }
 
           const calendarEvent = await calendarResponse.json()
+          const calendarDuration = Date.now() - calendarStart
+
+          // TRACK AGENT OUTPUT
+          session = addAgentOutput(
+            session,
+            `CalendarFormatting_Event${eventNum}`,
+            { facts },
+            calendarEvent,
+            true,
+            calendarDuration
+          )
+          setCurrentSession(session)
+          sessionCache.save(session)
+
           formattedEvents.push(calendarEvent)
         }
 
+        // Complete session
+        session = setSessionCalendarEvents(session, formattedEvents)
+        session = completeSession(session, 'completed')
+        setCurrentSession(session)
+        sessionCache.save(session)
+
         setCalendarEvents(formattedEvents)
         setAppState('review')
-
-        // Success toast
-        toast.success('Events Found!', {
-          description: `Found ${extractResult.num_events} event${extractResult.num_events !== 1 ? 's' : ''} in ${file.name}`,
-          duration: 4000,
-        })
       } else {
+        // Complete session as cancelled (no events)
+        session = completeSession(session, 'cancelled')
+        setCurrentSession(session)
+        sessionCache.save(session)
+
         // Info toast (not an error, just no events found)
         toast.info('No Events Found', {
           description: 'The file doesn\'t appear to contain any calendar events.',
@@ -174,15 +286,17 @@ function App() {
         setAppState('input')
       }
     } catch (err) {
-      let errorMessage = 'An error occurred'
+      // Complete session as error
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      session = completeSession(session, 'error', errorMessage)
+      setCurrentSession(session)
+      sessionCache.save(session)
+
       let errorTitle = 'Processing Failed'
 
       // Handle different error types
       if (err instanceof TypeError && err.message.includes('fetch')) {
         errorTitle = 'Connection Error'
-        errorMessage = 'Could not connect to the server. Make sure the backend is running on http://localhost:5000'
-      } else if (err instanceof Error) {
-        errorMessage = err.message
       }
 
       // Error toast with specific messaging
@@ -238,9 +352,22 @@ function App() {
     setExtractedEvents([])
     setLoadingConfig([LOADING_MESSAGES.PROCESSING_TEXT])
 
+    // CREATE NEW SESSION
+    let session = createSession('text', text, {
+      textLength: text.length,
+      timestamp: new Date(),
+    })
+    setCurrentSession(session)
+    sessionCache.save(session)
+
     try {
       // Extract events from text input
       setLoadingConfig([LOADING_MESSAGES.EXTRACTING_EVENTS])
+      session = updateProgress(session, { stage: 'extracting_events' })
+      setCurrentSession(session)
+      sessionCache.save(session)
+
+      const extractStart = Date.now()
       const extractResponse = await fetch('http://localhost:5000/api/extract', {
         method: 'POST',
         headers: {
@@ -258,6 +385,20 @@ function App() {
       }
 
       const extractResult = await extractResponse.json()
+      const extractDuration = Date.now() - extractStart
+
+      // TRACK AGENT OUTPUT
+      session = addAgentOutput(
+        session,
+        'EventIdentification',
+        { input: text },
+        extractResult,
+        true,
+        extractDuration
+      )
+      session = setSessionExtractedEvents(session, extractResult.events || [])
+      setCurrentSession(session)
+      sessionCache.save(session)
 
       if (extractResult.has_events) {
         setExtractedEvents(extractResult.events)
@@ -272,6 +413,12 @@ function App() {
 
           // Show progress for multi-event processing
           setLoadingConfig([LOADING_MESSAGES.PROCESSING_EVENTS(eventNum, totalEvents)])
+          session = updateProgress(session, {
+            stage: 'extracting_facts',
+            currentEvent: eventNum,
+            totalEvents,
+          })
+          setCurrentSession(session)
 
           // Extract facts
           setLoadingConfig([{
@@ -279,6 +426,7 @@ function App() {
             icon: LOADING_MESSAGES.EXTRACTING_FACTS.icon
           }])
 
+          const factsStart = Date.now()
           const factsResponse = await fetch('http://localhost:5000/api/extract-facts', {
             method: 'POST',
             headers: {
@@ -295,13 +443,33 @@ function App() {
           }
 
           const facts = await factsResponse.json()
+          const factsDuration = Date.now() - factsStart
+
+          // TRACK AGENT OUTPUT
+          session = addAgentOutput(
+            session,
+            `FactExtraction_Event${eventNum}`,
+            { raw_text: event.raw_text, description: event.description },
+            facts,
+            true,
+            factsDuration
+          )
+          setCurrentSession(session)
+          sessionCache.save(session)
 
           // Format for calendar
           setLoadingConfig([{
             message: `Formatting event (${eventNum}/${totalEvents})...`,
             icon: LOADING_MESSAGES.FORMATTING_CALENDAR.icon
           }])
+          session = updateProgress(session, {
+            stage: 'formatting_calendar',
+            currentEvent: eventNum,
+            totalEvents,
+          })
+          setCurrentSession(session)
 
+          const calendarStart = Date.now()
           const calendarResponse = await fetch('http://localhost:5000/api/format-calendar', {
             method: 'POST',
             headers: {
@@ -315,18 +483,37 @@ function App() {
           }
 
           const calendarEvent = await calendarResponse.json()
+          const calendarDuration = Date.now() - calendarStart
+
+          // TRACK AGENT OUTPUT
+          session = addAgentOutput(
+            session,
+            `CalendarFormatting_Event${eventNum}`,
+            { facts },
+            calendarEvent,
+            true,
+            calendarDuration
+          )
+          setCurrentSession(session)
+          sessionCache.save(session)
+
           formattedEvents.push(calendarEvent)
         }
 
+        // Complete session
+        session = setSessionCalendarEvents(session, formattedEvents)
+        session = completeSession(session, 'completed')
+        setCurrentSession(session)
+        sessionCache.save(session)
+
         setCalendarEvents(formattedEvents)
         setAppState('review')
-
-        // Success toast
-        toast.success('Events Found!', {
-          description: `Found ${extractResult.num_events} event${extractResult.num_events !== 1 ? 's' : ''}`,
-          duration: 4000,
-        })
       } else {
+        // Complete session as cancelled (no events)
+        session = completeSession(session, 'cancelled')
+        setCurrentSession(session)
+        sessionCache.save(session)
+
         // Info toast (not an error, just no events found)
         toast.info('No Events Found', {
           description: 'The text doesn\'t appear to contain any calendar events.',
@@ -336,15 +523,17 @@ function App() {
         setAppState('input')
       }
     } catch (err) {
-      let errorMessage = 'An error occurred'
+      // Complete session as error
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      session = completeSession(session, 'error', errorMessage)
+      setCurrentSession(session)
+      sessionCache.save(session)
+
       let errorTitle = 'Processing Failed'
 
       // Handle different error types
       if (err instanceof TypeError && err.message.includes('fetch')) {
         errorTitle = 'Connection Error'
-        errorMessage = 'Could not connect to the server. Make sure the backend is running on http://localhost:5000'
-      } else if (err instanceof Error) {
-        errorMessage = err.message
       }
 
       // Error toast with specific messaging
@@ -374,8 +563,28 @@ function App() {
     setAppState('input')
   }, [])
 
-  // Handler for canceling event review
-  const handleCancelReview = useCallback(() => {
+  // Session restoration handler
+  const handleSessionClick = useCallback((sessionId: string) => {
+    const session = sessionCache.get(sessionId)
+    if (session) {
+      setCurrentSession(session)
+      setCalendarEvents(session.calendarEvents)
+      setExtractedEvents(session.extractedEvents)
+
+      // Update UI based on session status
+      if (session.status === 'completed' && session.calendarEvents.length > 0) {
+        setAppState('review')
+      } else if (session.status === 'active') {
+        setAppState('loading')
+      } else {
+        setAppState('input')
+      }
+    }
+  }, [])
+
+  // New session handler
+  const handleNewSession = useCallback(() => {
+    setCurrentSession(null)
     setCalendarEvents([])
     setExtractedEvents([])
     setUploadedFile(null)
@@ -384,7 +593,14 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        sessions={sessionHistory.map(toSessionListItem)}
+        currentSessionId={currentSession?.id}
+        onSessionClick={handleSessionClick}
+        onNewSession={handleNewSession}
+      />
       <Toaster
         position="bottom-center"
         richColors
@@ -408,22 +624,6 @@ function App() {
               src={greetingImagePaths[currentGreetingIndex]}
               alt="Greeting"
               className="greeting-image"
-            />
-          </motion.div>
-        )}
-
-        {/* Show wordmark in review state */}
-        {appState === 'review' && (
-          <motion.div
-            className="greeting-container"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          >
-            <img
-              src={wordmarkImage}
-              alt="DropCal"
-              className="wordmark-image"
             />
           </motion.div>
         )}
@@ -452,7 +652,6 @@ function App() {
                 duration: 3000,
               })
             }}
-            onCancel={handleCancelReview}
           />
         )}
 
