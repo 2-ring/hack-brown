@@ -9,10 +9,13 @@ import {
 } from '@phosphor-icons/react'
 import { AudioInput } from './audio'
 import { TextInput } from './text'
+import { LoadingState } from '../components/LoadingState'
+import type { LoadingStateConfig, LoadingPhase } from '../types/loadingState'
 
 interface MainInputAreaProps {
   uploadedFile: File | null
   isProcessing: boolean
+  loadingConfig?: LoadingStateConfig | LoadingPhase[]
   onFileUpload: (file: File) => void
   onAudioSubmit: (audioBlob: Blob) => void
   onTextSubmit: (text: string) => void
@@ -22,6 +25,7 @@ interface MainInputAreaProps {
 export function MainInputArea({
   uploadedFile,
   isProcessing,
+  loadingConfig,
   onFileUpload,
   onAudioSubmit,
   onTextSubmit,
@@ -162,9 +166,10 @@ export function MainInputArea({
           onSubmit={handleTextSubmit}
         />
       ) : isProcessing ? (
-        <div className="processing-indicator">
-          <p>Processing {uploadedFile?.name}...</p>
-        </div>
+        <LoadingState
+          config={loadingConfig || { message: 'Processing...' }}
+          isLoading={isProcessing}
+        />
       ) : uploadedFile ? (
         <div className="file-info">
           <p className="file-name">{uploadedFile.name}</p>
