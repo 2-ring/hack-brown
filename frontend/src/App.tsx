@@ -14,6 +14,7 @@ import {
   createSession,
   addAgentOutput,
   updateProgress,
+  setContext,
   setExtractedEvents as setSessionExtractedEvents,
   setCalendarEvents as setSessionCalendarEvents,
   completeSession,
@@ -33,6 +34,11 @@ function App() {
     Math.floor(Math.random() * greetingImagePaths.length)
   )
   const [appState, setAppState] = useState<AppState>('input')
+
+  // Expose sessionCache to window for debugging
+  useEffect(() => {
+    (window as any).sessionCache = sessionCache
+  }, [])
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [_extractedEvents, setExtractedEvents] = useState<any[]>([])
@@ -124,7 +130,49 @@ function App() {
       setCurrentSession(session)
       sessionCache.save(session)
 
-      // Step 2: Extract events from processed input
+      // Step 2: Analyze context to understand user intent
+      setLoadingConfig([LOADING_MESSAGES.UNDERSTANDING_CONTEXT])
+      session = updateProgress(session, {
+        stage: 'processing_input',
+        message: 'Analyzing context and user intent...'
+      })
+      setCurrentSession(session)
+      sessionCache.save(session)
+
+      const contextStart = Date.now()
+      const contextResponse = await fetch('http://localhost:5000/api/analyze-context', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: processResult.text || '',
+          metadata: processResult.metadata || {},
+        }),
+      })
+
+      if (!contextResponse.ok) {
+        const errorData = await contextResponse.json()
+        throw new Error(errorData.error || 'Failed to analyze context')
+      }
+
+      const contextResult = await contextResponse.json()
+      const contextDuration = Date.now() - contextStart
+
+      // TRACK AGENT OUTPUT and update session with context
+      session = addAgentOutput(
+        session,
+        'ContextUnderstanding',
+        { input: processResult.text },
+        contextResult,
+        true,
+        contextDuration
+      )
+      session = setContext(session, contextResult)
+      setCurrentSession(session)
+      sessionCache.save(session)
+
+      // Step 3: Extract events from processed input (guided by context)
       setLoadingConfig([LOADING_MESSAGES.EXTRACTING_EVENTS])
       session = updateProgress(session, { stage: 'extracting_events' })
       setCurrentSession(session)
@@ -139,6 +187,7 @@ function App() {
         body: JSON.stringify({
           input: processResult.text || '',
           metadata: processResult.metadata || {},
+          context: contextResult, // Pass context to guide extraction
         }),
       })
 
@@ -361,7 +410,49 @@ function App() {
     sessionCache.save(session)
 
     try {
-      // Extract events from text input
+      // Step 1: Analyze context to understand user intent
+      setLoadingConfig([LOADING_MESSAGES.UNDERSTANDING_CONTEXT])
+      session = updateProgress(session, {
+        stage: 'processing_input',
+        message: 'Analyzing context and user intent...'
+      })
+      setCurrentSession(session)
+      sessionCache.save(session)
+
+      const contextStart = Date.now()
+      const contextResponse = await fetch('http://localhost:5000/api/analyze-context', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: text,
+          metadata: {},
+        }),
+      })
+
+      if (!contextResponse.ok) {
+        const errorData = await contextResponse.json()
+        throw new Error(errorData.error || 'Failed to analyze context')
+      }
+
+      const contextResult = await contextResponse.json()
+      const contextDuration = Date.now() - contextStart
+
+      // TRACK AGENT OUTPUT and update session with context
+      session = addAgentOutput(
+        session,
+        'ContextUnderstanding',
+        { input: text },
+        contextResult,
+        true,
+        contextDuration
+      )
+      session = setContext(session, contextResult)
+      setCurrentSession(session)
+      sessionCache.save(session)
+
+      // Step 2: Extract events from text input (guided by context)
       setLoadingConfig([LOADING_MESSAGES.EXTRACTING_EVENTS])
       session = updateProgress(session, { stage: 'extracting_events' })
       setCurrentSession(session)
@@ -376,6 +467,7 @@ function App() {
         body: JSON.stringify({
           input: text,
           metadata: {},
+          context: contextResult, // Pass context to guide extraction
         }),
       })
 

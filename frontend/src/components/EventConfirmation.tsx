@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CalendarBlank as CalendarIcon, Equals as EqualsIcon, PencilSimple as EditIcon, PaperPlaneRight as SendIcon, X as XIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon } from '@phosphor-icons/react'
+import { Equals as EqualsIcon, PencilSimple as EditIcon, PaperPlaneRight as SendIcon, X as XIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon } from '@phosphor-icons/react'
 import type { CalendarEvent } from '../types/calendarEvent'
 import wordmarkImage from '../assets/Wordmark.png'
 import './EventConfirmation.css'
@@ -99,7 +99,6 @@ export function EventConfirmation({ events, onConfirm }: EventConfirmationProps)
       {/* Fixed Header */}
       <div className="event-confirmation-header">
         <div className="header-left">
-          <CalendarIcon size={20} weight="fill" />
           <span>Google Calendar</span>
         </div>
         <div className="header-center">
@@ -156,30 +155,23 @@ export function EventConfirmation({ events, onConfirm }: EventConfirmationProps)
                   key="chat-expanded"
                   className="event-confirmation-footer-content"
                   initial={{
-                    rotateY: 90,
-                    scale: 0.8,
+                    y: 20,
+                    scale: 0.95,
                     opacity: 0
                   }}
                   animate={{
-                    rotateY: 0,
+                    y: 0,
                     scale: 1,
                     opacity: 1
                   }}
                   exit={{
-                    rotateY: -90,
-                    scale: 0.8,
+                    y: -20,
+                    scale: 0.95,
                     opacity: 0
                   }}
                   transition={{
-                    duration: 0.4,
-                    ease: [0.34, 1.56, 0.64, 1]
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    flex: 1,
-                    transformStyle: 'preserve-3d'
+                    duration: 0.3,
+                    ease: [0.22, 1, 0.36, 1]
                   }}
                 >
                   <button
@@ -224,30 +216,23 @@ export function EventConfirmation({ events, onConfirm }: EventConfirmationProps)
                   key="chat-collapsed"
                   className="event-confirmation-footer-content"
                   initial={{
-                    rotateY: -90,
-                    scale: 0.8,
+                    y: 20,
+                    scale: 0.95,
                     opacity: 0
                   }}
                   animate={{
-                    rotateY: 0,
+                    y: 0,
                     scale: 1,
                     opacity: 1
                   }}
                   exit={{
-                    rotateY: 90,
-                    scale: 0.8,
+                    y: -20,
+                    scale: 0.95,
                     opacity: 0
                   }}
                   transition={{
-                    duration: 0.4,
-                    ease: [0.34, 1.56, 0.64, 1]
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    flex: 1,
-                    transformStyle: 'preserve-3d'
+                    duration: 0.3,
+                    ease: [0.22, 1, 0.36, 1]
                   }}
                 >
                   <button

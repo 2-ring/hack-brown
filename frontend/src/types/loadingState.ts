@@ -40,6 +40,9 @@ export const LOADING_MESSAGES = {
   // Text processing
   PROCESSING_TEXT: { message: 'Processing text...', icon: ArticleIcon },
 
+  // Context understanding
+  UNDERSTANDING_CONTEXT: { message: 'Understanding context and intent...', icon: ListBulletsIcon },
+
   // Event extraction
   EXTRACTING_EVENTS: { message: 'Extracting calendar events...', icon: SparkleIcon },
 

@@ -8,6 +8,7 @@ import type {
   SessionListItem,
 } from '../types/session'
 import type { IdentifiedEvent, CalendarEvent } from '../types/calendarEvent'
+import type { ContextResult } from '../types/context'
 
 // Generate unique IDs
 function generateId(): string {
@@ -87,6 +88,19 @@ export function addAgentOutput(
     ...session,
     updatedAt: now,
     agentOutputs: [...session.agentOutputs, agentOutput],
+  }
+}
+
+// Update session with context understanding
+export function setContext(
+  session: Session,
+  context: ContextResult
+): Session {
+  return {
+    ...session,
+    updatedAt: new Date(),
+    context,
+    title: context.title,
   }
 }
 

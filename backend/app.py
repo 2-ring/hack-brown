@@ -51,6 +51,36 @@ input_processor_factory.register_processor(InputType.TEXT, text_processor)
 pdf_processor = PDFProcessor()
 input_processor_factory.register_processor(InputType.PDF, pdf_processor)
 
+# Pydantic models for Agent 0: Context Understanding & Intent Analysis
+class UserContext(BaseModel):
+    """User's role and context"""
+    role: str = Field(description="User's likely role: 'student', 'professional', 'organizer', 'attendee', etc.")
+    domain: str = Field(description="Domain/context: 'academic', 'professional', 'personal', 'social', etc.")
+    task_type: str = Field(description="Type of task: 'semester_planning', 'single_event', 'coordinating_meeting', 'conference_attendance', 'importing_schedule', etc.")
+
+class ExtractionGuidance(BaseModel):
+    """Guidance for the extraction agent"""
+    include: List[str] = Field(description="Types of events TO extract: ['assignments', 'exams', 'meetings', 'deadlines', etc.]")
+    exclude: List[str] = Field(description="Types of content to IGNORE: ['readings', 'office_hours', 'course_description', 'grading_policy', etc.]")
+    reasoning: str = Field(description="Why these inclusion/exclusion decisions make sense given user intent")
+
+class IntentAnalysis(BaseModel):
+    """Analysis of user's intent and goals"""
+    primary_goal: str = Field(description="What the user wants to accomplish: 'Schedule all assignment deadlines', 'Add this single event', 'Import team meeting schedule', etc.")
+    confidence: str = Field(description="Confidence in intent understanding: 'high', 'medium', 'low'")
+    extraction_guidance: ExtractionGuidance = Field(description="Specific guidance for extraction agent")
+    expected_event_count: str = Field(description="Estimated number of events: 'single event', '5-10 events', '15-20 events', etc.")
+    domain_assumptions: str = Field(description="Key assumptions about this domain: 'Academic calendar, assignments are non-negotiable dates', 'Professional context, tentative meetings need confirmation', etc.")
+
+class ContextResult(BaseModel):
+    """Complete context understanding output"""
+    title: str = Field(description="Smart session title that captures what this is and what the user wants. Examples: 'CS101 Spring 2026 - Assignment Deadlines', 'Tech Talk on AI Safety - Feb 15', 'Weekly Team Schedule'")
+    user_context: UserContext = Field(description="User's role and context")
+    intent_analysis: IntentAnalysis = Field(description="Deep analysis of user intent and goals")
+
+# Create structured output LLM for context understanding
+context_llm = llm.with_structured_output(ContextResult)
+
 # Pydantic models for Agent 1: Event Identification
 class IdentifiedEvent(BaseModel):
     """A single identified event with raw text and description"""
@@ -128,6 +158,71 @@ calendar_formatting_llm = llm.with_structured_output(CalendarEvent)
 # ============================================================================
 # Logged Agent Functions - Wrapped with automatic logging
 # ============================================================================
+
+@log_agent_execution("Agent0_ContextUnderstanding")
+def run_context_understanding(raw_input: str, metadata: dict, requires_vision: bool, system_prompt: str):
+    """
+    Agent 0: Context Understanding & Intent Analysis - Wrapped with logging.
+    Analyzes input to understand user intent, context, and generate session title.
+    Provides guidance to downstream agents.
+    """
+    if requires_vision:
+        # Vision API processing for images or PDF pages
+        content = []
+
+        # Handle single image (from image file)
+        if 'image_data' in metadata:
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": metadata.get('media_type', 'image/jpeg'),
+                    "data": metadata['image_data']
+                }
+            })
+
+        # Handle multiple pages (from PDF)
+        elif 'pages' in metadata:
+            for page in metadata['pages']:
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": page.get('media_type', 'image/jpeg'),
+                        "data": page['image_data']
+                    }
+                })
+
+        # Add the analysis instruction
+        content.append({
+            "type": "text",
+            "text": "Analyze this input to understand user intent and context following the instructions above."
+        })
+
+        # Create messages for vision API
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content}
+        ]
+
+        # Use structured output with vision
+        result = context_llm.invoke(messages)
+    else:
+        # Text-only processing
+        if not raw_input:
+            raise ValueError("No input provided for text-only processing")
+
+        context_prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{input}")
+        ])
+
+        # Run context understanding
+        chain = context_prompt | context_llm
+        result = chain.invoke({"input": raw_input})
+
+    return result
+
 
 @log_agent_execution("Agent1_EventIdentification")
 def run_event_identification(raw_input: str, metadata: dict, requires_vision: bool, system_prompt: str):
@@ -333,12 +428,12 @@ def process_audio():
     """
     return process_input()
 
-@app.route('/api/extract', methods=['POST'])
-def extract_events():
+@app.route('/api/analyze-context', methods=['POST'])
+def analyze_context():
     """
-    Agent 1: Event Identification
-    Identifies all calendar events and extracts relevant text for each.
-    Does NOT parse or structure - just identifies and groups by event.
+    Agent 0: Context Understanding & Intent Analysis
+    Analyzes input to understand what it is, what the user wants, and generates a smart session title.
+    Provides guidance to downstream extraction agents.
     """
     data = request.get_json()
     raw_input = data.get('input', '')
@@ -347,8 +442,147 @@ def extract_events():
     # Check if this requires vision processing (images or PDF pages)
     requires_vision = metadata.get('requires_vision', False)
 
+    # System prompt for context understanding
+    system_prompt = """You are a context understanding and user intent specialist. Your job is to deeply analyze the input and understand:
+1. What type of content this is
+2. Who the user likely is (their role/context)
+3. What they want to accomplish
+4. What should and should NOT be extracted
+
+You are NOT extracting events yet - you're analyzing the macro-level task and providing guidance.
+
+YOUR TASK:
+Analyze the input and provide:
+
+1. **title**: A smart session title (50 chars or less) that captures:
+   - What this content is (syllabus, flyer, email, schedule, etc.)
+   - Key identifying info (course name, event name, etc.)
+   - Context about scope ("15 Deadlines", "Single Event", etc.)
+   - Examples: "CS101 Spring 2026 - Assignment Deadlines", "AI Safety Talk Flyer - Feb 15", "Weekly Team Schedule - 4 Meetings"
+
+2. **user_context**: Who is the user and what's the context?
+   - role: student, professional, organizer, attendee, etc.
+   - domain: academic, professional, personal, social, etc.
+   - task_type: semester_planning, single_event, coordinating_meeting, conference_attendance, importing_schedule, etc.
+
+3. **intent_analysis**: Deep understanding of what the user wants
+   - primary_goal: What they're trying to accomplish
+   - confidence: How confident you are (high/medium/low)
+   - extraction_guidance:
+     * include: Event types TO extract (specific to this context)
+     * exclude: Content types to IGNORE (even if they contain dates/times)
+     * reasoning: Why these decisions make sense
+   - expected_event_count: Rough estimate
+   - domain_assumptions: Key facts about this domain that inform extraction
+
+CRITICAL: Think about what the user DOES NOT want, not just what they do want.
+
+Examples of smart inclusion/exclusion:
+
+**Course Syllabus:**
+- Include: assignment deadlines, exams, project milestones, major due dates
+- Exclude: weekly readings (unless they have hard deadlines), lecture topics (user has the course scheduled), professor's bio, grading policy, office hours (unless user specifically scheduling one), holiday breaks (already in their calendar)
+- Reasoning: "Student needs hard deadlines they must meet, not every class session or reading assignment"
+
+**Conference Program:**
+- Include: All sessions (but mark most as tentative)
+- Exclude: Registration times, coffee breaks, meal breaks, sponsor information, venue directions
+- Reasoning: "User will choose which sessions to attend, but needs to see all options. Not interested in logistics like meals."
+
+**Talk/Event Flyer:**
+- Include: The main event being advertised
+- Exclude: Information about the speaker's other work, past events by this organization, RSVP deadlines that have passed, social media handles
+- Reasoning: "User wants to attend this one event, not schedule everything mentioned on the flyer"
+
+**Email Thread about Scheduling:**
+- Include: Only the final agreed-upon time
+- Exclude: All proposed times that were rejected, "sounds good" confirmations, back-and-forth discussion
+- Reasoning: "User wants the actual meeting time, not the negotiation process"
+
+**Weekly Schedule/Agenda:**
+- Include: All recurring meetings, standup times, regular appointments
+- Exclude: Task lists without times, general reminders, project descriptions
+- Reasoning: "User is importing their regular schedule, only time-based commitments matter"
+
+DOMAIN-SPECIFIC REASONING:
+
+**Academic Context:**
+- Midterms/finals are definite, high priority
+- Weekly readings are low priority unless there's a specific deadline
+- Office hours are NOT wanted unless user is specifically scheduling an appointment
+- Course prerequisites, learning objectives = ignore completely
+
+**Professional Context:**
+- Client meetings are definite
+- Internal meetings might be recurring
+- Team standups are recurring events
+- "Deadline: Q2 2026" is too vague, skip it
+
+**Personal/Social Context:**
+- Birthday parties, weddings, dinners = definite events
+- "RSVP by" dates might not be wanted (the RSVP deadline, not the event)
+- Save-the-date information without specific times = skip for now
+
+Generate a title and analysis that shows you understand both what the user wants AND what they definitely don't want.
+"""
+
+    try:
+        # Call the logged agent function
+        # Session tracking happens in frontend - backend just returns results
+        result = run_context_understanding(raw_input, metadata, requires_vision, system_prompt)
+
+        # Convert Pydantic model to dict for JSON response
+        return jsonify(result.model_dump())
+
+    except Exception as e:
+        app_logger.error(f"Context understanding endpoint failed: {str(e)}")
+        return jsonify({'error': f'Context understanding failed: {str(e)}'}), 500
+
+
+@app.route('/api/extract', methods=['POST'])
+def extract_events():
+    """
+    Agent 1: Event Identification
+    Identifies all calendar events and extracts relevant text for each.
+    Does NOT parse or structure - just identifies and groups by event.
+    Can be guided by context understanding from Agent 0.
+    """
+    data = request.get_json()
+    raw_input = data.get('input', '')
+    metadata = data.get('metadata', {})
+    context = data.get('context', None)  # Optional context from Agent 0
+
+    # Check if this requires vision processing (images or PDF pages)
+    requires_vision = metadata.get('requires_vision', False)
+
+    # Build context guidance if available
+    context_guidance = ""
+    if context:
+        intent = context.get('intent_analysis', {})
+        guidance = intent.get('extraction_guidance', {})
+        include = guidance.get('include', [])
+        exclude = guidance.get('exclude', [])
+        reasoning = guidance.get('reasoning', '')
+
+        if include or exclude:
+            context_guidance = f"""
+
+CONTEXT UNDERSTANDING:
+The input has been analyzed and the following guidance should inform your extraction:
+
+PRIMARY USER GOAL: {intent.get('primary_goal', 'Not specified')}
+
+EXTRACTION GUIDANCE:
+- INCLUDE these types of events: {', '.join(include) if include else 'All calendar events'}
+- EXCLUDE these types of content: {', '.join(exclude) if exclude else 'Standard non-event content'}
+- REASONING: {reasoning}
+
+Use this guidance to make smart decisions about what is and isn't a calendar event the user wants.
+"""
+
     # System prompt for event identification
-    system_prompt = """You are an event identification specialist. Your ONLY job is to find calendar events and extract all relevant text for each one.
+    system_prompt = f"""You are an event identification specialist. Your ONLY job is to find calendar events and extract all relevant text for each one.
+{context_guidance}
 
 A calendar event is ANYTHING that happens at a specific time:
 - Meetings, appointments, classes, lectures
@@ -430,6 +664,7 @@ Event 2:
 
     try:
         # Call the logged agent function
+        # Session tracking happens in frontend - backend just returns results
         result = run_event_identification(raw_input, metadata, requires_vision, system_prompt)
 
         # Convert Pydantic model to dict for JSON response

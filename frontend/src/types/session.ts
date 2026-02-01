@@ -1,4 +1,5 @@
 import type { CalendarEvent, IdentifiedEvent } from './calendarEvent'
+import type { ContextResult } from './context'
 
 // Input types - captures what the user submitted
 export type InputType = 'file' | 'text' | 'audio'
@@ -57,6 +58,9 @@ export interface Session {
 
   // Input tracking
   inputs: SessionInput[]
+
+  // Context understanding (from Agent 0)
+  context?: ContextResult
 
   // Processing tracking
   progress: ProcessingProgress

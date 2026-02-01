@@ -43,8 +43,7 @@
 }
 
 .google-connected {
-  cursor: default;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .auth-status {

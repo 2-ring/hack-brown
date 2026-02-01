@@ -202,8 +202,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  perspective: 1200px;
-  perspective-origin: center;
+  overflow: hidden;
 }
 
 .event-confirmation-footer-content {
@@ -211,7 +210,6 @@
   align-items: center;
   gap: 0.75rem;
   flex: 1;
-  transform-style: preserve-3d;
 }
 
 /* Adjust position when sidebar is open */

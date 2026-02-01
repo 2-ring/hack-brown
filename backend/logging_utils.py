@@ -1,12 +1,11 @@
 """
 Logging utilities for DropCal agent pipeline.
-Provides structured logging for all agent executions, inputs, outputs, and timing.
+Provides simple logging for debugging. Session structure handles all execution tracking.
 """
 import logging
 import json
 import time
 import functools
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -67,7 +66,8 @@ processor_logger = setup_logger("InputProcessor", "processors.log")
 
 def log_agent_execution(agent_name: str, logger: Optional[logging.Logger] = None):
     """
-    Decorator to log agent execution with inputs, outputs, and timing.
+    Simplified decorator - just logs start/finish for debugging.
+    Session tracking handles all structured data (inputs, outputs, timing).
 
     Usage:
         @log_agent_execution("EventIdentification")
@@ -85,40 +85,24 @@ def log_agent_execution(agent_name: str, logger: Optional[logging.Logger] = None
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
-            # Generate unique execution ID
-            exec_id = f"{agent_name}_{int(time.time() * 1000)}"
-
-            # Log start
-            logger.info(f"[{exec_id}] Starting agent: {agent_name}")
-            logger.debug(f"[{exec_id}] Input args: {_safe_serialize(args)}")
-            logger.debug(f"[{exec_id}] Input kwargs: {_safe_serialize(kwargs)}")
-
+            # Simple logging for debugging
+            logger.info(f"Starting agent: {agent_name}")
             start_time = time.time()
 
             try:
                 # Execute the agent function
                 result = func(*args, **kwargs)
 
-                # Log success
+                # Log completion
                 execution_time = time.time() - start_time
-                logger.info(f"[{exec_id}] Agent {agent_name} completed successfully in {execution_time:.3f}s")
-                logger.debug(f"[{exec_id}] Output: {_safe_serialize(result)}")
-
-                # Write detailed JSON log for this execution
-                _write_detailed_log(exec_id, agent_name, args, kwargs, result, execution_time, success=True)
+                logger.info(f"Agent {agent_name} completed in {execution_time:.3f}s")
 
                 return result
 
             except Exception as e:
-                # Log failure
+                # Log error
                 execution_time = time.time() - start_time
-                logger.error(f"[{exec_id}] Agent {agent_name} failed after {execution_time:.3f}s: {str(e)}")
-                logger.exception(f"[{exec_id}] Exception details:")
-
-                # Write detailed JSON log for this execution
-                _write_detailed_log(exec_id, agent_name, args, kwargs, None, execution_time,
-                                   success=False, error=str(e))
-
+                logger.error(f"Agent {agent_name} failed after {execution_time:.3f}s: {str(e)}")
                 raise
 
         return wrapper
@@ -167,71 +151,9 @@ def _safe_serialize(obj: Any, max_length: int = 1000) -> str:
         return f"<Unable to serialize: {str(e)}>"
 
 
-def _write_detailed_log(
-    exec_id: str,
-    agent_name: str,
-    args: tuple,
-    kwargs: dict,
-    result: Any,
-    execution_time: float,
-    success: bool,
-    error: Optional[str] = None
-):
-    """
-    Write detailed log for agent execution grouped by agent name.
-    Appends to agent-specific log file with structured formatting.
-
-    Args:
-        exec_id: Unique execution ID
-        agent_name: Name of the agent
-        args: Positional arguments
-        kwargs: Keyword arguments
-        result: Agent output (None if failed)
-        execution_time: Execution time in seconds
-        success: Whether execution succeeded
-        error: Error message if failed
-    """
-    try:
-        # Create agent-specific log file
-        agent_log_file = LOGS_DIR / f"{agent_name}.log"
-
-        # Prepare log entry with structured formatting
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        separator = "=" * 80
-
-        with open(agent_log_file, 'a') as f:
-            f.write(f"\n{separator}\n")
-            f.write(f"EXECUTION ID: {exec_id}\n")
-            f.write(f"TIMESTAMP: {timestamp}\n")
-            f.write(f"STATUS: {'SUCCESS' if success else 'FAILED'}\n")
-            f.write(f"EXECUTION TIME: {execution_time:.3f}s\n")
-            f.write(f"{separator}\n\n")
-
-            # Write input section
-            f.write("INPUT:\n")
-            f.write("-" * 80 + "\n")
-            if args:
-                f.write(f"Args: {_safe_serialize(args, max_length=5000)}\n")
-            if kwargs:
-                f.write(f"Kwargs: {_safe_serialize(kwargs, max_length=5000)}\n")
-            f.write("\n")
-
-            # Write output section
-            if success:
-                f.write("OUTPUT:\n")
-                f.write("-" * 80 + "\n")
-                f.write(f"{_safe_serialize(result, max_length=10000)}\n")
-            else:
-                f.write("ERROR:\n")
-                f.write("-" * 80 + "\n")
-                f.write(f"{error}\n")
-
-            f.write(f"\n{separator}\n\n")
-
-        agent_logger.debug(f"[{exec_id}] Detailed log appended to {agent_log_file}")
-
-    except Exception as e:
-        agent_logger.error(f"Failed to write detailed log for {exec_id}: {str(e)}")
+# Removed _serialize_for_session and _write_detailed_log
+# Session tracking in frontend handles all structured data
+# These were redundant with the session.AgentOutput structure
 
 
 def log_info(message: str, logger_name: str = "DropCal"):
