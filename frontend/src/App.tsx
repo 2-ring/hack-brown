@@ -47,6 +47,7 @@ function App() {
   const [loadingConfig, setLoadingConfig] = useState<LoadingStateConfig[]>([{ message: 'Processing...' }])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expectedEventCount, setExpectedEventCount] = useState<number | undefined>(undefined)
+  const [feedbackMessage, setFeedbackMessage] = useState<string>('')
 
   // Session management state
   const [currentSession, setCurrentSession] = useState<Session | null>(null)
@@ -81,17 +82,16 @@ function App() {
     setAppState('loading')
     setExtractedEvents([])
     setExpectedEventCount(undefined)
+    setFeedbackMessage('') // Clear any previous feedback
     setLoadingConfig([LOADING_MESSAGES.READING_FILE])
 
-    // CREATE NEW SESSION
+    // CREATE NEW SESSION (will only be saved if events are found)
     let session = createSession('file', file.name, {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
       timestamp: new Date(),
     })
-    setCurrentSession(session)
-    sessionCache.save(session)
 
     try {
       // Step 1: Process the file (extract text or prepare for vision)
@@ -104,7 +104,7 @@ function App() {
         message: 'Processing file...',
       })
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       const processStart = Date.now()
       const processResponse = await fetch('http://localhost:5000/api/process', {
@@ -130,7 +130,7 @@ function App() {
         processDuration
       )
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       // Step 2: Analyze context to understand user intent
       setLoadingConfig([LOADING_MESSAGES.UNDERSTANDING_CONTEXT])
@@ -139,7 +139,7 @@ function App() {
         message: 'Analyzing context and user intent...'
       })
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       const contextStart = Date.now()
       const contextResponse = await fetch('http://localhost:5000/api/analyze-context', {
@@ -172,13 +172,13 @@ function App() {
       )
       session = setContext(session, contextResult)
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       // Step 3: Extract events from processed input (guided by context)
       setLoadingConfig([LOADING_MESSAGES.EXTRACTING_EVENTS])
       session = updateProgress(session, { stage: 'extracting_events' })
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       const extractStart = Date.now()
       const extractResponse = await fetch('http://localhost:5000/api/extract', {
@@ -217,9 +217,10 @@ function App() {
       )
       session = setSessionExtractedEvents(session, extractResult.events || [])
       setCurrentSession(session)
-      sessionCache.save(session)
 
       if (extractResult.has_events) {
+        // NOW save to cache since we confirmed there are events
+        sessionCache.save(session)
         setExtractedEvents(extractResult.events)
 
         // Step 3: Process all events in parallel through fact extraction and calendar formatting
@@ -330,18 +331,12 @@ function App() {
 
         setAppState('review')
       } else {
-        // Complete session as cancelled (no events)
-        session = completeSession(session, 'cancelled')
-        setCurrentSession(session)
-        sessionCache.save(session)
-
-        // Info toast (not an error, just no events found)
-        toast.info('No Events Found', {
-          description: 'The file doesn\'t appear to contain any calendar events.',
-          duration: 4000,
-        })
+        // No events found - don't save session, show feedback message instead
+        setFeedbackMessage('The file doesn\'t appear to contain any calendar events.')
         setUploadedFile(null)
+        setIsProcessing(false)
         setAppState('input')
+        return // Exit early, don't save this session
       }
     } catch (err) {
       // Complete session as error
@@ -409,16 +404,15 @@ function App() {
     setAppState('loading')
     setExtractedEvents([])
     setExpectedEventCount(undefined)
+    setFeedbackMessage('') // Clear any previous feedback
     setLoadingConfig([LOADING_MESSAGES.PROCESSING_TEXT])
 
-    // CREATE NEW SESSION with short title (max 50 chars, truncated with ellipsis)
+    // CREATE NEW SESSION with short title (will only be saved if events are found)
     const title = text.length > 50 ? text.substring(0, 50).trim() + '...' : text.trim()
     let session = createSession('text', title, {
       textLength: text.length,
       timestamp: new Date(),
     })
-    setCurrentSession(session)
-    sessionCache.save(session)
 
     try {
       // Step 1: Analyze context to understand user intent
@@ -428,7 +422,7 @@ function App() {
         message: 'Analyzing context and user intent...'
       })
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       const contextStart = Date.now()
       const contextResponse = await fetch('http://localhost:5000/api/analyze-context', {
@@ -461,13 +455,13 @@ function App() {
       )
       session = setContext(session, contextResult)
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       // Step 2: Extract events from text input (guided by context)
       setLoadingConfig([LOADING_MESSAGES.EXTRACTING_EVENTS])
       session = updateProgress(session, { stage: 'extracting_events' })
       setCurrentSession(session)
-      sessionCache.save(session)
+      // Don't save to cache yet - wait until we confirm there are events
 
       const extractStart = Date.now()
       const extractResponse = await fetch('http://localhost:5000/api/extract', {
@@ -506,9 +500,10 @@ function App() {
       )
       session = setSessionExtractedEvents(session, extractResult.events || [])
       setCurrentSession(session)
-      sessionCache.save(session)
 
       if (extractResult.has_events) {
+        // NOW save to cache since we confirmed there are events
+        sessionCache.save(session)
         setExtractedEvents(extractResult.events)
 
         // Process all events in parallel through fact extraction and calendar formatting
@@ -619,18 +614,12 @@ function App() {
 
         setAppState('review')
       } else {
-        // Complete session as cancelled (no events)
-        session = completeSession(session, 'cancelled')
-        setCurrentSession(session)
-        sessionCache.save(session)
-
-        // Info toast (not an error, just no events found)
-        toast.info('No Events Found', {
-          description: 'The text doesn\'t appear to contain any calendar events.',
-          duration: 4000,
-        })
+        // No events found - don't save session, show feedback message instead
+        setFeedbackMessage('The text doesn\'t appear to contain any calendar events.')
         setUploadedFile(null)
+        setIsProcessing(false)
         setAppState('input')
+        return // Exit early, don't save this session
       }
     } catch (err) {
       // Complete session as error
@@ -744,10 +733,12 @@ function App() {
             uploadedFile={uploadedFile}
             isProcessing={isProcessing}
             loadingConfig={loadingConfig}
+            feedbackMessage={feedbackMessage}
             onFileUpload={handleFileUpload}
             onAudioSubmit={handleAudioSubmit}
             onTextSubmit={handleTextSubmit}
             onClearFile={handleClearFile}
+            onClearFeedback={() => setFeedbackMessage('')}
           />
         )}
 

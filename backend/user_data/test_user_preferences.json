@@ -1,0 +1,375 @@
+{
+  "user_id": "test_user",
+  "last_analyzed": "2026-02-02T21:32:39.550377Z",
+  "total_events_analyzed": 1124,
+  "analysis_date_range": {
+    "start": "2025-02-03T08:15:00-05:00",
+    "end": "2056-01-10"
+  },
+  "timezone": "America/New_York",
+  "default_event_length": 60,
+  "title_formatting": {
+    "patterns": []
+  },
+  "description_formatting": {
+    "patterns": []
+  },
+  "color_usage": {
+    "patterns": []
+  },
+  "location_formatting": {
+    "patterns": []
+  },
+  "duration_patterns": {
+    "patterns": []
+  },
+  "timing_patterns": {
+    "patterns": []
+  },
+  "calendar_usage": {
+    "calendars": [
+      {
+        "calendar_name": "Deadlines",
+        "calendar_id": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Extracurriculars",
+        "calendar_id": "05cfe7a793cea3600ed1fee0195287872c80097f68479a4e763e334e674eeba4@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Exams",
+        "calendar_id": "30301b3e45d39e055dc07e5a27e93d48dd6399fa7287e200a82ef7e55e7c5dbc@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Exercise",
+        "calendar_id": "9a2efd89d20663fbefee0a38c6c6cb7c4f4ae415aaa9e7ad4a617b669f27ee14@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Important",
+        "calendar_id": "aba23346466a3b6531af122b5553163e375a3850d6d17ff378445b5d6e2aef40@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Default",
+        "calendar_id": "lucaskoverwolf@gmail.com",
+        "is_primary": true,
+        "usage_patterns": [
+          {
+            "pattern": "Primary calendar for ALL events across ALL areas of life - academic, personal, work, social, and administrative tasks",
+            "confidence": "high",
+            "examples": [
+              "Academic: 'MATH 0540 Hours', 'APMA OH', 'Baum Office Hours'",
+              "Personal care: 'Shower', 'Meditation'",
+              "Work/Organization: 'UAPPLY Core Team Weekly Meeting', 'UAPPLY Dev', 'Tour Guide Info Session'"
+            ],
+            "frequency": "always"
+          },
+          {
+            "pattern": "Used for comprehensive time-blocking including mundane daily activities like showering, not just important events",
+            "confidence": "high",
+            "examples": [
+              "'Shower' event scheduled for specific time",
+              "Detailed task scheduling like 'IMP APP // MATH 0540 (LECTURE + PSET + DO FINAL Q) // CLOTHES (+GLASSES!!!!!!) SHOPPING'",
+              "Activities scheduled down to minute precision like 'VASTRO PREP' at 14:20"
+            ],
+            "frequency": "always"
+          },
+          {
+            "pattern": "Contains recurring and long-term events spanning years into the future, particularly for UAPPLY meetings and birthdays",
+            "confidence": "high",
+            "examples": [
+              "UAPPLY Core Team Weekly Meetings scheduled through 2032",
+              "Birthday reminders: 'Jai Garg Birthday', 'Tia Maritza Birthday', 'Papai Birthday' recurring annually",
+              "Administrative deadlines: 'Fall Reg Opens', 'Deadline: Spring 2026 Meal Plan Changes'"
+            ],
+            "frequency": "always"
+          },
+          {
+            "pattern": "Heavy use of abbreviations and all-caps for event titles, indicating quick personal entry style",
+            "confidence": "high",
+            "examples": [
+              "'VASTRO PREP', 'APMA', 'NORTH HOUSE SET'",
+              "'[V-DUB] Email internships'",
+              "'Claire OH' (Office Hours)"
+            ],
+            "frequency": "always"
+          },
+          {
+            "pattern": "Contains both highly specific academic coursework (Math 0540, APMA) and extracurricular/organizational commitments (UAPPLY)",
+            "confidence": "high",
+            "examples": [
+              "Academic: 'MATH 0540 Hours' at MacMillan 115, 'APMA OH'",
+              "Organization work: 'UAPPLY Meeting', 'UAPPLY Dev', 'UAPPLY Core Team Weekly Meeting'",
+              "Campus involvement: 'Tour Guide Info Session'"
+            ],
+            "frequency": "always"
+          },
+          {
+            "pattern": "Multi-purpose task events combining several activities in single calendar entry with '//' separator",
+            "confidence": "medium",
+            "examples": [
+              "'IMP APP // MATH 0540 (LECTURE + PSET + DO FINAL Q) // CLOTHES (+GLASSES!!!!!!) SHOPPING'",
+              "Uses parentheses and multiple items in one block"
+            ],
+            "frequency": "sometimes"
+          },
+          {
+            "pattern": "NEVER contains color coding - all events appear without colorId customization",
+            "confidence": "high",
+            "examples": [
+              "All sample events show 'colorId: null'",
+              "No visual categorization through colors despite diverse event types"
+            ],
+            "frequency": "always"
+          },
+          {
+            "pattern": "Used for social reminders including family birthdays with recurring annual entries",
+            "confidence": "high",
+            "examples": [
+              "'Jai Garg Birthday'",
+              "'Tia Maritza Birthday' (appears multiple years)",
+              "'Tia Ranta Birthday', 'Papai Birthday'"
+            ],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [
+          "Academic coursework and office hours",
+          "Personal care and daily routines",
+          "Organizational meetings and commitments (UAPPLY)",
+          "Social events and reminders",
+          "Family birthdays",
+          "Campus activities and info sessions",
+          "Administrative deadlines and registration dates",
+          "Task reminders and to-dos",
+          "Meditation and wellness activities",
+          "Development/coding work"
+        ],
+        "typical_event_count": 1124
+      },
+      {
+        "calendar_name": "Meeting",
+        "calendar_id": "a7a110ffbee871a12956716e68546daf8d50c670649bd93b77ecf00fb40c85fd@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Appointment",
+        "calendar_id": "6b5a6c4c175ba1c04397681ad3218defe5fcfeee50e07485295e9ad8f0b7490f@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "UAPPLY",
+        "calendar_id": "cecb97e6925bbbed011c45519bf6e3a19b835898bab0061f4e23e8ae97a90e1a@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Classes",
+        "calendar_id": "2a8c7c4098fec32ad105663969958e3a4c0e900af78bcd50c74a34483d7e50d7@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Partiful",
+        "calendar_id": "k17042gggnclgh63kuap9ghacb0pqudd@import.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "https://www.baltimoreravens.com/api/addToCalendar/ag/s?text=",
+        "calendar_id": "0uhhgrr240pi2o39bkohd6n5pdo6ettg@import.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Brown University Athletics",
+        "calendar_id": "uc39bftutl9i03103k196ffijh8su2mn@import.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Work",
+        "calendar_id": "d39a95e332eebe141b2cb1a83703e508cdfeb31f32f1b7910d263a2f473784da@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Social",
+        "calendar_id": "17411737651e57ab1fad9b2a15de9b2cfc6350608fda84feb0a8d07536fdf3df@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Office Hours",
+        "calendar_id": "a0a875e9e080e109c88a0636409a2a218ad7cf08f482f11b0072865e8d1ee014@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      },
+      {
+        "calendar_name": "Hack@Brown 2026",
+        "calendar_id": "c_0eea9a1abb9ea5c8ece0433beed9a71f9e7454bb52a3e85b679cd62cb0b0f599@group.calendar.google.com",
+        "is_primary": false,
+        "usage_patterns": [
+          {
+            "pattern": "This calendar has no events in the analyzed period",
+            "confidence": "high",
+            "examples": [],
+            "frequency": "always"
+          }
+        ],
+        "event_types": [],
+        "typical_event_count": 0
+      }
+    ]
+  },
+  "contextual_patterns": {
+    "patterns": []
+  },
+  "general_observations": []
+}

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Equals as EqualsIcon, PencilSimple as EditIcon, PaperPlaneRight as SendIcon, X as XIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
+import { toast } from 'sonner'
 import type { CalendarEvent } from '../types/calendarEvent'
 import type { LoadingStateConfig } from '../types/loadingState'
 import wordmarkImage from '../assets/Wordmark.png'
@@ -19,12 +20,128 @@ interface EventConfirmationProps {
 export function EventConfirmation({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount }: EventConfirmationProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
+  const [editingField, setEditingField] = useState<{ eventIndex: number; field: 'summary' | 'date' | 'description' } | null>(null)
+  const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
+  const [isProcessingEdit, setIsProcessingEdit] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleSendRequest = () => {
-    if (changeRequest.trim()) {
-      // TODO: Implement change request functionality
-      console.log('Change request:', changeRequest)
+  // Sync editedEvents with events prop
+  useEffect(() => {
+    setEditedEvents(events)
+  }, [events])
+
+  // Focus input when editing starts and position cursor at end
+  useEffect(() => {
+    if (editingField && inputRef.current) {
+      const input = inputRef.current
+      input.focus()
+      // Set cursor position to end
+      const length = input.value.length
+      input.setSelectionRange(length, length)
+    }
+  }, [editingField])
+
+  const handleEditClick = (eventIndex: number, field: 'summary' | 'date' | 'description', e?: React.MouseEvent) => {
+    // Don't start editing if clicking on an input that's already being edited
+    if (e?.target instanceof HTMLInputElement) {
+      return
+    }
+    setEditingField({ eventIndex, field })
+  }
+
+  const handleEditChange = (eventIndex: number, field: string, value: string) => {
+    setEditedEvents(prev => {
+      const updated = [...prev]
+      const event = updated[eventIndex]
+      if (event) {
+        updated[eventIndex] = {
+          ...event,
+          [field]: value
+        }
+      }
+      return updated
+    })
+  }
+
+  const handleEditBlur = () => {
+    setEditingField(null)
+  }
+
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      setEditingField(null)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setEditingField(null)
+    }
+  }
+
+  const handleSendRequest = async () => {
+    if (changeRequest.trim() && !isProcessingEdit) {
+      const instruction = changeRequest.trim()
       setChangeRequest('')
+      setIsProcessingEdit(true)
+
+      // Show loading toast
+      const loadingToast = toast.loading('Processing changes...', {
+        description: 'AI is analyzing your request'
+      })
+
+      try {
+        // Send instruction to each event and let AI figure out which ones to modify
+        const modifiedEvents = await Promise.all(
+          editedEvents.map(async (event, index) => {
+            if (!event) return null
+
+            try {
+              const response = await fetch('http://localhost:5000/api/edit-event', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  event: event,
+                  instruction: instruction
+                }),
+              })
+
+              if (!response.ok) {
+                console.error(`Failed to edit event ${index}:`, await response.text())
+                return event // Keep original if edit fails
+              }
+
+              const result = await response.json()
+              return result.modified_event
+            } catch (error) {
+              console.error(`Error editing event ${index}:`, error)
+              return event // Keep original on error
+            }
+          })
+        )
+
+        // Update state with modified events
+        setEditedEvents(modifiedEvents)
+
+        // Dismiss loading and show success
+        toast.dismiss(loadingToast)
+        toast.success('Changes applied!', {
+          description: 'Events updated based on your request',
+          duration: 3000
+        })
+
+        // Close chat after successful edit
+        setIsChatExpanded(false)
+      } catch (error) {
+        // Dismiss loading and show error
+        toast.dismiss(loadingToast)
+        toast.error('Failed to apply changes', {
+          description: error instanceof Error ? error.message : 'Unknown error',
+          duration: 5000
+        })
+      } finally {
+        setIsProcessingEdit(false)
+      }
     }
   }
 
@@ -129,6 +246,7 @@ export function EventConfirmation({ events, onConfirm, isLoading = false, loadin
 
               if (event) {
                 // Event is complete - show actual card
+                const editedEvent = editedEvents[index] || event
                 return (
                   <motion.div
                     key={`event-${index}`}
@@ -138,23 +256,77 @@ export function EventConfirmation({ events, onConfirm, isLoading = false, loadin
                     transition={{ duration: 0.4, ease: "easeOut" }}
                   >
                     <div className="event-confirmation-card-row">
-                      <div className="event-confirmation-card-title">
-                        {event.summary}
+                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick(index, 'summary', e)}>
+                        {editingField?.eventIndex === index && editingField?.field === 'summary' ? (
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            className="event-confirmation-card-title editable-input"
+                            value={editedEvent.summary}
+                            onChange={(e) => handleEditChange(index, 'summary', e.target.value)}
+                            onBlur={handleEditBlur}
+                            onKeyDown={handleEditKeyDown}
+                          />
+                        ) : (
+                          <div className="event-confirmation-card-title">
+                            {editedEvent.summary}
+                          </div>
+                        )}
+                        <EditIcon
+                          size={16}
+                          weight="regular"
+                          className="edit-icon"
+                        />
                       </div>
-                      <EditIcon size={16} weight="regular" className="edit-icon" />
                     </div>
                     <div className="event-confirmation-card-row">
-                      <div className="event-confirmation-card-date">
-                        {formatDate(event.start.dateTime, event.end.dateTime)}
+                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick(index, 'date', e)}>
+                        {editingField?.eventIndex === index && editingField?.field === 'date' ? (
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            className="event-confirmation-card-date editable-input"
+                            value={formatDate(editedEvent.start.dateTime, editedEvent.end.dateTime)}
+                            onChange={(e) => handleEditChange(index, 'date', e.target.value)}
+                            onBlur={handleEditBlur}
+                            onKeyDown={handleEditKeyDown}
+                          />
+                        ) : (
+                          <div className="event-confirmation-card-date">
+                            {formatDate(editedEvent.start.dateTime, editedEvent.end.dateTime)}
+                          </div>
+                        )}
+                        <EditIcon
+                          size={14}
+                          weight="regular"
+                          className="edit-icon"
+                        />
                       </div>
-                      <EditIcon size={14} weight="regular" className="edit-icon" />
                     </div>
                     <div className="event-confirmation-card-row">
                       <div className="event-confirmation-card-description">
                         <EqualsIcon size={16} weight="bold" className="description-icon" />
-                        <span>{buildDescription(event)}</span>
+                        <div className="editable-content-wrapper" onClick={(e) => handleEditClick(index, 'description', e)}>
+                          {editingField?.eventIndex === index && editingField?.field === 'description' ? (
+                            <input
+                              ref={inputRef}
+                              type="text"
+                              className="editable-input description-input"
+                              value={buildDescription(editedEvent)}
+                              onChange={(e) => handleEditChange(index, 'description', e.target.value)}
+                              onBlur={handleEditBlur}
+                              onKeyDown={handleEditKeyDown}
+                            />
+                          ) : (
+                            <span>{buildDescription(editedEvent)}</span>
+                          )}
+                          <EditIcon
+                            size={14}
+                            weight="regular"
+                            className="edit-icon"
+                          />
+                        </div>
                       </div>
-                      <EditIcon size={14} weight="regular" className="edit-icon" />
                     </div>
                   </motion.div>
                 )
@@ -177,7 +349,7 @@ export function EventConfirmation({ events, onConfirm, isLoading = false, loadin
             })
           ) : (
             // Complete state - show only actual events (filter out nulls)
-            events.filter((event): event is CalendarEvent => event !== null).map((event, index) => (
+            editedEvents.filter((event): event is CalendarEvent => event !== null).map((event, index) => (
               <motion.div
                 key={index}
                 className="event-confirmation-card"
@@ -186,23 +358,77 @@ export function EventConfirmation({ events, onConfirm, isLoading = false, loadin
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
                 <div className="event-confirmation-card-row">
-                  <div className="event-confirmation-card-title">
-                    {event.summary}
+                  <div className="editable-content-wrapper" onClick={(e) => handleEditClick(index, 'summary', e)}>
+                    {editingField?.eventIndex === index && editingField?.field === 'summary' ? (
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        className="event-confirmation-card-title editable-input"
+                        value={event.summary}
+                        onChange={(e) => handleEditChange(index, 'summary', e.target.value)}
+                        onBlur={handleEditBlur}
+                        onKeyDown={handleEditKeyDown}
+                      />
+                    ) : (
+                      <div className="event-confirmation-card-title">
+                        {event.summary}
+                      </div>
+                    )}
+                    <EditIcon
+                      size={16}
+                      weight="regular"
+                      className="edit-icon"
+                    />
                   </div>
-                  <EditIcon size={16} weight="regular" className="edit-icon" />
                 </div>
                 <div className="event-confirmation-card-row">
-                  <div className="event-confirmation-card-date">
-                    {formatDate(event.start.dateTime, event.end.dateTime)}
+                  <div className="editable-content-wrapper" onClick={(e) => handleEditClick(index, 'date', e)}>
+                    {editingField?.eventIndex === index && editingField?.field === 'date' ? (
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        className="event-confirmation-card-date editable-input"
+                        value={formatDate(event.start.dateTime, event.end.dateTime)}
+                        onChange={(e) => handleEditChange(index, 'date', e.target.value)}
+                        onBlur={handleEditBlur}
+                        onKeyDown={handleEditKeyDown}
+                      />
+                    ) : (
+                      <div className="event-confirmation-card-date">
+                        {formatDate(event.start.dateTime, event.end.dateTime)}
+                      </div>
+                    )}
+                    <EditIcon
+                      size={14}
+                      weight="regular"
+                      className="edit-icon"
+                    />
                   </div>
-                  <EditIcon size={14} weight="regular" className="edit-icon" />
                 </div>
                 <div className="event-confirmation-card-row">
                   <div className="event-confirmation-card-description">
                     <EqualsIcon size={16} weight="bold" className="description-icon" />
-                    <span>{buildDescription(event)}</span>
+                    <div className="editable-content-wrapper" onClick={(e) => handleEditClick(index, 'description', e)}>
+                      {editingField?.eventIndex === index && editingField?.field === 'description' ? (
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          className="editable-input description-input"
+                          value={buildDescription(event)}
+                          onChange={(e) => handleEditChange(index, 'description', e.target.value)}
+                          onBlur={handleEditBlur}
+                          onKeyDown={handleEditKeyDown}
+                        />
+                      ) : (
+                        <span>{buildDescription(event)}</span>
+                      )}
+                      <EditIcon
+                        size={14}
+                        weight="regular"
+                        className="edit-icon"
+                      />
+                    </div>
                   </div>
-                  <EditIcon size={14} weight="regular" className="edit-icon" />
                 </div>
               </motion.div>
             ))
@@ -295,7 +521,7 @@ export function EventConfirmation({ events, onConfirm, isLoading = false, loadin
                       <button
                         className="event-confirmation-chat-send"
                         onClick={handleSendRequest}
-                        disabled={!changeRequest.trim()}
+                        disabled={!changeRequest.trim() || isProcessingEdit}
                       >
                         <SendIcon size={20} weight="fill" />
                       </button>

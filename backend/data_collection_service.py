@@ -131,29 +131,56 @@ class DataCollectionService:
 
     def _comprehensive_collection(self) -> List[Dict]:
         """
-        Comprehensive one-time collection: Last 12 months, ALL events.
+        Comprehensive one-time collection: Last 12 months, ALL events from ALL calendars.
         - Timeframe: Last 365 days
-        - Max events: All (up to 10,000 safety cap)
-        - API calls: 5-50 (depends on calendar size)
+        - Max events: All (up to 10,000 safety cap per calendar)
+        - API calls: 5-50 per calendar (depends on calendar size)
         - Time: 30-90 seconds
 
         For one-time comprehensive analysis to learn user patterns.
         Uses pagination to fetch everything without sampling.
+        Fetches from ALL calendars, not just primary.
         """
-        app_logger.info("Comprehensive collection: fetching ALL events from last 365 days")
+        app_logger.info("Comprehensive collection: fetching ALL events from ALL calendars (last 365 days)")
 
         time_min = self._calculate_date_ago(days=365)
 
-        # Fetch all events with pagination
-        all_events = self._fetch_all_with_pagination(
-            time_min=time_min,
-            max_total=10000  # Safety cap
-        )
+        # Get list of all calendars first
+        calendars = self.calendar_service.get_calendar_list()
+        app_logger.info(f"Found {len(calendars)} calendars to check")
 
-        app_logger.info(f"Comprehensive collection completed: {len(all_events)} total events")
+        # Fetch events from each calendar
+        all_events = []
+        for calendar in calendars:
+            cal_id = calendar.get('id')
+            cal_name = calendar.get('summary', 'Unnamed')
+
+            try:
+                app_logger.info(f"Fetching events from calendar: {cal_name}")
+
+                # Fetch events from this calendar
+                calendar_events = self._fetch_all_with_pagination(
+                    time_min=time_min,
+                    max_total=10000,  # Safety cap per calendar
+                    calendar_id=cal_id
+                )
+
+                # Add calendar metadata to each event
+                for event in calendar_events:
+                    event['_source_calendar_id'] = cal_id
+                    event['_source_calendar_name'] = cal_name
+
+                all_events.extend(calendar_events)
+                app_logger.info(f"  → Collected {len(calendar_events)} events from {cal_name}")
+
+            except Exception as e:
+                app_logger.error(f"Error fetching from calendar {cal_name}: {e}")
+                continue
+
+        app_logger.info(f"Comprehensive collection completed: {len(all_events)} total events across all calendars")
         return all_events
 
-    def _fetch_all_with_pagination(self, time_min: str, max_total: int = 10000) -> List[Dict]:
+    def _fetch_all_with_pagination(self, time_min: str, max_total: int = 10000, calendar_id: str = 'primary') -> List[Dict]:
         """
         Fetch all events with automatic pagination.
         Keeps requesting pages until no more results or max_total reached.
@@ -161,6 +188,7 @@ class DataCollectionService:
         Args:
             time_min: Start date for event search (ISO format with 'Z')
             max_total: Safety cap on total events to prevent runaway fetching
+            calendar_id: ID of the calendar to fetch events from (default: 'primary')
 
         Returns:
             List of all events in the time range
@@ -176,7 +204,8 @@ class DataCollectionService:
                     max_results=250,  # Default page size
                     time_min=time_min,
                     page_token=page_token,
-                    return_full_response=True
+                    return_full_response=True,
+                    calendar_id=calendar_id
                 )
 
                 # Extract events from this page
@@ -441,7 +470,13 @@ class DataCollectionService:
             date_str = start.get('dateTime') or start.get('date')
             if date_str:
                 try:
-                    dates.append(datetime.fromisoformat(date_str.replace('Z', '+00:00')))
+                    # Handle both datetime (with timezone) and date (all-day events)
+                    dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    # Make timezone-aware if naive (for all-day events)
+                    if dt.tzinfo is None:
+                        from datetime import timezone
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    dates.append(dt)
                 except ValueError:
                     pass
 

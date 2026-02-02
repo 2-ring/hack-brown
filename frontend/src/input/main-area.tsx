@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react'
 import { AudioInput } from './audio'
 import { TextInput } from './text'
+import { FeedbackPill } from './feedback-pill'
 import { LoadingState } from '../components/LoadingState'
 import type { LoadingStateConfig, LoadingPhase } from '../types/loadingState'
 
@@ -16,20 +17,24 @@ interface MainInputAreaProps {
   uploadedFile: File | null
   isProcessing: boolean
   loadingConfig?: LoadingStateConfig | LoadingPhase[]
+  feedbackMessage?: string
   onFileUpload: (file: File) => void
   onAudioSubmit: (audioBlob: Blob) => void
   onTextSubmit: (text: string) => void
   onClearFile: () => void
+  onClearFeedback?: () => void
 }
 
 export function MainInputArea({
   uploadedFile,
   isProcessing,
   loadingConfig,
+  feedbackMessage,
   onFileUpload,
   onAudioSubmit,
   onTextSubmit,
-  onClearFile
+  onClearFile,
+  onClearFeedback
 }: MainInputAreaProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
@@ -174,6 +179,11 @@ export function MainInputArea({
         <TextInput
           onClose={() => setIsTextInput(false)}
           onSubmit={handleTextSubmit}
+        />
+      ) : feedbackMessage ? (
+        <FeedbackPill
+          message={feedbackMessage}
+          onClose={() => onClearFeedback?.()}
         />
       ) : isProcessing ? (
         <LoadingState

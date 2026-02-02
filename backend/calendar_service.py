@@ -218,7 +218,7 @@ class CalendarService:
             print(f"An error occurred: {error}")
             return None
 
-    def list_events(self, max_results: int = 10, time_min: Optional[str] = None, page_token: Optional[str] = None, return_full_response: bool = False) -> Dict:
+    def list_events(self, max_results: int = 10, time_min: Optional[str] = None, page_token: Optional[str] = None, return_full_response: bool = False, calendar_id: str = 'primary') -> Dict:
         """
         List upcoming events from user's calendar.
 
@@ -228,6 +228,7 @@ class CalendarService:
             page_token: Token for pagination (from previous response's nextPageToken)
             return_full_response: If True, returns full API response with pagination info.
                                  If False, returns just the items list for backwards compatibility.
+            calendar_id: ID of the calendar to fetch events from (default: 'primary')
 
         Returns:
             If return_full_response=True: Full API response dict with 'items' and 'nextPageToken'
@@ -245,7 +246,7 @@ class CalendarService:
                 time_min = datetime.utcnow().isoformat() + 'Z'
 
             events_result = service.events().list(
-                calendarId='primary',
+                calendarId=calendar_id,
                 timeMin=time_min,
                 maxResults=max_results,
                 singleEvents=True,

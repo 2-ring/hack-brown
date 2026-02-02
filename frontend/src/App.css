@@ -423,6 +423,40 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Feedback Pill */
+.feedback-pill-dock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  padding: 0.5rem 1rem;
+  background-color: var(--white);
+  border-radius: 100px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e3f2fd;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.feedback-message {
+  flex: 1;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 1rem;
+  color: #333;
+  padding: 0 0.5rem;
+  line-height: 1.4;
+}
+
 .footer {
   width: 100%;
   padding: 2rem 0;

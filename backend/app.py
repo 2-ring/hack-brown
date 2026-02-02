@@ -436,6 +436,34 @@ def run_calendar_formatting(facts: dict, system_prompt: str):
 
     return result
 
+
+@log_agent_execution("Agent4_EventModification")
+def run_event_modification(original_event: dict, edit_instruction: str, system_prompt: str):
+    """
+    Agent 4: Event Modification - Wrapped with logging.
+    Takes an existing calendar event and a natural language edit instruction.
+    Applies ONLY the requested changes, preserves everything else.
+    """
+    if not original_event:
+        raise ValueError("No original event provided for modification")
+
+    if not edit_instruction:
+        raise ValueError("No edit instruction provided")
+
+    event_modification_prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "Original Event:\n{original_event}\n\nUser's Edit Instruction:\n{edit_instruction}\n\nApply the edit and return the modified event.")
+    ])
+
+    # Run event modification
+    chain = event_modification_prompt | calendar_formatting_llm  # Reuse CalendarEvent schema
+    result = chain.invoke({
+        "original_event": str(original_event),
+        "edit_instruction": edit_instruction
+    })
+
+    return result
+
 # ============================================================================
 # Flask Endpoints
 # ============================================================================
@@ -977,6 +1005,152 @@ recurrence=null
     except Exception as e:
         app_logger.error(f"Calendar formatting endpoint failed: {str(e)}")
         return jsonify({'error': f'Calendar formatting failed: {str(e)}'}), 500
+
+@app.route('/api/edit-event', methods=['POST'])
+def edit_event():
+    """
+    Agent 4: Event Modification
+    Takes an existing calendar event and a natural language edit instruction.
+    Applies ONLY the requested changes, preserves everything else.
+    """
+    data = request.get_json()
+    original_event = data.get('event')
+    edit_instruction = data.get('instruction')
+
+    if not original_event:
+        return jsonify({'error': 'No event provided'}), 400
+
+    if not edit_instruction:
+        return jsonify({'error': 'No edit instruction provided'}), 400
+
+    # Get current date context for relative date normalization
+    from datetime import datetime
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    current_time = datetime.now().strftime('%H:%M:%S')
+
+    # System prompt for event modification
+    system_prompt = f"""You are an event modification specialist. Your job is to apply user-requested edits to calendar events with surgical precision.
+
+CURRENT CONTEXT:
+- Today's date: {current_date}
+- Current time: {current_time}
+- Default timezone: America/New_York (EST/EDT)
+
+YOUR TASK:
+You will receive:
+1. An existing calendar event (all current fields)
+2. A user's edit instruction (natural language)
+
+You must:
+1. Parse the edit instruction carefully
+2. Apply ONLY the requested changes
+3. Preserve ALL other fields exactly as they are
+4. Ensure the result is valid and consistent
+
+CRITICAL RULES:
+
+1. **Minimal Changes**: Only modify what was explicitly requested
+   - "Move to 3pm" → Change start/end times, keep everything else
+   - "Add Zoom link" → Add to location or description, keep everything else
+   - "Rename to Team Sync" → Change summary only
+
+2. **Smart Interpretation**:
+   - "Move to tomorrow" → Calculate new date from current date
+   - "Make it 30 minutes" → Adjust end time, keep start time
+   - "Add John to the meeting" → Add to attendees list
+   - "Change location to Building A" → Update location field
+
+3. **Consistency Checks**:
+   - End time must be after start time
+   - If duration changes, adjust end time appropriately
+   - If recurrence is mentioned, format as RRULE properly
+   - Keep timezone consistent unless explicitly changed
+
+4. **Preserve Structure**:
+   - Return the same CalendarEvent model structure
+   - Keep null fields null unless explicitly setting them
+   - Maintain ISO 8601 datetime format
+   - Maintain RRULE format for recurrence
+
+5. **Context Awareness**:
+   - "Next Tuesday" means calculate from today ({current_date})
+   - "Add 30 minutes" means extend duration
+   - "Earlier" or "later" means shift the time
+
+EXAMPLES:
+
+Original Event:
+{{
+  "summary": "Team Meeting",
+  "start": {{"dateTime": "2026-02-05T14:00:00-05:00", "timeZone": "America/New_York"}},
+  "end": {{"dateTime": "2026-02-05T15:00:00-05:00", "timeZone": "America/New_York"}},
+  "location": "Conference Room A",
+  "description": "Weekly sync"
+}}
+
+Edit: "Move to 3pm"
+Result:
+{{
+  "summary": "Team Meeting",
+  "start": {{"dateTime": "2026-02-05T15:00:00-05:00", "timeZone": "America/New_York"}},
+  "end": {{"dateTime": "2026-02-05T16:00:00-05:00", "timeZone": "America/New_York"}},
+  "location": "Conference Room A",
+  "description": "Weekly sync"
+}}
+
+Edit: "Add Zoom link: https://zoom.us/j/123456"
+Result:
+{{
+  "summary": "Team Meeting",
+  "start": {{"dateTime": "2026-02-05T14:00:00-05:00", "timeZone": "America/New_York"}},
+  "end": {{"dateTime": "2026-02-05T15:00:00-05:00", "timeZone": "America/New_York"}},
+  "location": "https://zoom.us/j/123456",
+  "description": "Weekly sync"
+}}
+
+Edit: "Move to next Tuesday and make it 30 minutes"
+Result:
+{{
+  "summary": "Team Meeting",
+  "start": {{"dateTime": "2026-02-10T14:00:00-05:00", "timeZone": "America/New_York"}},
+  "end": {{"dateTime": "2026-02-10T14:30:00-05:00", "timeZone": "America/New_York"}},
+  "location": "Conference Room A",
+  "description": "Weekly sync"
+}}
+
+Edit: "Cancel the recurrence, make it one-time only"
+Result:
+{{
+  "summary": "Team Meeting",
+  "start": {{"dateTime": "2026-02-05T14:00:00-05:00", "timeZone": "America/New_York"}},
+  "end": {{"dateTime": "2026-02-05T15:00:00-05:00", "timeZone": "America/New_York"}},
+  "location": "Conference Room A",
+  "description": "Weekly sync",
+  "recurrence": null
+}}
+
+VALIDATION:
+- Always ensure end time is after start time
+- Keep ISO 8601 format strict
+- Preserve timezone unless explicitly changed
+- Return valid RRULE format if recurrence is set
+
+Apply the edit precisely and return the modified event.
+"""
+
+    try:
+        # Call the logged agent function
+        result = run_event_modification(original_event, edit_instruction, system_prompt)
+
+        # Convert Pydantic model to dict for JSON response
+        return jsonify({
+            'success': True,
+            'modified_event': result.model_dump()
+        })
+
+    except Exception as e:
+        app_logger.error(f"Event modification endpoint failed: {str(e)}")
+        return jsonify({'error': f'Event modification failed: {str(e)}'}), 500
 
 # ============================================================================
 # Google Calendar API Endpoints
