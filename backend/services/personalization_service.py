@@ -7,8 +7,8 @@ import os
 import json
 from typing import Optional
 from datetime import datetime
-from user_preferences import UserPreferences
-from logging_utils import app_logger
+from models.user_preferences import UserPreferences
+from utils.logging_utils import app_logger
 
 
 class PersonalizationService:

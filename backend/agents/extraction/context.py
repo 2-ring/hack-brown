@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from ..base import BaseAgent
 from models.agent_models import ContextResult
-from logging_utils import log_agent_execution
+from utils.logging_utils import log_agent_execution
 
 
 class ContextUnderstandingAgent(BaseAgent):

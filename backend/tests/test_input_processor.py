@@ -3,8 +3,11 @@ Test script for the input processing layer
 """
 
 import os
-from input_processor import InputProcessorFactory, InputType
-from processors.audio_processor import AudioProcessor
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.input_processor import InputProcessorFactory, InputType
+from processors.audio import AudioProcessor
 
 
 def test_audio_processor():

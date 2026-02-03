@@ -6,15 +6,15 @@ import os
 from werkzeug.utils import secure_filename
 from typing import Optional
 
-from input_processor import InputProcessorFactory, InputType
+from utils.input_processor import InputProcessorFactory, InputType
 from backend.processors.audio import AudioProcessor
 from backend.processors.image import ImageProcessor
 from backend.processors.text import TextFileProcessor
 from backend.processors.pdf import PDFProcessor
-from calendar_service import CalendarService
-from logging_utils import app_logger
-from personalization_service import PersonalizationService
-from user_preferences import UserPreferences
+from services.calendar_service import CalendarService
+from utils.logging_utils import app_logger
+from services.personalization_service import PersonalizationService
+from models.user_preferences import UserPreferences
 
 # Import agent modules
 from agents import (
@@ -29,8 +29,8 @@ from agents import (
 # Import models
 from models import ExtractedFacts
 
-# Import API blueprints
-from api import calendar_bp
+# Import route blueprints
+from routes import calendar_bp
 
 load_dotenv()
 

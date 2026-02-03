@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
-from user_preferences import (
+from models.user_preferences import (
     UserPreferences,
     TitleFormattingPatterns,
     DescriptionFormattingPatterns,
@@ -25,7 +25,7 @@ from user_preferences import (
     ContextualPatterns,
     DiscoveredPattern
 )
-from logging_utils import app_logger
+from utils.logging_utils import app_logger
 
 
 class PatternAnalysisService:

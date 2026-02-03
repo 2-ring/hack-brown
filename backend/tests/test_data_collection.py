@@ -3,8 +3,12 @@ Test/Demo script for Data Collection Service.
 Shows how to use the service to fetch events for analysis.
 """
 
-from calendar_service import CalendarService
-from data_collection_service import DataCollectionService
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from services.calendar_service import CalendarService
+from services.data_collection_service import DataCollectionService
 import json
 
 

@@ -11,8 +11,8 @@ from typing import List, Dict, Any
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from input_processor import BaseInputProcessor, ProcessingResult, InputType
-from logging_utils import log_processor_execution
+from utils.input_processor import BaseInputProcessor, ProcessingResult, InputType
+from utils.logging_utils import log_processor_execution
 
 
 class PDFProcessor(BaseInputProcessor):

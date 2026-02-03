@@ -8,8 +8,8 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from .base import BaseAgent
 from models.agent_models import ExtractedFacts
-from user_preferences import UserPreferences
-from logging_utils import log_agent_execution, app_logger
+from models.user_preferences import UserPreferences
+from utils.logging_utils import log_agent_execution, app_logger
 
 
 class PreferenceApplicationAgent(BaseAgent):

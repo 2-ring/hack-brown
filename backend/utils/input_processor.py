@@ -6,7 +6,7 @@ Converts them to text for downstream processing.
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from enum import Enum
-from logging_utils import log_processor_execution, processor_logger
+from utils.logging_utils import log_processor_execution, processor_logger
 
 
 class InputType(Enum):

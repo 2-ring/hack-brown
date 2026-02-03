@@ -12,8 +12,8 @@ from openai import OpenAI
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from input_processor import BaseInputProcessor, ProcessingResult, InputType
-from logging_utils import log_processor_execution
+from utils.input_processor import BaseInputProcessor, ProcessingResult, InputType
+from utils.logging_utils import log_processor_execution
 
 
 class AudioProcessor(BaseInputProcessor):
