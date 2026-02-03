@@ -18,13 +18,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Sign in with Google OAuth.
- * Requests calendar scope for Google Calendar integration.
+ * Requests only authentication scopes (email, profile).
+ * Calendar linking is handled separately.
  */
 export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      scopes: 'https://www.googleapis.com/auth/calendar',
+      scopes: 'email profile openid',
       redirectTo: window.location.origin,
     },
   });

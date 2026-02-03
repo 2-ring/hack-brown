@@ -6,6 +6,7 @@ Provides CRUD operations for Supabase tables.
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from .supabase_client import get_supabase
+from utils.encryption import encrypt_token, decrypt_token
 
 
 class User:
@@ -126,9 +127,10 @@ class User:
         """
         supabase = get_supabase()
 
-        data = {"google_access_token": access_token}
+        # Encrypt tokens before storing
+        data = {"google_access_token": encrypt_token(access_token)}
         if refresh_token:
-            data["google_refresh_token"] = refresh_token
+            data["google_refresh_token"] = encrypt_token(refresh_token)
         if expires_at:
             data["token_expires_at"] = expires_at.isoformat()
 

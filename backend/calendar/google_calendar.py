@@ -11,6 +11,7 @@ from datetime import datetime
 import os
 
 from database.models import User, Session as DBSession
+from utils.encryption import decrypt_token
 
 
 class GoogleCalendarClient:
@@ -36,14 +37,23 @@ class GoogleCalendarClient:
         if not user:
             raise ValueError(f"User {self.user_id} not found")
 
-        access_token = user.get('google_access_token')
-        refresh_token = user.get('google_refresh_token')
+        # Get encrypted tokens from database
+        encrypted_access_token = user.get('google_access_token')
+        encrypted_refresh_token = user.get('google_refresh_token')
         token_expires_at = user.get('token_expires_at')
 
-        if not access_token:
+        if not encrypted_access_token:
             # User hasn't connected Google Calendar yet
             self.credentials = None
             return
+
+        # Decrypt tokens
+        access_token = decrypt_token(encrypted_access_token)
+        refresh_token = decrypt_token(encrypted_refresh_token) if encrypted_refresh_token else None
+
+        if not access_token:
+            # Decryption failed
+            raise ValueError(f"Failed to decrypt Google Calendar tokens for user {self.user_id}")
 
         # Create credentials object
         client_id = os.getenv('GOOGLE_CLIENT_ID')

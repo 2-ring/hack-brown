@@ -106,8 +106,17 @@ npm install
    GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
 
+   # Token Encryption Key (generate a new one!)
+   # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ENCRYPTION_KEY=5ynV6RgnTdmDJ21gALlncT7HfjETByQbUXGlzXc_RkQ=
+
    # Flask Configuration
    FLASK_ENV=development
+   ```
+
+   **Important:** Generate your own `ENCRYPTION_KEY` by running:
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
    ```
 
 ### Step 3: Configure Frontend Environment
@@ -200,9 +209,12 @@ ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-...
 GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
+ENCRYPTION_KEY=your_generated_encryption_key_here
 ```
 
-**Important**: Click **"Save Changes"** after adding all variables.
+**Important**:
+- Generate `ENCRYPTION_KEY` with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+- Click **"Save Changes"** after adding all variables.
 
 ### Step 4: Deploy
 
