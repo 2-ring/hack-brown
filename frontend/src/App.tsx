@@ -12,7 +12,8 @@ import {
   uploadFile as apiUploadFile,
   getUserSessions,
   getSession,
-  pollSession
+  pollSession,
+  addSessionToCalendar
 } from './api/backend-client'
 import './App.css'
 
@@ -244,6 +245,64 @@ function App() {
     setSidebarOpen(false)
   }, [])
 
+  // Handle adding events to Google Calendar
+  const handleAddToCalendar = useCallback(async () => {
+    if (!currentSession) {
+      toast.error('No Session', {
+        description: 'No session available to add to calendar.',
+        duration: 3000,
+      })
+      return
+    }
+
+    try {
+      toast.loading('Adding to Calendar...', {
+        id: 'calendar-add',
+        description: 'Creating events in Google Calendar...',
+      })
+
+      const result = await addSessionToCalendar(currentSession.id)
+
+      // Dismiss loading toast
+      toast.dismiss('calendar-add')
+
+      // Show success message
+      if (result.has_conflicts) {
+        toast.warning('Events Added with Conflicts', {
+          description: `Created ${result.num_events_created} event(s), but found ${result.conflicts.length} scheduling conflict(s).`,
+          duration: 5000,
+        })
+      } else {
+        toast.success('Added to Calendar!', {
+          description: `Successfully created ${result.num_events_created} event(s) in Google Calendar.`,
+          duration: 4000,
+        })
+      }
+
+      // Reload the session to get updated calendar_event_ids
+      const updatedSession = await getSession(currentSession.id)
+      setCurrentSession(updatedSession)
+
+    } catch (error) {
+      toast.dismiss('calendar-add')
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+      // Check if it's an auth error
+      if (errorMessage.includes('not connected') || errorMessage.includes('not authenticated')) {
+        toast.error('Google Calendar Not Connected', {
+          description: 'Please sign in with Google to use calendar integration.',
+          duration: 5000,
+        })
+      } else {
+        toast.error('Failed to Add to Calendar', {
+          description: errorMessage,
+          duration: 5000,
+        })
+      }
+    }
+  }, [currentSession])
+
   // Convert backend sessions to menu format
   const menuSessions: SessionListItem[] = sessionHistory.map(session => ({
     id: session.id,
@@ -289,12 +348,7 @@ function App() {
           onTextSubmit={handleTextSubmit}
           onClearFile={handleClearFile}
           onClearFeedback={() => setFeedbackMessage('')}
-          onConfirm={() => {
-            toast.success('Adding to calendar...', {
-              description: 'This feature will be implemented in Agent 6!',
-              duration: 3000,
-            })
-          }}
+          onConfirm={handleAddToCalendar}
           onAuthChange={() => {}}
         />
       </div>

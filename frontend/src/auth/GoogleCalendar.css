@@ -88,6 +88,49 @@
   }
 }
 
+.google-auth-user-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.google-sign-in-button .user-avatar-small {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.google-sign-in-button .user-name-compact {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.google-sign-out-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: white;
+  border: 1px solid #747775;
+  border-radius: 50%;
+  color: #5f6368;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.google-sign-out-button:hover {
+  background: #f8f9fa;
+  border-color: #5f6368;
+  color: #1f1f1f;
+}
+
+.google-sign-out-button:active {
+  background: #eceff1;
+}
+
 /* Keep button light even in dark mode - it's the official Google design */
 @media (prefers-color-scheme: dark) {
   /* Button stays light - official Google design */
@@ -112,5 +155,16 @@
     background: #2d2d2d;
     color: #aaa;
     border-color: #444;
+  }
+
+  .google-sign-out-button {
+    background: white !important;
+    border-color: #747775 !important;
+    color: #5f6368 !important;
+  }
+
+  .google-sign-out-button:hover {
+    background: #f8f9fa !important;
+    color: #1f1f1f !important;
   }
 }

@@ -12,6 +12,7 @@ import {
   signOut as authSignOut,
   onAuthStateChange,
 } from './supabase';
+import { storeGoogleCalendarTokens } from '../api/backend-client';
 
 interface AuthContextType {
   session: Session | null;
@@ -58,6 +59,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (newSession) {
         const currentUser = await getCurrentUser();
         setUser(currentUser);
+
+        // Store Google Calendar tokens if available
+        // This happens after successful Google OAuth sign-in
+        if (newSession.provider_token) {
+          try {
+            await storeGoogleCalendarTokens(newSession.provider_token);
+            console.log('Google Calendar tokens stored successfully');
+          } catch (error) {
+            console.error('Failed to store Google Calendar tokens:', error);
+          }
+        }
       } else {
         setUser(null);
       }

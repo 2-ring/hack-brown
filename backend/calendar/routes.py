@@ -7,6 +7,8 @@ from flask import Blueprint, jsonify, request, redirect
 from typing import Optional
 
 from calendar.service import CalendarService
+from calendar.google_calendar import GoogleCalendarClient, store_google_tokens_from_supabase
+from auth.middleware import require_auth
 
 # Create blueprint
 calendar_bp = Blueprint('calendar', __name__)
@@ -299,3 +301,146 @@ def list_calendars():
 
     except Exception as e:
         return jsonify({'error': f'Failed to list calendars: {str(e)}'}), 500
+
+
+# ============================================================================
+# Session Calendar Integration (Supabase Auth)
+# ============================================================================
+
+@calendar_bp.route('/api/sessions/<session_id>/add-to-calendar', methods=['POST'])
+@require_auth
+def add_session_to_calendar(session_id):
+    """
+    Create Google Calendar events from a session's processed_events.
+
+    Requires authentication. User must have Google Calendar connected.
+
+    Path parameters:
+    - session_id: UUID of the session to add to calendar
+
+    Returns:
+        - success: Whether all events were created successfully
+        - calendar_event_ids: List of Google Calendar event IDs
+        - conflicts: List of detected scheduling conflicts
+        - message: Summary message
+    """
+    try:
+        # Get authenticated user
+        user_id = request.user_id
+
+        # Create calendar client for this user
+        calendar_client = GoogleCalendarClient(user_id)
+
+        # Check if user has connected Google Calendar
+        if not calendar_client.is_authenticated():
+            return jsonify({
+                'error': 'Google Calendar not connected',
+                'message': 'Please connect your Google Calendar account first',
+                'authenticated': False
+            }), 401
+
+        # Create events from session
+        calendar_event_ids, conflicts = calendar_client.create_events_from_session(session_id)
+
+        # Prepare response
+        has_conflicts = len(conflicts) > 0
+        message = f"Created {len(calendar_event_ids)} event(s) successfully"
+
+        if has_conflicts:
+            message += f", but found {len(conflicts)} scheduling conflict(s)"
+
+        return jsonify({
+            'success': True,
+            'calendar_event_ids': calendar_event_ids,
+            'num_events_created': len(calendar_event_ids),
+            'conflicts': conflicts,
+            'has_conflicts': has_conflicts,
+            'message': message
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        return jsonify({'error': f'Failed to add events to calendar: {str(e)}'}), 500
+
+
+@calendar_bp.route('/api/auth/google-calendar/status', methods=['GET'])
+@require_auth
+def check_google_calendar_status():
+    """
+    Check if the authenticated user has connected their Google Calendar.
+
+    Requires authentication.
+
+    Returns:
+        - connected: Whether user has Google Calendar tokens stored
+        - valid: Whether the stored tokens are valid (not expired)
+    """
+    try:
+        user_id = request.user_id
+
+        # Create calendar client
+        calendar_client = GoogleCalendarClient(user_id)
+
+        # Check authentication status
+        is_connected = calendar_client.credentials is not None
+        is_valid = calendar_client.is_authenticated()
+
+        return jsonify({
+            'connected': is_connected,
+            'valid': is_valid,
+            'message': 'Google Calendar connected' if is_valid else 'Google Calendar not connected or expired'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to check status: {str(e)}'}), 500
+
+
+@calendar_bp.route('/api/auth/google-calendar/store-tokens', methods=['POST'])
+@require_auth
+def store_google_calendar_tokens():
+    """
+    Store Google OAuth tokens from Supabase Auth session.
+
+    This should be called by the frontend after successful Google OAuth sign-in.
+    The frontend extracts provider tokens from the Supabase session and sends them here.
+
+    Requires authentication.
+
+    Expects JSON body:
+    {
+        "provider_token": {
+            "access_token": "...",
+            "refresh_token": "...",  // optional
+            "expires_at": 1234567890  // optional, unix timestamp or ISO string
+        }
+    }
+
+    Returns:
+        - success: Whether tokens were stored successfully
+        - message: Success message
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+
+        if not data or 'provider_token' not in data:
+            return jsonify({'error': 'No provider_token provided'}), 400
+
+        provider_token = data['provider_token']
+
+        # Store tokens in database
+        store_google_tokens_from_supabase(user_id, provider_token)
+
+        return jsonify({
+            'success': True,
+            'message': 'Google Calendar tokens stored successfully',
+            'connected': True
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to store tokens: {str(e)}'}), 500

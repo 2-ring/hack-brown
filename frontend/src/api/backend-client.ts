@@ -180,3 +180,61 @@ export async function healthCheck(): Promise<{ status: string; message: string }
 
   return handleResponse(response);
 }
+
+// ============================================================================
+// Google Calendar Integration
+// ============================================================================
+
+/**
+ * Store Google Calendar tokens from OAuth session.
+ */
+export async function storeGoogleCalendarTokens(providerToken: any): Promise<void> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/auth/google-calendar/store-tokens`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ provider_token: providerToken }),
+  });
+
+  await handleResponse(response);
+}
+
+/**
+ * Check if user has connected Google Calendar.
+ */
+export async function checkGoogleCalendarStatus(): Promise<{
+  connected: boolean;
+  valid: boolean;
+  message: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/auth/google-calendar/status`, {
+    method: 'GET',
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Add a session's processed events to Google Calendar.
+ */
+export async function addSessionToCalendar(sessionId: string): Promise<{
+  success: boolean;
+  calendar_event_ids: string[];
+  num_events_created: number;
+  conflicts: any[];
+  has_conflicts: boolean;
+  message: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/sessions/${sessionId}/add-to-calendar`, {
+    method: 'POST',
+    headers,
+  });
+
+  return handleResponse(response);
+}

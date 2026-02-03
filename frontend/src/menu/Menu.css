@@ -316,12 +316,6 @@
   color: #aaa;
 }
 
-.sidebar-footer {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid #e5e5e5;
-  background-color: #fafafa;
-}
-
 /* Scrollbar styling */
 .chat-history::-webkit-scrollbar {
   width: 6px;
