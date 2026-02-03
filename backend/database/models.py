@@ -311,6 +311,203 @@ class User:
 
         return response.data[0]
 
+    # ========================================================================
+    # Unified Provider Connection Methods (New Architecture)
+    # ========================================================================
+
+    @staticmethod
+    def add_provider_connection(
+        user_id: str,
+        provider: str,
+        provider_id: str,
+        email: str,
+        usage: List[str],
+        display_name: Optional[str] = None,
+        photo_url: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Add or update a provider connection with specified usage.
+
+        Args:
+            user_id: User's UUID
+            provider: Provider name (e.g., 'google', 'apple_calendar')
+            provider_id: Provider's user ID
+            email: Email associated with this provider
+            usage: List of usage types (e.g., ['auth'], ['calendar'], ['auth', 'calendar'])
+            display_name: User's display name from provider (optional)
+            photo_url: User's profile photo from provider (optional)
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+        user = User.get_by_id(user_id)
+
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+
+        connections = user.get('provider_connections', [])
+
+        # Check if this provider connection already exists
+        existing_idx = None
+        for idx, conn in enumerate(connections):
+            if conn.get('provider') == provider and conn.get('provider_id') == provider_id:
+                existing_idx = idx
+                break
+
+        # Create connection entry
+        connection = {
+            "provider": provider,
+            "provider_id": provider_id,
+            "email": email,
+            "usage": usage,
+            "linked_at": datetime.utcnow().isoformat()
+        }
+
+        # Add optional fields
+        if display_name:
+            connection["display_name"] = display_name
+        if photo_url:
+            connection["photo_url"] = photo_url
+
+        # Update or append
+        if existing_idx is not None:
+            connections[existing_idx] = connection
+        else:
+            connections.append(connection)
+
+        # Update user
+        response = supabase.table("users").update({
+            "provider_connections": connections
+        }).eq("id", user_id).execute()
+
+        return response.data[0]
+
+    @staticmethod
+    def get_provider_connection(
+        user_id: str,
+        provider: str,
+        provider_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific provider connection.
+
+        Args:
+            user_id: User's UUID
+            provider: Provider name to find
+            provider_id: Optional specific provider ID (if user has multiple accounts from same provider)
+
+        Returns:
+            Provider connection dict if found, None otherwise
+        """
+        user = User.get_by_id(user_id)
+        if not user:
+            return None
+
+        connections = user.get('provider_connections', [])
+
+        for conn in connections:
+            if conn.get('provider') == provider:
+                # If provider_id specified, must match exactly
+                if provider_id and conn.get('provider_id') != provider_id:
+                    continue
+                return conn
+
+        return None
+
+    @staticmethod
+    def get_primary_calendar_connection(user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the user's primary (active) calendar connection.
+
+        Args:
+            user_id: User's UUID
+
+        Returns:
+            Primary calendar connection dict if found, None otherwise
+        """
+        user = User.get_by_id(user_id)
+        if not user:
+            return None
+
+        primary_provider = user.get('primary_calendar_provider')
+        if not primary_provider:
+            return None
+
+        # Find the connection with this provider that has 'calendar' in usage
+        connections = user.get('provider_connections', [])
+        for conn in connections:
+            if conn.get('provider') == primary_provider and 'calendar' in conn.get('usage', []):
+                return conn
+
+        return None
+
+    @staticmethod
+    def set_primary_calendar(user_id: str, provider: str) -> Dict[str, Any]:
+        """
+        Set which calendar provider is primary (active).
+
+        Args:
+            user_id: User's UUID
+            provider: Provider to set as primary
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+
+        # Verify provider exists and has calendar usage
+        conn = User.get_provider_connection(user_id, provider)
+        if not conn:
+            raise ValueError(f"Provider {provider} not connected")
+
+        if 'calendar' not in conn.get('usage', []):
+            raise ValueError(f"Provider {provider} not set up for calendar usage")
+
+        response = supabase.table("users").update({
+            "primary_calendar_provider": provider
+        }).eq("id", user_id).execute()
+
+        return response.data[0]
+
+    @staticmethod
+    def remove_provider_connection(
+        user_id: str,
+        provider: str,
+        provider_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Remove a provider connection.
+
+        Args:
+            user_id: User's UUID
+            provider: Provider name to remove
+            provider_id: Optional specific provider ID
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+        user = User.get_by_id(user_id)
+
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+
+        connections = user.get('provider_connections', [])
+
+        # Filter out the connection to remove
+        new_connections = [
+            conn for conn in connections
+            if not (conn.get('provider') == provider and
+                   (provider_id is None or conn.get('provider_id') == provider_id))
+        ]
+
+        response = supabase.table("users").update({
+            "provider_connections": new_connections
+        }).eq("id", user_id).execute()
+
+        return response.data[0]
+
 
 class Session:
     """Session model for database operations."""

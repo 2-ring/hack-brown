@@ -1,0 +1,164 @@
+/* Settings Popup Styles */
+
+.settings-popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.settings-popup {
+  position: fixed;
+  bottom: 90px;
+  left: 16px;
+  width: 280px;
+  background-color: #2b2b2b;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header with user info */
+.settings-popup-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-popup-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.settings-popup-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.settings-popup-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.settings-popup-user-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.settings-popup-user-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+}
+
+.settings-popup-user-plan {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-popup-email {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 52px;
+}
+
+/* Menu items */
+.settings-popup-menu {
+  padding: 8px 0;
+}
+
+.settings-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  text-align: left;
+}
+
+.settings-popup-item:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.settings-popup-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settings-popup-item span:first-of-type {
+  flex: 1;
+}
+
+.settings-popup-shortcut {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: auto;
+}
+
+.settings-popup-arrow {
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: auto;
+}
+
+/* Footer with logout */
+.settings-popup-footer {
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-popup-logout {
+  color: #ff6b6b;
+}
+
+.settings-popup-logout:hover {
+  background-color: rgba(255, 107, 107, 0.1);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .settings-popup {
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 320px;
+  }
+}

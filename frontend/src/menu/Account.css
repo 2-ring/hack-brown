@@ -1,0 +1,147 @@
+/* Account Component Styles */
+
+.account-container {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e5e5e5;
+  background-color: #fafafa;
+}
+
+.account-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Sign in button - matches GoogleCalendar.css styling */
+.account-sign-in-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #747775;
+  border-radius: 24px;
+  font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f1f1f;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.account-sign-in-button:hover {
+  background: #f8f9fa;
+  border-color: #5f6368;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.account-sign-in-button:active {
+  background: #eceff1;
+  border-color: #5f6368;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
+
+/* User button when signed in */
+.account-user-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.account-user-button:hover {
+  background-color: #e8e8e8;
+}
+
+.account-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.account-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.account-user-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.account-user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.account-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.account-user-plan {
+  font-size: 12px;
+  color: #888;
+  font-weight: 400;
+}
+
+/* Keep Google sign-in button light even in dark mode - official Google design */
+@media (prefers-color-scheme: dark) {
+  .account-sign-in-button {
+    background: white !important;
+    border-color: #747775 !important;
+    color: #1f1f1f !important;
+  }
+
+  .account-sign-in-button:hover {
+    background: #f8f9fa !important;
+  }
+}

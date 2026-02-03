@@ -77,15 +77,39 @@ def sync_user_profile():
         existing_user = User.get_by_id(user_id)
         is_new_user = existing_user is None
 
-        # Create or update user with provider info
-        user = User.create_or_update_from_provider(
-            user_id=user_id,
-            provider=provider,
-            provider_id=profile['provider_id'],
-            email=auth_user.email,
-            display_name=profile['display_name'],
-            photo_url=profile['photo_url']
-        )
+        if is_new_user:
+            # Create new user
+            supabase = get_supabase()
+            user_data = {
+                "id": user_id,
+                "email": auth_user.email,
+                "display_name": profile['display_name'],
+                "photo_url": profile['photo_url'],
+                "primary_auth_provider": provider,
+                "provider_connections": [{
+                    "provider": provider,
+                    "provider_id": profile['provider_id'],
+                    "email": auth_user.email,
+                    "display_name": profile['display_name'],
+                    "photo_url": profile['photo_url'],
+                    "usage": ["auth"],
+                    "linked_at": supabase.table("users").select("created_at").execute().data[0]['created_at'] if False else "now"
+                }]
+            }
+            response = supabase.table("users").insert(user_data).execute()
+            user = response.data[0]
+        else:
+            # Add provider connection if not already present
+            User.add_provider_connection(
+                user_id=user_id,
+                provider=provider,
+                provider_id=profile['provider_id'],
+                email=auth_user.email,
+                usage=["auth"],
+                display_name=profile['display_name'],
+                photo_url=profile['photo_url']
+            )
+            user = User.get_by_id(user_id)
 
         return jsonify({
             'success': True,
@@ -94,8 +118,9 @@ def sync_user_profile():
                 'email': user['email'],
                 'display_name': user['display_name'],
                 'photo_url': user['photo_url'],
-                'auth_providers': user.get('auth_providers', []),
-                'calendar_connections': user.get('calendar_connections', [])
+                'provider_connections': user.get('provider_connections', []),
+                'primary_auth_provider': user.get('primary_auth_provider'),
+                'primary_calendar_provider': user.get('primary_calendar_provider')
             },
             'is_new_user': is_new_user,
             'provider': provider,
@@ -135,8 +160,9 @@ def get_user_profile():
                 'email': user['email'],
                 'display_name': user['display_name'],
                 'photo_url': user['photo_url'],
-                'auth_providers': user.get('auth_providers', []),
-                'calendar_connections': user.get('calendar_connections', []),
+                'provider_connections': user.get('provider_connections', []),
+                'primary_auth_provider': user.get('primary_auth_provider'),
+                'primary_calendar_provider': user.get('primary_calendar_provider'),
                 'preferences': user.get('preferences', {}),
                 'created_at': user.get('created_at'),
                 'updated_at': user.get('updated_at')

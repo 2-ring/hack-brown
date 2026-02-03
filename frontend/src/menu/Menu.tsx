@@ -1,6 +1,7 @@
 import { PlusCircle, Sidebar as SidebarIcon, CalendarBlank, ArrowSquareOut, Images, Files, Pen, Microphone } from '@phosphor-icons/react'
 import type { SessionListItem } from '../sessions'
 import type { InputType } from '../sessions'
+import { Account } from './Account'
 import './Menu.css'
 import logoImage from '../assets/Logo.png'
 import wordmarkImage from '../assets/Wordmark.png'
@@ -133,6 +134,8 @@ export function Menu({
             )}
           </div>
         </div>
+
+        <Account />
       </div>
 
       {/* Logo and dock when sidebar is closed */}

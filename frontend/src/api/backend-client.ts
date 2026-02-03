@@ -197,8 +197,17 @@ export async function syncUserProfile(): Promise<{
     email: string;
     display_name: string | null;
     photo_url: string | null;
-    auth_providers: any[];
-    calendar_connections: any[];
+    provider_connections: Array<{
+      provider: string;
+      provider_id: string;
+      email: string;
+      usage: string[];
+      display_name?: string;
+      photo_url?: string;
+      linked_at: string;
+    }>;
+    primary_auth_provider: string | null;
+    primary_calendar_provider: string | null;
   };
   is_new_user: boolean;
   provider: string;
@@ -224,8 +233,17 @@ export async function getUserProfile(): Promise<{
     email: string;
     display_name: string | null;
     photo_url: string | null;
-    auth_providers: any[];
-    calendar_connections: any[];
+    provider_connections: Array<{
+      provider: string;
+      provider_id: string;
+      email: string;
+      usage: string[];
+      display_name?: string;
+      photo_url?: string;
+      linked_at: string;
+    }>;
+    primary_auth_provider: string | null;
+    primary_calendar_provider: string | null;
     preferences: any;
     created_at: string;
     updated_at: string;
