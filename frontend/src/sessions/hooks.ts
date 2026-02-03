@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { sessionCache } from '../sessions'
-import type { Session } from '../sessions'
+import { sessionCache } from './cache'
+import type { Session } from './types'
 
 /**
  * Custom hook that automatically syncs with session cache changes

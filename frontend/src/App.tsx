@@ -17,8 +17,8 @@ import {
   completeSession,
   toSessionListItem,
   sessionCache,
+  useSessionHistory,
 } from './sessions'
-import { useSessionHistory } from './hooks/useSessionHistory'
 import { useIsMobile } from './hooks/useIsMobile'
 import './App.css'
 
