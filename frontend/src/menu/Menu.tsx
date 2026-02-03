@@ -1,4 +1,4 @@
-import { PlusCircle, Sidebar as SidebarIcon, CalendarBlank, ArrowSquareOut, Images, Files, Pen, Microphone } from '@phosphor-icons/react'
+import { PlusCircle, SidebarSimple as SidebarIcon, CalendarBlank, ArrowSquareOut, Images, Files, Pen, Microphone } from '@phosphor-icons/react'
 import type { SessionListItem } from '../sessions'
 import type { InputType } from '../sessions'
 import { Account } from './Account'
