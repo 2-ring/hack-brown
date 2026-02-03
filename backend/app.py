@@ -7,10 +7,10 @@ from werkzeug.utils import secure_filename
 from typing import Optional
 
 from input_processor import InputProcessorFactory, InputType
-from processors.audio_processor import AudioProcessor
-from processors.image_processor import ImageProcessor
-from processors.text_processor import TextFileProcessor
-from processors.pdf_processor import PDFProcessor
+from backend.processors.audio import AudioProcessor
+from backend.processors.image import ImageProcessor
+from backend.processors.text import TextFileProcessor
+from backend.processors.pdf import PDFProcessor
 from calendar_service import CalendarService
 from logging_utils import app_logger
 from personalization_service import PersonalizationService

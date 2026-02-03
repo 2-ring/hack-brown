@@ -5,7 +5,7 @@ Agents 0-3: Context → Identification → Extraction → Formatting
 
 from .context import ContextUnderstandingAgent
 from .identification import EventIdentificationAgent
-from .extraction import FactExtractionAgent
+from .facts import FactExtractionAgent
 from .formatting import CalendarFormattingAgent
 
 __all__ = [

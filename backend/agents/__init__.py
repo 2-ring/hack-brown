@@ -2,12 +2,12 @@
 DropCal Agent Pipeline - Multi-Agent Event Extraction System
 
 Organized by functionality:
-- core/: Main extraction pipeline (Agents 0-3)
+- extraction/: Main extraction pipeline (Agents 0-3)
 - modification: Event editing (Agent 4)
 - preferences: Personalization (Agent 5)
 """
 
-from .core import (
+from .extraction import (
     ContextUnderstandingAgent,
     EventIdentificationAgent,
     FactExtractionAgent,
