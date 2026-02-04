@@ -12,8 +12,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
   transition: background-color 0.2s ease;
   cursor: pointer;
   max-width: 100%;

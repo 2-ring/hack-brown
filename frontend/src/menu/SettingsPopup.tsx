@@ -26,6 +26,7 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import './SettingsPopup.css';
 import { useState, useEffect, useRef } from 'react';
+import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider } from '../api/backend-client';
 
 interface SettingsPopupProps {
   onClose: () => void;
@@ -48,7 +49,7 @@ type ViewMode = 'main' | 'integrations';
 
 export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoading = false }: SettingsPopupProps) {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, signIn } = useAuth();
   const popupRef = useRef<HTMLDivElement>(null);
 
   // View state
@@ -61,25 +62,42 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
   const [hoveredStar, setHoveredStar] = useState<string | null>(null);
   const [hoveredSignOut, setHoveredSignOut] = useState<string | null>(null);
 
-  // Mock calendar integrations data - will be replaced with actual backend data
-  const [calendars, setCalendars] = useState<CalendarIntegration[]>([
-    {
-      id: '1',
-      name: 'Personal Calendar',
-      email: 'user@gmail.com',
-      provider: 'google',
-      isDefault: true,
-      isConnected: true,
-    },
-    {
-      id: '2',
-      name: 'Work Calendar',
-      email: 'user@company.com',
-      provider: 'microsoft',
-      isDefault: false,
-      isConnected: true,
-    },
-  ]);
+  // Calendar integrations data from backend
+  const [calendars, setCalendars] = useState<CalendarIntegration[]>([]);
+  const [calendarsLoading, setCalendarsLoading] = useState(false);
+
+  // Fetch calendar providers from backend
+  useEffect(() => {
+    if (viewMode === 'integrations') {
+      fetchCalendarProviders();
+    }
+  }, [viewMode]);
+
+  const fetchCalendarProviders = async () => {
+    try {
+      setCalendarsLoading(true);
+      const response = await getCalendarProviders();
+
+      // Map backend response to CalendarIntegration format
+      const providerData: CalendarIntegration[] = ['google', 'microsoft', 'apple'].map((provider) => {
+        const backendProvider = response.providers.find(p => p.provider === provider);
+        return {
+          id: backendProvider?.provider_id || provider,
+          name: provider.charAt(0).toUpperCase() + provider.slice(1),
+          email: backendProvider?.email || '',
+          provider: provider as 'google' | 'microsoft' | 'apple',
+          isDefault: backendProvider?.is_primary || false,
+          isConnected: backendProvider?.connected || false,
+        };
+      });
+
+      setCalendars(providerData);
+    } catch (error) {
+      console.error('Failed to fetch calendar providers:', error);
+    } finally {
+      setCalendarsLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -103,23 +121,56 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
     setViewMode('main');
   };
 
-  const handleSetDefault = (calendarId: string) => {
-    setCalendars((prev) =>
-      prev.map((cal) => ({
-        ...cal,
-        isDefault: cal.id === calendarId,
-      }))
-    );
+  const handleSetDefault = async (provider: string) => {
+    try {
+      await setPrimaryCalendarProvider(provider);
+      // Optimistically update UI
+      setCalendars((prev) =>
+        prev.map((cal) => ({
+          ...cal,
+          isDefault: cal.provider === provider,
+        }))
+      );
+    } catch (error) {
+      console.error('Failed to set primary provider:', error);
+      // Refresh to get correct state
+      fetchCalendarProviders();
+    }
   };
 
-  const handleDisconnect = (calendarId: string) => {
-    // TODO: Implement disconnect logic
-    console.log('Disconnect calendar:', calendarId);
+  const handleDisconnect = async (provider: string) => {
+    try {
+      await disconnectCalendarProvider(provider);
+      // Optimistically update UI
+      setCalendars((prev) =>
+        prev.map((cal) =>
+          cal.provider === provider
+            ? { ...cal, isConnected: false, email: '', isDefault: false }
+            : cal
+        )
+      );
+    } catch (error) {
+      console.error('Failed to disconnect provider:', error);
+      // Refresh to get correct state
+      fetchCalendarProviders();
+    }
   };
 
-  const handleConnectNew = (provider: 'google' | 'microsoft' | 'apple') => {
-    // TODO: Implement OAuth flow
-    console.log('Connect new calendar:', provider);
+  const handleConnectNew = async (provider: 'google' | 'microsoft' | 'apple') => {
+    if (provider === 'google') {
+      // Reuse existing Google sign-in flow
+      await signIn();
+      // After sign-in completes, refresh calendar providers
+      setTimeout(() => fetchCalendarProviders(), 1000);
+    } else if (provider === 'microsoft') {
+      // TODO: Implement Microsoft OAuth flow
+      console.log('Microsoft OAuth not yet implemented');
+      alert('Microsoft calendar integration coming soon!');
+    } else if (provider === 'apple') {
+      // TODO: Implement Apple Calendar flow (requires Apple ID + app password)
+      console.log('Apple Calendar integration not yet implemented');
+      alert('Apple calendar integration coming soon!');
+    }
   };
 
   const getProviderIcon = (provider: string, size: number = 20) => {
@@ -332,20 +383,20 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                     <div className="settings-integration-actions">
                       <button
                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
-                        onClick={() => !isDefault && handleSetDefault(calendar!.id)}
-                        onMouseEnter={() => setHoveredStar(calendar!.id)}
+                        onClick={() => !isDefault && handleSetDefault(provider)}
+                        onMouseEnter={() => setHoveredStar(provider)}
                         onMouseLeave={() => setHoveredStar(null)}
                         disabled={isDefault}
                       >
-                        <Star size={20} weight={isDefault || hoveredStar === calendar!.id ? 'duotone' : 'regular'} style={{ color: '#666' }} />
+                        <Star size={20} weight={isDefault || hoveredStar === provider ? 'duotone' : 'regular'} style={{ color: '#666' }} />
                       </button>
                       <button
                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
-                        onClick={() => handleDisconnect(calendar!.id)}
-                        onMouseEnter={() => setHoveredSignOut(calendar!.id)}
+                        onClick={() => handleDisconnect(provider)}
+                        onMouseEnter={() => setHoveredSignOut(provider)}
                         onMouseLeave={() => setHoveredSignOut(null)}
                       >
-                        <SignOut size={20} weight={hoveredSignOut === calendar!.id ? 'bold' : 'regular'} style={{ color: '#d32f2f' }} />
+                        <SignOut size={20} weight={hoveredSignOut === provider ? 'bold' : 'regular'} style={{ color: '#d32f2f' }} />
                       </button>
                     </div>
                   </div>

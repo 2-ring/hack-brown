@@ -49,7 +49,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Conference Room A',
     description: 'Daily team sync to discuss progress and blockers',
-    calendar: 'primary'
+    calendar: 'Work'
   },
   {
     summary: 'Client Presentation',
@@ -63,7 +63,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Zoom Meeting',
     description: 'Quarterly review presentation for client stakeholders',
-    calendar: 'primary'
+    calendar: 'Work'
   },
   {
     summary: 'Hack@Brown 2026',
@@ -77,7 +77,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Brown University',
     description: 'Annual hackathon - Marshall Wace Track',
-    calendar: 'primary'
+    calendar: 'School'
   },
   {
     summary: 'Coffee with Alex',
@@ -91,7 +91,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Blue State Coffee',
     description: 'Catch up on project ideas',
-    calendar: 'primary'
+    calendar: 'Personal'
   },
   {
     summary: 'Project Kickoff Meeting',
@@ -105,7 +105,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Main Office',
     description: 'Q2 project planning and team alignment',
-    calendar: 'primary'
+    calendar: 'Work'
   },
   {
     summary: 'Dentist Appointment',
@@ -119,7 +119,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Dr. Smith Dental',
     description: 'Regular checkup and cleaning',
-    calendar: 'primary'
+    calendar: 'Personal'
   },
   {
     summary: 'Spring Break Trip',
@@ -133,7 +133,7 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Miami Beach',
     description: 'Week-long vacation',
-    calendar: 'primary'
+    calendar: 'Personal'
   }
 ]
 

@@ -1,5 +1,5 @@
 :root {
-  --dock-height: 48px;
+  --dock-height: 56px;
   --dock-border-radius: 32px;
   --page-padding-x: 1rem;
 }
@@ -31,7 +31,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 100px;
+  height: 120px;
   background: linear-gradient(
     to top,
     rgba(255, 255, 255, 0) 0%,
@@ -309,6 +309,7 @@
   background-color: transparent;
   border: 2px solid transparent;
   transition: all 0.2s ease;
+  margin-top: -8px;
 }
 
 /* Date Number */
@@ -320,6 +321,10 @@
 }
 
 /* Today's Date Styling */
+.event-date-header-timing.today {
+  gap: 0.03125rem;
+}
+
 .event-date-header-timing.today .event-date-day-label {
   color: #1170C5;
 }
@@ -327,6 +332,7 @@
 .event-date-header-timing.today .event-date-circle {
   background-color: #1170C5;
   border: 2px solid #1170C5;
+  margin-top: 0;
 }
 
 .event-date-header-timing.today .event-date-number {
@@ -680,7 +686,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 100px;
+  height: 120px;
   background: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0) 0%,
@@ -939,7 +945,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   :root {
-    --dock-height: 44px;
+    --dock-height: 50px;
     --dock-border-radius: 28px;
   }
 

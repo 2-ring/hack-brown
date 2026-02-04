@@ -198,7 +198,7 @@
   color: #333;
 }
 
-.settings-popup-item:active:not(:disabled) {
+.settings-popup-item:active:not(:disabled):not(.settings-integration-row) {
   background-color: #e0e0e0;
 }
 

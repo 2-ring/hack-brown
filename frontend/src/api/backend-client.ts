@@ -343,3 +343,67 @@ export async function addSessionToCalendar(sessionId: string): Promise<{
 
   return handleResponse(response);
 }
+
+// ============================================================================
+// Calendar Provider Management
+// ============================================================================
+
+/**
+ * Get all connected calendar providers for the current user.
+ */
+export async function getCalendarProviders(): Promise<{
+  success: boolean;
+  providers: Array<{
+    provider: string;
+    provider_id: string;
+    email: string;
+    is_primary: boolean;
+    connected: boolean;
+    valid: boolean;
+  }>;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/calendar/providers`, {
+    method: 'GET',
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Set the primary calendar provider.
+ */
+export async function setPrimaryCalendarProvider(provider: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/calendar/set-primary-provider`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ provider }),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Disconnect a calendar provider.
+ */
+export async function disconnectCalendarProvider(provider: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/calendar/disconnect-provider`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ provider }),
+  });
+
+  return handleResponse(response);
+}
