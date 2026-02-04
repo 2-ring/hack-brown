@@ -349,7 +349,8 @@ function App() {
           onClearFile={handleClearFile}
           onClearFeedback={() => setFeedbackMessage('')}
           onConfirm={handleAddToCalendar}
-          onAuthChange={() => {}}
+          onMenuToggle={handleSidebarToggle}
+          onNewSession={handleNewSession}
         />
       </div>
     </div>

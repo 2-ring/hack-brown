@@ -1,8 +1,7 @@
 /* Account Component Styles */
 
 .account-container {
-  padding: 12px 16px;
-  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+  margin: 0 1rem 0.75rem 1rem;
 }
 
 .account-loading {
@@ -69,25 +68,19 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 12px;
+  padding: 0.375rem 1.125rem;
   background: white;
   border: 1px solid #e5e5e5;
-  border-radius: 12px;
+  border-radius: 24px;
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .account-user-button:hover {
-  background-color: #f8f8f8;
+  background-color: #fafafa;
   border-color: #d5d5d5;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
-}
-
-.account-user-button:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .account-user-info {
@@ -98,18 +91,18 @@
 }
 
 .account-user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 1.5px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .account-user-avatar-placeholder {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4285f4 0%, #357ae8 100%);
   display: flex;
@@ -117,10 +110,10 @@
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 13px;
   flex-shrink: 0;
-  border: 2px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 1.5px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   letter-spacing: -0.3px;
 }
 

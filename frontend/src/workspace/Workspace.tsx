@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
+import { List as MenuIcon, PlusCircle } from '@phosphor-icons/react'
 import { InputWorkspace } from './input'
 import { EventsWorkspace } from './events/EventsWorkspace'
-import { GoogleCalendar as GoogleCalendarAuth } from '../auth'
 import type { CalendarEvent } from './events/types'
 import type { LoadingStateConfig } from './events/types'
 
@@ -29,7 +29,8 @@ interface WorkspaceProps {
   onClearFile: () => void
   onClearFeedback?: () => void
   onConfirm?: () => void
-  onAuthChange: (authenticated: boolean) => void
+  onMenuToggle?: () => void
+  onNewSession?: () => void
 }
 
 export function Workspace({
@@ -47,10 +48,23 @@ export function Workspace({
   onClearFile,
   onClearFeedback,
   onConfirm,
-  onAuthChange,
+  onMenuToggle,
+  onNewSession,
 }: WorkspaceProps) {
   return (
     <>
+      {/* Mobile Header - only show in input state */}
+      {appState === 'input' && (
+        <div className="mobile-input-header">
+          <button className="mobile-header-button" onClick={onMenuToggle} title="Menu">
+            <MenuIcon size={24} weight="regular" />
+          </button>
+          <button className="mobile-header-button new-event" onClick={onNewSession} title="New event">
+            <PlusCircle size={24} weight="regular" />
+          </button>
+        </div>
+      )}
+
       {/* Show greeting only in input state */}
       {appState === 'input' && greetingImage && (
         <motion.div
@@ -90,11 +104,6 @@ export function Workspace({
           expectedEventCount={expectedEventCount}
           onConfirm={onConfirm}
         />
-      )}
-
-      {/* Google Calendar Auth - only show in input state */}
-      {appState === 'input' && (
-        <GoogleCalendarAuth onAuthChange={onAuthChange} />
       )}
     </>
   )
