@@ -55,7 +55,7 @@ class TestTwoStageRetrievalPerformance:
     @pytest.fixture
     def retrieval(self):
         """Create TwoStageRetrieval instance."""
-        from preferences.similarity_service import TwoStageRetrieval
+        from preferences.similarity import TwoStageRetrieval
         return TwoStageRetrieval()
 
     def test_index_building_speed_small(self, retrieval, small_dataset):
@@ -144,7 +144,7 @@ class TestProductionSearchPerformance:
     @pytest.fixture
     def search(self):
         """Create ProductionSimilaritySearch instance."""
-        from preferences.similarity_service import ProductionSimilaritySearch
+        from preferences.similarity import ProductionSimilaritySearch
         return ProductionSimilaritySearch()
 
     def test_cache_effectiveness(self, search, medium_dataset):
@@ -257,7 +257,7 @@ class TestScalability:
     @pytest.fixture
     def search(self):
         """Create ProductionSimilaritySearch instance."""
-        from preferences.similarity_service import ProductionSimilaritySearch
+        from preferences.similarity import ProductionSimilaritySearch
         return ProductionSimilaritySearch()
 
     @pytest.mark.parametrize("n_events", [100, 500, 1000])

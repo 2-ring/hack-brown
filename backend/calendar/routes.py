@@ -7,7 +7,8 @@ from flask import Blueprint, jsonify, request, redirect
 from typing import Optional
 
 from .service import CalendarService
-from calendar.google import auth as google_auth, create as google_create
+from calendar import factory
+from calendar.google import auth as google_auth  # Still needed for legacy token storage endpoint
 from auth.middleware import require_auth
 
 # Create blueprint
@@ -326,16 +327,16 @@ def add_session_to_calendar(session_id):
         # Get authenticated user
         user_id = request.user_id
 
-        # Check if user has connected Google Calendar
-        if not google_auth.is_authenticated(user_id):
+        # Check if user has connected calendar provider
+        if not factory.is_authenticated(user_id):
             return jsonify({
-                'error': 'Google Calendar not connected',
-                'message': 'Please connect your Google Calendar account first',
+                'error': 'Calendar not connected',
+                'message': 'Please connect your calendar account first',
                 'authenticated': False
             }), 401
 
-        # Create events from session
-        calendar_event_ids, conflicts = google_create.create_events_from_session(user_id, session_id)
+        # Create events from session (uses primary provider)
+        calendar_event_ids, conflicts = factory.create_events_from_session(user_id, session_id)
 
         # Prepare response
         has_conflicts = len(conflicts) > 0
@@ -376,10 +377,9 @@ def check_google_calendar_status():
     try:
         user_id = request.user_id
 
-        # Check authentication status
-        credentials = google_auth.load_credentials(user_id)
-        is_connected = credentials is not None
-        is_valid = google_auth.is_authenticated(user_id)
+        # Check authentication status (for primary provider)
+        is_connected = factory.is_authenticated(user_id)
+        is_valid = is_connected
 
         return jsonify({
             'connected': is_connected,

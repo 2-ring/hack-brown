@@ -7,7 +7,7 @@ Tests the basic functionality of the similarity engine.
 import sys
 sys.path.insert(0, '/home/lucas/files/university/startups/hack@brown/backend')
 
-from preferences.similarity_service import CalendarEventSimilarity
+from preferences.similarity import CalendarEventSimilarity
 
 def test_basic_similarity():
     """Test basic similarity computation."""

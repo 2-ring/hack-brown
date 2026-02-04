@@ -138,6 +138,65 @@ class User:
         return response.data[0]
 
     @staticmethod
+    def update_microsoft_tokens(
+        user_id: str,
+        access_token: str,
+        refresh_token: Optional[str] = None,
+        expires_at: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        Update user's Microsoft Graph API tokens.
+
+        Args:
+            user_id: User's UUID
+            access_token: Microsoft access token
+            refresh_token: Microsoft refresh token (optional)
+            expires_at: Token expiration datetime (optional)
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+
+        # Encrypt tokens before storing
+        data = {"microsoft_access_token": encrypt_token(access_token)}
+        if refresh_token:
+            data["microsoft_refresh_token"] = encrypt_token(refresh_token)
+        if expires_at:
+            data["microsoft_token_expires_at"] = expires_at.isoformat()
+
+        response = supabase.table("users").update(data).eq("id", user_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def update_apple_credentials(
+        user_id: str,
+        apple_id: str,
+        app_password: str
+    ) -> Dict[str, Any]:
+        """
+        Update user's Apple iCloud CalDAV credentials.
+
+        Args:
+            user_id: User's UUID
+            apple_id: Apple ID email address
+            app_password: App-specific password for CalDAV
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+
+        # Encrypt app-specific password before storing
+        data = {
+            "apple_id": apple_id,
+            "apple_app_password": encrypt_token(app_password)
+        }
+
+        response = supabase.table("users").update(data).eq("id", user_id).execute()
+        return response.data[0]
+
+    @staticmethod
     def create_or_update_from_provider(
         user_id: str,
         provider: str,

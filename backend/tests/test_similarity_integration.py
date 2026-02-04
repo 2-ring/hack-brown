@@ -88,7 +88,7 @@ class TestSimilaritySystemIntegration:
     @pytest.fixture
     def production_search(self, sample_events):
         """Create production search instance with indexed events."""
-        from preferences.similarity_service import ProductionSimilaritySearch
+        from preferences.similarity import ProductionSimilaritySearch
 
         search = ProductionSimilaritySearch()
         search.build_index(sample_events)
@@ -128,7 +128,7 @@ class TestSimilaritySystemIntegration:
 
     def test_index_building_performance(self, sample_events):
         """Test that index building is reasonably fast."""
-        from preferences.similarity_service import ProductionSimilaritySearch
+        from preferences.similarity import ProductionSimilaritySearch
 
         search = ProductionSimilaritySearch()
 
@@ -308,7 +308,7 @@ class TestSimilaritySystemIntegration:
 
     def test_empty_index_handling(self):
         """Test handling of empty index."""
-        from preferences.similarity_service import ProductionSimilaritySearch
+        from preferences.similarity import ProductionSimilaritySearch
 
         search = ProductionSimilaritySearch()
 
@@ -356,7 +356,7 @@ class TestSimilarityEvaluation:
     def test_evaluation_framework_exists(self):
         """Test that evaluation module can be imported."""
         try:
-            from preferences.similarity_evaluation import (
+            from preferences.similarity import (
                 SimilarityEvaluator,
                 run_evaluation_report,
                 split_train_test,
@@ -368,7 +368,7 @@ class TestSimilarityEvaluation:
 
     def test_train_test_split(self):
         """Test train/test splitting utility."""
-        from preferences.similarity_evaluation import split_train_test
+        from preferences.similarity import split_train_test
 
         events = [{'id': str(i), 'title': f'Event {i}'} for i in range(100)]
 
