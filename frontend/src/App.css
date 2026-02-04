@@ -1,3 +1,23 @@
+/* Drop Area Content Component Sizing Variables */
+:root {
+  /* Button sizes */
+  --droparea-btn-small: 48px;
+  --droparea-btn-medium: 48px;
+  --droparea-btn-large: 64px;
+
+  /* Icon sizes */
+  --droparea-icon-small: 24px;
+  --droparea-icon-medium: 24px;
+  --droparea-icon-large: 32px;
+
+  /* Spacing */
+  --droparea-gap: 1.5rem;
+  --droparea-dock-padding: 0.5rem 1rem;
+
+  /* Text input */
+  --droparea-text-size: 1rem;
+}
+
 .app {
   height: 100vh;
   display: flex;
@@ -114,7 +134,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: var(--droparea-gap);
   pointer-events: none;
 }
 
@@ -148,16 +168,26 @@
 }
 
 .icon-circle.small {
-  width: 48px;
-  height: 48px;
+  width: var(--droparea-btn-small);
+  height: var(--droparea-btn-small);
+}
+
+.icon-circle.small svg {
+  width: var(--droparea-icon-small);
+  height: var(--droparea-icon-small);
 }
 
 .icon-circle.center {
-  width: 64px;
-  height: 64px;
+  width: var(--droparea-btn-large);
+  height: var(--droparea-btn-large);
   background-color: var(--primary-color);
   box-shadow: 0 4px 12px rgba(17, 112, 197, 0.3);
   color: var(--white);
+}
+
+.icon-circle.center svg {
+  width: var(--droparea-icon-large);
+  height: var(--droparea-icon-large);
 }
 
 .file-info {
@@ -313,7 +343,7 @@
   align-items: center;
   gap: 0.75rem;
   flex: 1;
-  padding: 0.5rem 1rem;
+  padding: var(--droparea-dock-padding);
   background-color: var(--white);
   border-radius: 100px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -326,7 +356,7 @@
   padding: 0 1rem;
   border: none;
   font-family: Inter, system-ui, sans-serif;
-  font-size: 1rem;
+  font-size: var(--droparea-text-size);
   color: #333;
   background-color: transparent;
   transition: all 0.2s ease;
@@ -376,8 +406,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: var(--droparea-btn-medium);
+  height: var(--droparea-btn-medium);
   border-radius: 50%;
   border: none;
   background-color: var(--white);
@@ -389,6 +419,11 @@
               color 0.2s ease;
   will-change: transform;
   flex-shrink: 0;
+}
+
+.dock-button svg {
+  width: var(--droparea-icon-medium);
+  height: var(--droparea-icon-medium);
 }
 
 .dock-button:hover {
@@ -405,8 +440,6 @@
   background-color: var(--primary-color);
   box-shadow: 0 4px 12px rgba(17, 112, 197, 0.3);
   color: var(--white);
-  width: 48px;
-  height: 48px;
 }
 
 .dock-button.submit:hover {
@@ -431,7 +464,7 @@
   align-items: center;
   gap: 0.75rem;
   flex: 1;
-  padding: 0.5rem 1rem;
+  padding: var(--droparea-dock-padding);
   background-color: var(--white);
   border-radius: 100px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -441,12 +474,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: var(--droparea-btn-medium);
+  height: var(--droparea-btn-medium);
   border-radius: 50%;
   background-color: #e3f2fd;
   color: var(--primary-color);
   flex-shrink: 0;
+}
+
+.feedback-icon svg {
+  width: var(--droparea-icon-medium);
+  height: var(--droparea-icon-medium);
 }
 
 .feedback-message {
@@ -481,6 +519,19 @@
 /* Mobile styles */
 
 @media (max-width: 768px) {
+  /* Override sizing variables for mobile */
+  :root {
+    --droparea-btn-small: 40px;
+    --droparea-btn-medium: 44px;
+    --droparea-btn-large: 52px;
+    --droparea-icon-small: 20px;
+    --droparea-icon-medium: 22px;
+    --droparea-icon-large: 26px;
+    --droparea-gap: 0.85rem;
+    --droparea-dock-padding: 0.5rem 1rem;
+    --droparea-text-size: 1rem;
+  }
+
   /* Mobile Input Header */
   .mobile-input-header {
     display: flex;
@@ -499,26 +550,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: var(--droparea-btn-medium);
+    height: var(--droparea-btn-medium);
     border: none;
-    background-color: white;
+    background-color: transparent;
     border-radius: 50%;
     color: #666;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-header-button svg {
+    width: calc(var(--droparea-icon-medium) + 2px);
+    height: calc(var(--droparea-icon-medium) + 2px);
   }
 
   .mobile-header-button:hover,
   .mobile-header-button:active {
-    background-color: #f5f5f5;
     color: #333;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(1.1);
   }
 
   .mobile-header-button.new-event {
-    color: var(--primary-color);
+    color: #666;
   }
 
   /* Hide the fixed mark logo and sidebar dock on mobile */
@@ -529,12 +583,12 @@
 
   /* Content adjustments */
   .content {
-    padding: 5rem 1rem 2rem;
+    padding: 5.5rem 1rem 2rem;
   }
 
   .greeting-image {
-    max-width: 85%;
-    margin-bottom: 0.5rem;
+    max-width: 82%;
+    margin-bottom: 0.75rem;
   }
 
   .wordmark-image {
@@ -542,9 +596,9 @@
   }
 
   .drop-area {
-    min-height: 160px;
-    max-width: 95%;
-    margin-top: -4rem;
+    min-height: 150px;
+    max-width: 88%;
+    margin-top: -3.5rem;
     border-radius: 24px;
     background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%231170C5FF' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
   }
@@ -555,50 +609,6 @@
 
   .drop-area.dragging {
     background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%231170C5FF' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
-  }
-
-  /* Button sizing adjustments for mobile */
-  .icon-row {
-    gap: 0.85rem;
-  }
-
-  .icon-circle.small {
-    width: 40px;
-    height: 40px;
-  }
-
-  .icon-circle.small svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .icon-circle.center {
-    width: 52px;
-    height: 52px;
-  }
-
-  .icon-circle.center svg {
-    width: 26px;
-    height: 26px;
-  }
-
-  /* Input dock adjustments */
-  .sound-input-dock {
-    padding: 0.4rem 0.8rem;
-  }
-
-  .dock-button {
-    width: 42px;
-    height: 42px;
-  }
-
-  .dock-button.submit {
-    width: 42px;
-    height: 42px;
-  }
-
-  .text-input-field {
-    font-size: 0.95rem;
   }
 
   .events-container {
