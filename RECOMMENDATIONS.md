@@ -4,7 +4,7 @@
 
 - [x] Encrypt Google Calendar tokens in database
 - [ ] Add user record auto-creation on first Google OAuth sign-in
-- [ ] Complete render.yaml with frontend static site configuration
+- [x] Complete render.yaml with frontend static site configuration
 - [ ] Test the full flow end-to-end in staging environment
 
 ## Short Term

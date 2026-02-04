@@ -4,8 +4,8 @@ import type { InputType } from '../sessions'
 import { Account } from './Account'
 import { SkeletonSessionGroup } from '../components/skeletons'
 import './Menu.css'
-import logoImage from '../assets/Logo.png'
-import wordmarkImage from '../assets/Wordmark.png'
+import markImage from '../assets/Mark.png'
+import wordImage from '../assets/Word.png'
 
 interface MenuProps {
   isOpen: boolean
@@ -27,8 +27,6 @@ export function Menu({
   onNewSession,
   isLoadingSessions = false,
 }: MenuProps) {
-  // TODO: REMOVE - Force loading state for testing skeleton
-  isLoadingSessions = true
   // Get icon for input type (matches input area icons)
   const getInputIcon = (inputType: InputType) => {
     switch (inputType) {
@@ -82,10 +80,28 @@ export function Menu({
 
   return (
     <>
+      {/* Fixed mark logo - always visible in same position */}
+      <button className="fixed-mark-logo" onClick={onToggle} title="DropCal">
+        <img src={markImage} alt="DropCal Mark" />
+      </button>
+
+      {/* Dock when sidebar is closed */}
+      {!isOpen && (
+        <div className="sidebar-dock">
+          <button className="dock-icon-button" onClick={onToggle} title="Expand sidebar">
+            <SidebarIcon size={20} weight="regular" />
+          </button>
+          <button className="dock-icon-button" onClick={onNewSession} title="New events">
+            <PlusCircle size={20} weight="regular" />
+          </button>
+        </div>
+      )}
+
+      {/* Sidebar that slides in next to the mark */}
       <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <img src={wordmarkImage} alt="DropCal" className="wordmark-logo" />
+            <img src={wordImage} alt="DropCal" className="word-logo" />
           </div>
           <button className="sidebar-toggle" onClick={onToggle}>
             <SidebarIcon size={20} weight="regular" />
@@ -146,23 +162,6 @@ export function Menu({
 
         <Account />
       </div>
-
-      {/* Logo and dock when sidebar is closed */}
-      {!isOpen && (
-        <>
-          <button className="floating-logo" onClick={onToggle} title="DropCal">
-            <img src={logoImage} alt="DropCal" className="floating-logo-icon" />
-          </button>
-          <div className="sidebar-dock">
-            <button className="dock-icon-button" onClick={onToggle} title="Expand sidebar">
-              <SidebarIcon size={20} weight="regular" />
-            </button>
-            <button className="dock-icon-button" onClick={onNewSession} title="New events">
-              <PlusCircle size={20} weight="regular" />
-            </button>
-          </div>
-        </>
-      )}
     </>
   )
 }

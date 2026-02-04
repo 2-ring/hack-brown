@@ -26,3 +26,22 @@ services:
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
+
+  # React Frontend (Static Site)
+  - type: web
+    name: dropcal-frontend
+    env: static
+    region: oregon
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_API_URL
+        value: https://dropcal-backend.onrender.com

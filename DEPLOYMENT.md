@@ -236,9 +236,34 @@ curl -X POST https://dropcal-backend.onrender.com/api/sessions \
 
 ---
 
-## Part 4: Frontend Deployment (Optional)
+## Part 4: Frontend Deployment
 
-### Option A: Vercel
+### Deployment via Render (Recommended)
+
+The frontend is automatically deployed along with the backend when you deploy via `render.yaml`.
+
+**What happens:**
+1. Render reads `render.yaml` and creates **2 services**:
+   - `dropcal-backend` - Python API (already configured above)
+   - `dropcal-frontend` - Static site (React/Vite)
+
+2. Frontend will be available at: `https://dropcal-frontend.onrender.com`
+
+**Environment Variables for Frontend:**
+
+The frontend service needs these variables (add in Render dashboard after deployment):
+
+```
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
+VITE_API_URL=https://dropcal-backend.onrender.com
+```
+
+**Note:** `VITE_API_URL` is pre-configured in `render.yaml` to point to the backend service.
+
+### Alternative: Vercel Deployment
+
+If you prefer to deploy frontend separately:
 
 1. Go to [vercel.com](https://vercel.com)
 2. Click **"New Project"** → Import your GitHub repo
