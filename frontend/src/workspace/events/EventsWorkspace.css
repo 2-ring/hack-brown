@@ -107,6 +107,23 @@
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+/* Skeleton card styling */
+.event-confirmation-card.skeleton-card {
+  min-height: 140px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.skeleton-full-height {
+  height: 100%;
+  display: flex;
+}
+
+.skeleton-full-height > span {
+  display: block !important;
+  height: 100% !important;
+}
+
 .event-confirmation-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);

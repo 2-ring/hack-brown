@@ -56,6 +56,10 @@
   font-weight: 500;
 }
 
+.auth-status-skeleton {
+  min-width: 240px;
+}
+
 .auth-status.authenticated {
   background: #e8f5e9;
   color: #2e7d32;

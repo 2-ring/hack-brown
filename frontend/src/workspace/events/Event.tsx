@@ -7,6 +7,7 @@ interface EventProps {
   event: CalendarEvent | null
   index: number
   isLoading?: boolean
+  isLoadingCalendars?: boolean
 
   // Editing state
   editingField?: { eventIndex: number; field: 'summary' | 'date' | 'description' } | null
@@ -29,6 +30,7 @@ export function Event({
   event,
   index,
   isLoading = false,
+  isLoadingCalendars = false,
   editingField,
   inputRef,
   formatDate,
@@ -40,7 +42,7 @@ export function Event({
   onEditBlur,
   onEditKeyDown,
 }: EventProps) {
-  // Loading skeleton
+  // Loading skeleton - simplified to single rounded box
   if (isLoading && !event) {
     return (
       <motion.div
@@ -50,9 +52,7 @@ export function Event({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
-        <Skeleton height={28} borderRadius={8} style={{ marginBottom: '12px' }} />
-        <Skeleton height={20} width="60%" borderRadius={8} style={{ marginBottom: '12px' }} />
-        <Skeleton count={2} height={18} borderRadius={8} />
+        <Skeleton height="100%" borderRadius={12} containerClassName="skeleton-full-height" />
       </motion.div>
     )
   }
@@ -139,16 +139,20 @@ export function Event({
       {/* Calendar badge */}
       {event.calendar && (
         <div className="event-confirmation-card-row">
-          <div
-            className="event-calendar-badge"
-            style={{
-              backgroundColor: getCalendarColor(event.calendar),
-              color: getTextColor(getCalendarColor(event.calendar))
-            }}
-          >
-            <CalendarIcon size={14} weight="fill" />
-            <span>{event.calendar}</span>
-          </div>
+          {isLoadingCalendars ? (
+            <Skeleton width={100} height={24} borderRadius={12} />
+          ) : (
+            <div
+              className="event-calendar-badge"
+              style={{
+                backgroundColor: getCalendarColor(event.calendar),
+                color: getTextColor(getCalendarColor(event.calendar))
+              }}
+            >
+              <CalendarIcon size={14} weight="fill" />
+              <span>{event.calendar}</span>
+            </div>
+          )}
         </div>
       )}
     </motion.div>

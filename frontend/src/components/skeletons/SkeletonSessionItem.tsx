@@ -1,15 +1,15 @@
 /**
  * SkeletonSessionItem Component
  *
- * Specialized skeleton for session list items in the Menu sidebar.
- * Matches the layout of session entries with icon, title, and optional badge.
+ * Simplified skeleton for session list items in the Menu sidebar.
+ * Just a rounded box with optional opacity for fade effect.
  *
  * @example
  * <SkeletonSessionItem />
  *
  * @example
- * // With custom styles
- * <SkeletonSessionItem className="my-custom-class" />
+ * // With fade effect
+ * <SkeletonSessionItem opacity={0.6} />
  */
 
 import Skeleton from 'react-loading-skeleton'
@@ -18,29 +18,21 @@ import './skeleton.css'
 interface SkeletonSessionItemProps {
   /** Custom className */
   className?: string
-  /** Whether to show event count badge */
-  showBadge?: boolean
+  /** Opacity for fade effect (0-1) */
+  opacity?: number
 }
 
 export function SkeletonSessionItem({
   className = '',
-  showBadge = false
+  opacity = 1
 }: SkeletonSessionItemProps) {
   return (
-    <div className={`skeleton-session-item ${className}`.trim()}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px' }}>
-        {/* Icon */}
-        <Skeleton circle width={16} height={16} />
-
-        {/* Title */}
-        <div style={{ flex: 1 }}>
-          <Skeleton height={16} width="80%" />
-        </div>
-
-        {/* Optional badge */}
-        {showBadge && (
-          <Skeleton width={20} height={18} borderRadius={9} />
-        )}
+    <div
+      className={`skeleton-session-item ${className}`.trim()}
+      style={{ opacity }}
+    >
+      <div style={{ padding: '8px 12px' }}>
+        <Skeleton height={36} borderRadius={8} />
       </div>
     </div>
   )
@@ -49,7 +41,7 @@ export function SkeletonSessionItem({
 /**
  * SkeletonSessionGroup
  *
- * Skeleton for a group of session items with label
+ * Skeleton for a group of session items with label and fade effect
  */
 interface SkeletonSessionGroupProps {
   /** Number of items in group */
@@ -58,26 +50,31 @@ interface SkeletonSessionGroupProps {
   showLabel?: boolean
   /** Custom className */
   className?: string
+  /** Enable fade effect (opacity decreases down the list) */
+  fade?: boolean
 }
 
 export function SkeletonSessionGroup({
   count = 3,
   showLabel = true,
-  className = ''
+  className = '',
+  fade = true
 }: SkeletonSessionGroupProps) {
   return (
     <div className={`skeleton-session-group ${className}`.trim()}>
       {/* Group label */}
       {showLabel && (
-        <div style={{ padding: '8px 12px' }}>
+        <div style={{ padding: '8px 12px', marginBottom: '4px' }}>
           <Skeleton width={60} height={12} />
         </div>
       )}
 
-      {/* Session items */}
-      {Array.from({ length: count }).map((_, index) => (
-        <SkeletonSessionItem key={index} showBadge={Math.random() > 0.5} />
-      ))}
+      {/* Session items with fade effect */}
+      {Array.from({ length: count }).map((_, index) => {
+        // Calculate opacity: starts at 1.0, decreases to 0.3
+        const opacity = fade ? 1 - (index / count) * 0.7 : 1
+        return <SkeletonSessionItem key={index} opacity={opacity} />
+      })}
     </div>
   )
 }

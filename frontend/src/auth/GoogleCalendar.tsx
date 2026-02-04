@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowSquareUpRight, SignOut, User as UserIcon } from '@phosphor-icons/react'
 import { useAuth } from './AuthContext'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
 import './GoogleCalendar.css'
 
 interface GoogleCalendarAuthProps {
@@ -19,9 +21,8 @@ export function GoogleCalendarAuth({ onAuthChange }: GoogleCalendarAuthProps) {
   if (loading) {
     return (
       <div className="google-calendar-auth">
-        <div className="auth-status checking">
-          <span className="status-indicator"></span>
-          <span>Checking Google Calendar connection...</span>
+        <div className="auth-status-skeleton">
+          <Skeleton height={40} borderRadius={24} />
         </div>
       </div>
     )

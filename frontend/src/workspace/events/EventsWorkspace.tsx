@@ -26,17 +26,23 @@ interface EventsWorkspaceProps {
 }
 
 export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount }: EventsWorkspaceProps) {
+  // TODO: REMOVE - Force loading state for testing skeleton
+  isLoading = true
+  expectedEventCount = expectedEventCount || 3
+
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingField, setEditingField] = useState<{ eventIndex: number; field: 'summary' | 'date' | 'description' } | null>(null)
   const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
   const [isProcessingEdit, setIsProcessingEdit] = useState(false)
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([])
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Fetch calendar list on mount
   useEffect(() => {
     const fetchCalendars = async () => {
+      setIsLoadingCalendars(true)
       try {
         const response = await fetch('http://localhost:5000/api/calendar/list-calendars')
         if (response.ok) {
@@ -45,6 +51,8 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
         }
       } catch (error) {
         console.error('Failed to fetch calendars:', error)
+      } finally {
+        setIsLoadingCalendars(false)
       }
     }
     fetchCalendars()
@@ -293,6 +301,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
                   event={editedEvent}
                   index={index}
                   isLoading={!event}
+                  isLoadingCalendars={isLoadingCalendars}
                   editingField={editingField}
                   inputRef={inputRef}
                   formatDate={formatDate}
@@ -313,6 +322,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
                 key={index}
                 event={event}
                 index={index}
+                isLoadingCalendars={isLoadingCalendars}
                 editingField={editingField}
                 inputRef={inputRef}
                 formatDate={formatDate}

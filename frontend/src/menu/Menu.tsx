@@ -27,6 +27,8 @@ export function Menu({
   onNewSession,
   isLoadingSessions = false,
 }: MenuProps) {
+  // TODO: REMOVE - Force loading state for testing skeleton
+  isLoadingSessions = true
   // Get icon for input type (matches input area icons)
   const getInputIcon = (inputType: InputType) => {
     switch (inputType) {
@@ -107,11 +109,8 @@ export function Menu({
 
           <div className="chat-history">
             {isLoadingSessions ? (
-              // Loading state - show skeleton groups
-              <>
-                <SkeletonSessionGroup count={3} showLabel />
-                <SkeletonSessionGroup count={2} showLabel />
-              </>
+              // Loading state - show single continuous skeleton list
+              <SkeletonSessionGroup count={8} showLabel={false} />
             ) : groupedSessions.length === 0 ? (
               <div className="empty-state">
                 <p>No sessions yet</p>
