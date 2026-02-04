@@ -2,6 +2,7 @@ import { PlusCircle, SidebarSimple as SidebarIcon, CalendarBlank, ArrowSquareOut
 import type { SessionListItem } from '../sessions'
 import type { InputType } from '../sessions'
 import { Account } from './Account'
+import { MenuButton } from './MenuButton'
 import { SkeletonSessionGroup } from '../components/skeletons'
 import './Menu.css'
 import markImage from '../assets/Mark.png'
@@ -109,19 +110,22 @@ export function Menu({
         </div>
 
         <div className="sidebar-content">
-          <button className="new-chat-button" onClick={onNewSession}>
-            <PlusCircle size={16} weight="bold" />
-            <span>New events</span>
-          </button>
-
-          <button
-            className="view-calendar-button"
-            onClick={() => window.open('https://calendar.google.com', '_blank')?.focus()}
+          <MenuButton
+            onClick={onNewSession}
+            icon={<PlusCircle size={16} weight="bold" />}
+            variant="primary"
           >
-            <CalendarBlank size={16} weight="bold" />
-            <span>View calendar</span>
-            <ArrowSquareOut size={14} weight="regular" />
-          </button>
+            New events
+          </MenuButton>
+
+          <MenuButton
+            onClick={() => window.open('https://calendar.google.com', '_blank')?.focus()}
+            icon={<CalendarBlank size={16} weight="bold" />}
+            trailingIcon={<ArrowSquareOut size={14} weight="regular" />}
+            variant="secondary"
+          >
+            View calendar
+          </MenuButton>
 
           <div className="chat-history">
             {isLoadingSessions ? (

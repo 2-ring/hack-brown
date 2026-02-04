@@ -465,6 +465,11 @@ class TwoStageRetrieval:
             show_progress_bar=show_progress
         )
 
+        # Populate embedding cache for fast reranking
+        for title, embedding in zip(titles, self.embeddings):
+            cache_key = title.strip().lower()
+            self.similarity._embedding_cache[cache_key] = embedding
+
         # Build FAISS index for cosine similarity
         try:
             import faiss
@@ -557,7 +562,7 @@ class TwoStageRetrieval:
         if not query_title:
             return []
 
-        query_emb = self.similarity.model.encode(query_title, convert_to_numpy=True)
+        query_emb = self.similarity._get_embedding(query_title)
 
         # Reshape and normalize for FAISS
         query_emb = query_emb.reshape(1, -1).astype('float32')
@@ -701,7 +706,7 @@ class ProductionSimilaritySearch:
             'cache_hits': self.cache_hits,
             'cache_misses': self.cache_misses,
             'hit_rate': hit_rate,
-            'total_searches': total,
+            'total_searches': self._search_count,
             'avg_search_time_ms': avg_time
         }
 

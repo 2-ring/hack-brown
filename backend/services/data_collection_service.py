@@ -6,7 +6,7 @@ Efficiently fetches calendar events using smart sampling strategies.
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import time
-from calendar.service import CalendarService
+from calendars.service import CalendarService
 
 
 class DataCollectionService:

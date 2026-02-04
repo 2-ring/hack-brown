@@ -26,6 +26,14 @@
   }
 }
 
+/* Sign in buttons container */
+.account-sign-in-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 /* Sign in button - matches GoogleCalendar.css styling */
 .account-sign-in-button {
   display: flex;
@@ -59,6 +67,24 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/* Provider-specific styling */
+.account-sign-in-button.microsoft:hover {
+  background: #f3f2f1;
+}
+
+.account-sign-in-button.apple {
+  color: #1d1d1f;
+}
+
+.account-sign-in-button.apple:hover {
+  background: #f5f5f7;
+}
+
+.provider-icon {
+  flex-shrink: 0;
+}
+
+/* Legacy class name support */
 .google-icon {
   flex-shrink: 0;
 }
@@ -145,7 +171,7 @@
   letter-spacing: -0.1px;
 }
 
-/* Keep Google sign-in button light even in dark mode - official Google design */
+/* Keep sign-in buttons light even in dark mode - official brand designs */
 @media (prefers-color-scheme: dark) {
   .account-sign-in-button {
     background: white !important;
@@ -155,5 +181,17 @@
 
   .account-sign-in-button:hover {
     background: #f8f9fa !important;
+  }
+
+  .account-sign-in-button.microsoft:hover {
+    background: #f3f2f1 !important;
+  }
+
+  .account-sign-in-button.apple {
+    color: #1d1d1f !important;
+  }
+
+  .account-sign-in-button.apple:hover {
+    background: #f5f5f7 !important;
   }
 }

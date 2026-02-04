@@ -12,7 +12,7 @@ from processors.audio import AudioProcessor
 from processors.image import ImageProcessor
 from processors.text import TextFileProcessor
 from processors.pdf import PDFProcessor
-from calendar.service import CalendarService
+from calendars.service import CalendarService
 from preferences.service import PersonalizationService
 from preferences.models import UserPreferences
 
