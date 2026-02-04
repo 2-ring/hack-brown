@@ -257,3 +257,162 @@ def list_auth_providers():
 
     except Exception as e:
         return jsonify({'error': f'Failed to list providers: {str(e)}'}), 500
+
+
+# ============================================================================
+# Calendar Provider Connection Endpoints
+# ============================================================================
+
+@auth_bp.route('/api/auth/microsoft/connect', methods=['POST'])
+@require_auth
+def connect_microsoft_calendar():
+    """
+    Connect Microsoft Calendar to user account.
+
+    Stores Microsoft OAuth tokens from frontend MSAL authentication.
+
+    Expects JSON body:
+    {
+        "access_token": "...",
+        "refresh_token": "...",
+        "expires_in": 3600,
+        "email": "user@outlook.com"  // optional
+    }
+
+    Returns:
+        - success: Whether connection was successful
+        - message: Status message
+        - provider: 'microsoft'
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+
+        if not data or 'access_token' not in data:
+            return jsonify({'error': 'No access_token provided'}), 400
+
+        # Store Microsoft tokens
+        from calendars.microsoft import auth as microsoft_auth
+        microsoft_auth.store_microsoft_tokens(user_id, data)
+
+        return jsonify({
+            'success': True,
+            'message': 'Microsoft Calendar connected successfully',
+            'provider': 'microsoft'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to connect Microsoft Calendar: {str(e)}'}), 500
+
+
+@auth_bp.route('/api/auth/microsoft/status', methods=['GET'])
+@require_auth
+def check_microsoft_calendar_status():
+    """
+    Check if user has Microsoft Calendar connected and if credentials are valid.
+
+    Returns:
+        - connected: Whether Microsoft Calendar is connected
+        - valid: Whether credentials are valid
+        - message: Status message
+    """
+    try:
+        user_id = request.user_id
+
+        from calendars.microsoft import auth as microsoft_auth
+
+        # Check if authenticated
+        is_auth = microsoft_auth.is_authenticated(user_id)
+
+        return jsonify({
+            'success': True,
+            'connected': is_auth,
+            'valid': is_auth,
+            'message': 'Microsoft Calendar connected' if is_auth else 'Not connected'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': True,
+            'connected': False,
+            'valid': False,
+            'message': str(e)
+        })
+
+
+@auth_bp.route('/api/auth/apple/connect', methods=['POST'])
+@require_auth
+def connect_apple_calendar():
+    """
+    Connect Apple Calendar to user account.
+
+    Stores Apple ID and app-specific password for CalDAV access.
+
+    Expects JSON body:
+    {
+        "apple_id": "user@icloud.com",
+        "app_password": "xxxx-xxxx-xxxx-xxxx"
+    }
+
+    Returns:
+        - success: Whether connection was successful
+        - message: Status message
+        - provider: 'apple'
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+
+        if not data or 'apple_id' not in data or 'app_password' not in data:
+            return jsonify({'error': 'Both apple_id and app_password are required'}), 400
+
+        apple_id = data['apple_id']
+        app_password = data['app_password']
+
+        # Store Apple credentials (this also tests the connection)
+        from calendars.apple import auth as apple_auth
+        apple_auth.store_apple_credentials(user_id, apple_id, app_password)
+
+        return jsonify({
+            'success': True,
+            'message': 'Apple Calendar connected successfully',
+            'provider': 'apple'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to connect Apple Calendar: {str(e)}'}), 500
+
+
+@auth_bp.route('/api/auth/apple/status', methods=['GET'])
+@require_auth
+def check_apple_calendar_status():
+    """
+    Check if user has Apple Calendar connected and if credentials are valid.
+
+    Returns:
+        - connected: Whether Apple Calendar is connected
+        - valid: Whether credentials are valid
+        - message: Status message
+    """
+    try:
+        user_id = request.user_id
+
+        from calendars.apple import auth as apple_auth
+
+        # Check if authenticated
+        is_auth = apple_auth.is_authenticated(user_id)
+
+        return jsonify({
+            'success': True,
+            'connected': is_auth,
+            'valid': is_auth,
+            'message': 'Apple Calendar connected' if is_auth else 'Not connected'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': True,
+            'connected': False,
+            'valid': False,
+            'message': str(e)
+        })

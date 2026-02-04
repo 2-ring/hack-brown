@@ -8,7 +8,7 @@ from typing import Optional
 
 from .service import CalendarService
 from calendar import factory
-from calendar.google import auth as google_auth  # Still needed for legacy token storage endpoint
+from calendars.google import auth as google_auth  # Still needed for legacy token storage endpoint
 from auth.middleware import require_auth
 
 # Create blueprint
@@ -437,3 +437,191 @@ def store_google_calendar_tokens():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Failed to store tokens: {str(e)}'}), 500
+
+
+# ============================================================================
+# Calendar Provider Management
+# ============================================================================
+
+@calendar_bp.route('/api/calendar/providers', methods=['GET'])
+@require_auth
+def list_calendar_providers():
+    """
+    List all connected calendar providers for the authenticated user.
+
+    Returns:
+        - providers: Array of provider objects with:
+            - provider: Provider name ('google', 'microsoft', 'apple')
+            - email: Email associated with provider
+            - connected: Whether provider is connected
+            - valid: Whether credentials are currently valid
+            - is_primary: Whether this is the primary calendar provider
+            - usage: Array of usage types (['auth', 'calendar'])
+        - primary_provider: Name of primary calendar provider
+    """
+    try:
+        user_id = request.user_id
+        user = User.get_by_id(user_id)
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Get all provider connections
+        connections = user.get('provider_connections', [])
+        primary_provider = user.get('primary_calendar_provider')
+
+        # Build provider list
+        provider_list = []
+        for conn in connections:
+            provider_name = conn.get('provider')
+            usage = conn.get('usage', [])
+
+            # Only include providers with 'calendar' in usage
+            if 'calendar' not in usage:
+                continue
+
+            # Check if credentials are valid
+            valid = False
+            try:
+                valid = factory.is_authenticated(user_id, provider_name)
+            except Exception:
+                pass
+
+            provider_info = {
+                'provider': provider_name,
+                'email': conn.get('email'),
+                'connected': True,
+                'valid': valid,
+                'is_primary': provider_name == primary_provider,
+                'usage': usage,
+                'display_name': conn.get('display_name'),
+                'linked_at': conn.get('linked_at')
+            }
+
+            provider_list.append(provider_info)
+
+        return jsonify({
+            'success': True,
+            'providers': provider_list,
+            'primary_provider': primary_provider
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to list calendar providers: {str(e)}'}), 500
+
+
+@calendar_bp.route('/api/calendar/set-primary-provider', methods=['POST'])
+@require_auth
+def set_primary_calendar_provider():
+    """
+    Set the primary calendar provider for new events.
+
+    Expects JSON body:
+    {
+        "provider": "google" | "microsoft" | "apple"
+    }
+
+    Returns:
+        - success: Whether primary provider was set
+        - primary_provider: The new primary provider
+        - message: Success message
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+
+        if not data or 'provider' not in data:
+            return jsonify({'error': 'No provider specified'}), 400
+
+        provider = data['provider']
+
+        # Validate provider is supported
+        if provider not in ['google', 'microsoft', 'apple']:
+            return jsonify({'error': f'Invalid provider: {provider}'}), 400
+
+        # Check if user has this provider connected
+        conn = User.get_provider_connection(user_id, provider)
+        if not conn:
+            return jsonify({'error': f'Provider {provider} not connected'}), 400
+
+        # Check if 'calendar' is in usage
+        if 'calendar' not in conn.get('usage', []):
+            return jsonify({'error': f'Provider {provider} not configured for calendar use'}), 400
+
+        # Set as primary
+        User.set_primary_calendar(user_id, provider)
+
+        return jsonify({
+            'success': True,
+            'primary_provider': provider,
+            'message': f'{provider.capitalize()} Calendar set as primary'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to set primary provider: {str(e)}'}), 500
+
+
+@calendar_bp.route('/api/calendar/disconnect-provider', methods=['POST'])
+@require_auth
+def disconnect_calendar_provider():
+    """
+    Disconnect a calendar provider.
+
+    Removes calendar tokens and updates usage array.
+    If disconnecting primary provider, clears primary_calendar_provider.
+
+    Expects JSON body:
+    {
+        "provider": "google" | "microsoft" | "apple"
+    }
+
+    Returns:
+        - success: Whether provider was disconnected
+        - message: Success message
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+
+        if not data or 'provider' not in data:
+            return jsonify({'error': 'No provider specified'}), 400
+
+        provider = data['provider']
+
+        # Get user
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Check if provider is connected
+        conn = User.get_provider_connection(user_id, provider)
+        if not conn:
+            return jsonify({'error': f'Provider {provider} not connected'}), 400
+
+        # Remove 'calendar' from usage
+        usage = conn.get('usage', [])
+        if 'calendar' in usage:
+            usage.remove('calendar')
+
+        # If usage is now empty and it's not an auth provider, remove the connection entirely
+        if not usage or (len(usage) == 0):
+            User.remove_provider_connection(user_id, provider)
+        else:
+            # Just update usage to remove 'calendar'
+            User.update_provider_usage(user_id, provider, usage)
+
+        # If this was the primary provider, clear it
+        if user.get('primary_calendar_provider') == provider:
+            from database.supabase_client import get_supabase
+            supabase = get_supabase()
+            supabase.table("users").update({
+                "primary_calendar_provider": None
+            }).eq("id", user_id).execute()
+
+        return jsonify({
+            'success': True,
+            'message': f'{provider.capitalize()} Calendar disconnected successfully'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to disconnect provider: {str(e)}'}), 500

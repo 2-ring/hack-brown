@@ -26,10 +26,10 @@ def get_provider_modules(provider: str) -> tuple:
         from calendars.google import auth, fetch, create
         return auth, fetch, create
     elif provider == 'microsoft':
-        from calendar.microsoft import auth, fetch, create
+        from calendars.microsoft import auth, fetch, create
         return auth, fetch, create
     elif provider == 'apple':
-        from calendar.apple import auth, fetch, create
+        from calendars.apple import auth, fetch, create
         return auth, fetch, create
     else:
         raise ValueError(f"Unsupported calendar provider: {provider}")
