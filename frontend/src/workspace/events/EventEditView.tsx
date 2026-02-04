@@ -45,7 +45,7 @@ interface EventEditViewProps {
   getCalendarColor: (calendarName: string | undefined) => string
 }
 
-type EditableField = 'summary' | 'location' | 'description'
+type EditableField = 'summary' | 'location' | 'description' | 'startDate' | 'endDate' | 'timezone' | 'repeat'
 
 export function EventEditView({
   event,
@@ -203,15 +203,87 @@ export function EventEditView({
                     </label>
                   </div>
                   <div className="row-main">
-                    <span className="date-text">{formatDateForDisplay(editedEvent.start.dateTime)}</span>
+                    <div className="editable-content-wrapper" onClick={(e) => handleEditClick('startDate', e)}>
+                      {editingField === 'startDate' ? (
+                        <input
+                          ref={inputRef as React.RefObject<HTMLInputElement>}
+                          type="text"
+                          className="date-text editable-input"
+                          value={formatDateForDisplay(editedEvent.start.dateTime)}
+                          onChange={(e) => {
+                            // For now, just keep the display value
+                            // TODO: Implement date parsing
+                          }}
+                          onBlur={handleEditBlur}
+                          onKeyDown={handleEditKeyDown}
+                        />
+                      ) : (
+                        <span className="date-text">{formatDateForDisplay(editedEvent.start.dateTime)}</span>
+                      )}
+                      <EditIcon size={14} weight="regular" className="edit-icon" />
+                    </div>
                     {!isAllDay && (
-                      <span className="date-text">{formatTimeForDisplay(editedEvent.start.dateTime)}</span>
+                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick('startDate', e)}>
+                        {editingField === 'startDate' ? (
+                          <input
+                            ref={inputRef as React.RefObject<HTMLInputElement>}
+                            type="text"
+                            className="date-text editable-input"
+                            value={formatTimeForDisplay(editedEvent.start.dateTime)}
+                            onChange={(e) => {
+                              // For now, just keep the display value
+                              // TODO: Implement time parsing
+                            }}
+                            onBlur={handleEditBlur}
+                            onKeyDown={handleEditKeyDown}
+                          />
+                        ) : (
+                          <span className="date-text">{formatTimeForDisplay(editedEvent.start.dateTime)}</span>
+                        )}
+                        <EditIcon size={14} weight="regular" className="edit-icon" />
+                      </div>
                     )}
                   </div>
                   <div className="row-main">
-                    <span className="date-text">{formatDateForDisplay(editedEvent.end.dateTime)}</span>
+                    <div className="editable-content-wrapper" onClick={(e) => handleEditClick('endDate', e)}>
+                      {editingField === 'endDate' ? (
+                        <input
+                          ref={inputRef as React.RefObject<HTMLInputElement>}
+                          type="text"
+                          className="date-text editable-input"
+                          value={formatDateForDisplay(editedEvent.end.dateTime)}
+                          onChange={(e) => {
+                            // For now, just keep the display value
+                            // TODO: Implement date parsing
+                          }}
+                          onBlur={handleEditBlur}
+                          onKeyDown={handleEditKeyDown}
+                        />
+                      ) : (
+                        <span className="date-text">{formatDateForDisplay(editedEvent.end.dateTime)}</span>
+                      )}
+                      <EditIcon size={14} weight="regular" className="edit-icon" />
+                    </div>
                     {!isAllDay && (
-                      <span className="date-text">{formatTimeForDisplay(editedEvent.end.dateTime)}</span>
+                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick('endDate', e)}>
+                        {editingField === 'endDate' ? (
+                          <input
+                            ref={inputRef as React.RefObject<HTMLInputElement>}
+                            type="text"
+                            className="date-text editable-input"
+                            value={formatTimeForDisplay(editedEvent.end.dateTime)}
+                            onChange={(e) => {
+                              // For now, just keep the display value
+                              // TODO: Implement time parsing
+                            }}
+                            onBlur={handleEditBlur}
+                            onKeyDown={handleEditKeyDown}
+                          />
+                        ) : (
+                          <span className="date-text">{formatTimeForDisplay(editedEvent.end.dateTime)}</span>
+                        )}
+                        <EditIcon size={14} weight="regular" className="edit-icon" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -222,7 +294,24 @@ export function EventEditView({
             <div className="event-edit-row no-border">
               <GlobeIcon size={20} weight="regular" className="row-icon" />
               <div className="row-content">
-                <span className="date-text">Eastern Standard Time</span>
+                <div className="editable-content-wrapper" onClick={(e) => handleEditClick('timezone', e)}>
+                  {editingField === 'timezone' ? (
+                    <input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      type="text"
+                      className="date-text editable-input"
+                      value="Eastern Standard Time"
+                      onChange={(e) => {
+                        // TODO: Implement timezone handling
+                      }}
+                      onBlur={handleEditBlur}
+                      onKeyDown={handleEditKeyDown}
+                    />
+                  ) : (
+                    <span className="date-text">Eastern Standard Time</span>
+                  )}
+                  <EditIcon size={14} weight="regular" className="edit-icon" />
+                </div>
               </div>
             </div>
 
@@ -230,7 +319,24 @@ export function EventEditView({
             <div className="event-edit-row no-border">
               <RepeatIcon size={20} weight="regular" className="row-icon" />
               <div className="row-content">
-                <span className="date-text">Does not repeat</span>
+                <div className="editable-content-wrapper" onClick={(e) => handleEditClick('repeat', e)}>
+                  {editingField === 'repeat' ? (
+                    <input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      type="text"
+                      className="date-text editable-input"
+                      value="Does not repeat"
+                      onChange={(e) => {
+                        // TODO: Implement repeat handling
+                      }}
+                      onBlur={handleEditBlur}
+                      onKeyDown={handleEditKeyDown}
+                    />
+                  ) : (
+                    <span className="date-text">Does not repeat</span>
+                  )}
+                  <EditIcon size={14} weight="regular" className="edit-icon" />
+                </div>
               </div>
             </div>
           </motion.div>

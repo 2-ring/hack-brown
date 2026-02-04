@@ -35,7 +35,7 @@ interface SessionListItem {
   eventCount: number
 }
 
-// TEMPORARY: Test data for events
+// TEMPORARY: Test data for events (spans two months to show month transition)
 const TEST_EVENTS: CalendarEvent[] = [
   {
     summary: 'Team Standup',
@@ -91,6 +91,48 @@ const TEST_EVENTS: CalendarEvent[] = [
     },
     location: 'Blue State Coffee',
     description: 'Catch up on project ideas',
+    calendar: 'primary'
+  },
+  {
+    summary: 'Project Kickoff Meeting',
+    start: {
+      dateTime: '2026-03-02T09:00:00',
+      timeZone: 'America/New_York'
+    },
+    end: {
+      dateTime: '2026-03-02T11:00:00',
+      timeZone: 'America/New_York'
+    },
+    location: 'Main Office',
+    description: 'Q2 project planning and team alignment',
+    calendar: 'primary'
+  },
+  {
+    summary: 'Dentist Appointment',
+    start: {
+      dateTime: '2026-03-05T14:00:00',
+      timeZone: 'America/New_York'
+    },
+    end: {
+      dateTime: '2026-03-05T15:00:00',
+      timeZone: 'America/New_York'
+    },
+    location: 'Dr. Smith Dental',
+    description: 'Regular checkup and cleaning',
+    calendar: 'primary'
+  },
+  {
+    summary: 'Spring Break Trip',
+    start: {
+      dateTime: '2026-03-14T08:00:00',
+      timeZone: 'America/New_York'
+    },
+    end: {
+      dateTime: '2026-03-21T20:00:00',
+      timeZone: 'America/New_York'
+    },
+    location: 'Miami Beach',
+    description: 'Week-long vacation',
     calendar: 'primary'
   }
 ]

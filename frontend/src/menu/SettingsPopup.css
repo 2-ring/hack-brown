@@ -21,7 +21,7 @@
   bottom: 0;
   background-color: transparent;
   z-index: 2000;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .settings-popup {
@@ -67,6 +67,36 @@
   background-color: #fafafa;
 }
 
+.settings-popup-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-popup-back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.settings-popup-back-button:hover {
+  color: #333;
+}
+
+.settings-popup-back-button:active {
+  color: #1170C5;
+}
+
 .settings-popup-user {
   display: none;
 }
@@ -80,6 +110,7 @@
   color: #666;
   margin: 0;
   font-weight: 400;
+  flex: 1;
 }
 
 /* Menu items - compact */
@@ -131,11 +162,25 @@
   flex-shrink: 0;
 }
 
-.settings-popup-item:hover:not(:disabled) {
+.settings-popup-item:hover:not(:disabled):not(.settings-integration-row) {
   background-color: #e8e8e8;
 }
 
-.settings-popup-item:hover:not(:disabled) svg {
+.settings-popup-item:hover:not(:disabled):not(.settings-integration-row) svg {
+  color: #333;
+}
+
+/* Integration row icons don't respond to row hover */
+.settings-integration-row svg {
+  pointer-events: none;
+}
+
+/* Action buttons in integration rows have pointer cursor and hover effects */
+.settings-integration-row button {
+  pointer-events: auto;
+}
+
+.settings-integration-row button:hover svg {
   color: #333;
 }
 
@@ -195,6 +240,12 @@
 
 .settings-popup-logout:active {
   background-color: #ffcdd2;
+}
+
+/* Apple icon styling */
+.apple-icon {
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* Mobile responsiveness */

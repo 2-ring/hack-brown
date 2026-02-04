@@ -1,3 +1,18 @@
+import {
+  Snowflake,
+  Heart,
+  Plant,
+  FlowerTulip,
+  Flower,
+  Sun,
+  Sparkle,
+  Waves,
+  Leaf,
+  Ghost,
+  Coffee,
+  Tree
+} from '@phosphor-icons/react'
+
 interface DateHeaderProps {
   date: Date
   // TODO: Add dateContext prop when implementing different display modes
@@ -19,9 +34,32 @@ export function MonthHeader({ date }: MonthHeaderProps) {
     ...(includeYear && { year: 'numeric' })
   })
 
+  // Get month icon component based on month number (0-11)
+  const getMonthIcon = (month: number) => {
+    const icons = [
+      Snowflake,    // January
+      Heart,        // February
+      Plant,        // March
+      FlowerTulip,  // April
+      Flower,       // May
+      Sun,          // June
+      Sparkle,      // July
+      Waves,        // August
+      Leaf,         // September
+      Ghost,        // October
+      Coffee,       // November
+      Tree          // December
+    ]
+    const IconComponent = icons[month]
+    return <IconComponent size={16} weight="duotone" />
+  }
+
   return (
     <div className="event-section-header">
-      <h2 className="event-section-header-text">{monthYear}</h2>
+      <h2 className="event-section-header-text">
+        <span className="month-icon">{getMonthIcon(date.getMonth())}</span>
+        {monthYear}
+      </h2>
     </div>
   )
 }

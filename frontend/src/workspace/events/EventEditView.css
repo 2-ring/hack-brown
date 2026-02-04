@@ -9,14 +9,14 @@
 
 /* Editable content wrapper */
 .event-edit-overlay .editable-content-wrapper {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   transition: background-color 0.2s ease;
   cursor: pointer;
-  width: 100%;
+  max-width: 100%;
   position: relative;
 }
 
@@ -54,7 +54,6 @@
   font-family: inherit;
   caret-color: #7C8FFF;
   min-width: 0;
-  width: 100%;
 }
 
 @keyframes fadeIn {
@@ -90,6 +89,12 @@
   padding: 0 0 1rem 0;
   border-bottom: 1px solid #e5e5e5;
   flex-shrink: 0;
+}
+
+/* Title wrapper should take full width in header */
+.event-edit-header .editable-content-wrapper {
+  display: flex;
+  width: 100%;
 }
 
 .event-edit-title-input {
@@ -228,6 +233,13 @@
 }
 
 .date-text {
+  font-size: 0.9375rem;
+  color: #202124;
+  font-weight: 400;
+}
+
+/* Date text as editable input */
+.date-text.editable-input {
   font-size: 0.9375rem;
   color: #202124;
   font-weight: 400;
