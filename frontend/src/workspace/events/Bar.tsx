@@ -110,7 +110,7 @@ export function BottomBar({
                   >
                     {IconComponent && (
                       <div className="loading-progress-icon">
-                        <IconComponent size={20} weight="bold" />
+                        <IconComponent size={16} weight="bold" />
                       </div>
                     )}
                     <div className="loading-progress-text">

@@ -81,8 +81,12 @@ export function Menu({
 
   return (
     <>
-      {/* Fixed mark logo - always visible in same position */}
-      <button className="fixed-mark-logo" onClick={onToggle} title="DropCal">
+      {/* Workspace mark logo - visible when sidebar is closed */}
+      <button
+        className={`workspace-mark-logo ${isOpen ? 'hidden' : ''}`}
+        onClick={onToggle}
+        title="DropCal"
+      >
         <img src={markImage} alt="DropCal Mark" />
       </button>
 
@@ -100,6 +104,15 @@ export function Menu({
 
       {/* Sidebar that slides in next to the mark */}
       <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
+        {/* Menu mark logo - visible when sidebar is open */}
+        <button
+          className={`menu-mark-logo ${isOpen ? '' : 'hidden'}`}
+          onClick={onToggle}
+          title="DropCal"
+        >
+          <img src={markImage} alt="DropCal Mark" />
+        </button>
+
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <img src={wordImage} alt="DropCal" className="word-logo" />

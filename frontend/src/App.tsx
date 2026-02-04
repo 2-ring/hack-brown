@@ -453,7 +453,7 @@ function AppContent() {
           },
         }}
       />
-      <div className={`content ${sidebarOpen ? 'with-sidebar' : ''}`}>
+      <div className={`content ${sidebarOpen ? 'with-sidebar' : ''} ${appState === 'loading' || appState === 'review' ? 'events-view' : ''}`}>
         <Workspace
           appState={appState}
           uploadedFile={null}

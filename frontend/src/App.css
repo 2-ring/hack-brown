@@ -42,6 +42,12 @@
   will-change: margin-left, width;
 }
 
+/* Remove padding when showing events workspace */
+.content.events-view {
+  padding: 0;
+  overflow: hidden;
+}
+
 .content.with-sidebar {
   margin-left: 280px;
   width: calc(100% - 280px);
@@ -633,5 +639,10 @@
   .content.with-sidebar {
     margin-left: 0 !important;
     width: 100% !important;
+  }
+
+  /* Mobile: events view also has no padding */
+  .content.events-view {
+    padding: 0;
   }
 }

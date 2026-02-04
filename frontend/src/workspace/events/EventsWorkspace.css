@@ -8,23 +8,20 @@
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
   position: relative;
+  height: 100vh;
+  overflow: visible; /* Allow shadows to show */
+  padding: var(--page-padding-x); /* Uniform padding on all sides */
 }
 
-/* Fixed Header - Outer Container */
+/* Header - Absolutely positioned at top */
 .event-confirmation-header {
-  position: fixed;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 800px;
-  padding: 0 var(--page-padding-x);
+  position: absolute;
+  top: var(--page-padding-x);
+  left: var(--page-padding-x);
+  right: var(--page-padding-x);
   z-index: 30;
-  transition: all 0.3s ease;
+  pointer-events: none; /* Allow clicks through to content */
 }
 
 /* Header Content - Inner Bar */
@@ -45,6 +42,7 @@
   border-radius: var(--dock-border-radius);
   overflow: hidden;
   gap: 0.75rem;
+  pointer-events: auto; /* Re-enable clicks on the bar itself */
 }
 
 .header-left {
@@ -187,10 +185,11 @@
 
 /* Scrollable Content Area */
 .event-confirmation-content {
-  flex: 1;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1.75rem 0 14rem 0;
+  padding-top: calc(var(--dock-height) + var(--page-padding-x) + 0.5rem); /* Header height + bar spacing + gap */
+  padding-bottom: calc(var(--dock-height) + var(--page-padding-x) + 0.5rem); /* Footer height + bar spacing + gap */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
 }
@@ -204,7 +203,6 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 0 var(--page-padding-x);
 }
 
 /* Date Header */
@@ -507,8 +505,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   background-color: #7C8FFF;
   border-radius: 50%;
   flex-shrink: 0;
@@ -553,41 +551,18 @@
   white-space: nowrap;
 }
 
-/* Footer Overlay with Gradient */
+/* Footer - Absolutely positioned at bottom */
 .event-confirmation-footer-overlay {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 800px;
-  z-index: 25;
-  pointer-events: none;
-  transition: left 0.3s ease;
-}
-
-.event-confirmation-footer-overlay::before {
-  content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 250px;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.5) 30%,
-    rgba(255, 255, 255, 0.8) 50%,
-    rgba(255, 255, 255, 0.95) 70%,
-    rgba(255, 255, 255, 1) 100%
-  );
-  pointer-events: none;
+  bottom: var(--page-padding-x);
+  left: var(--page-padding-x);
+  right: var(--page-padding-x);
+  z-index: 30;
+  pointer-events: none; /* Allow clicks through to content */
 }
 
 .event-confirmation-footer {
-  position: relative;
-  padding: 0 var(--page-padding-x) 2rem var(--page-padding-x);
-  pointer-events: auto;
+  pointer-events: auto; /* Re-enable clicks on footer content */
 }
 
 .event-confirmation-footer-row {
@@ -595,9 +570,6 @@
   align-items: center;
   gap: 0.75rem;
   height: var(--dock-height);
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
 }
 
 .event-confirmation-footer-content {
@@ -607,18 +579,7 @@
   flex: 1;
 }
 
-/* Adjust position when sidebar is open */
-.content.with-sidebar .event-confirmation-header {
-  left: calc(50% + 140px);
-}
-
-.content.with-sidebar .event-confirmation-header-content {
-  /* No adjustments needed - inherits from parent */
-}
-
-.content.with-sidebar .event-confirmation-footer-overlay {
-  left: calc(50% + 140px);
-}
+/* Sidebar adjustments no longer needed with flex layout */
 
 .event-confirmation-request-button {
   display: flex;
@@ -850,14 +811,6 @@
     --dock-border-radius: 28px;
   }
 
-  .event-confirmation-footer-overlay::before {
-    height: 200px;
-  }
-
-  .event-confirmation-header {
-    padding: 0 var(--page-padding-x);
-  }
-
   .event-confirmation-header-content {
     height: var(--dock-height);
     padding: 0 1rem;
@@ -875,11 +828,11 @@
   }
 
   .event-confirmation-content {
-    padding: 1.75rem 0 12rem 0;
+    padding-top: calc(var(--dock-height) + var(--page-padding-x) + 0.5rem);
+    padding-bottom: calc(var(--dock-height) + var(--page-padding-x) + 0.5rem);
   }
 
   .event-confirmation-list {
-    padding: 0 var(--page-padding-x);
     gap: 0.75rem;
   }
 
@@ -912,18 +865,9 @@
     font-size: 0.8125rem;
   }
 
-  .event-confirmation-footer {
-    padding: 0 var(--page-padding-x) 1.5rem var(--page-padding-x);
-  }
 
   .event-confirmation-footer-row {
     height: var(--dock-height);
-  }
-
-  /* On mobile, sidebar typically overlays, so keep elements centered */
-  .content.with-sidebar .event-confirmation-header,
-  .content.with-sidebar .event-confirmation-footer-overlay {
-    left: 50%;
   }
 
   .event-confirmation-request-button {
