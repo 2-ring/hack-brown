@@ -102,7 +102,10 @@ export function Event({
             style={{ backgroundColor: calendarColor }}
           />
           <span className="calendar-badge-text">
-            {calendars.find(cal => cal.id === event.calendar)?.summary || 'Primary'}
+            {calendars.find(cal =>
+              cal.id === event.calendar ||
+              cal.summary.toLowerCase() === event.calendar?.toLowerCase()
+            )?.summary || event.calendar || 'Primary'}
           </span>
         </div>
       </div>

@@ -329,7 +329,6 @@
 }
 
 .row-input {
-  width: 100%;
   font-size: 0.9375rem;
   color: #202124;
   border: none;
@@ -337,8 +336,13 @@
   outline: none;
   font-family: inherit;
   padding: 0;
-  flex: 1;
   min-width: 0;
+}
+
+/* Input element should expand */
+input.row-input {
+  width: 100%;
+  flex: 1;
 }
 
 .row-input::placeholder {
@@ -349,6 +353,8 @@
 .row-content .editable-content-wrapper .row-input:not(input) {
   color: #5f6368;
   cursor: pointer;
+  width: auto;
+  display: inline;
 }
 
 .row-content .editable-content-wrapper .row-input:not(input):not(:empty) {
@@ -356,7 +362,6 @@
 }
 
 .row-textarea {
-  width: 100%;
   font-size: 0.9375rem;
   color: #202124;
   border: none;
@@ -364,11 +369,16 @@
   outline: none;
   font-family: inherit;
   resize: vertical;
-  min-height: 60px;
   padding: 0;
   line-height: 1.5;
-  flex: 1;
   min-width: 0;
+}
+
+/* Textarea element should expand */
+textarea.row-textarea {
+  width: 100%;
+  min-height: 60px;
+  flex: 1;
 }
 
 .row-textarea::placeholder {
@@ -380,6 +390,8 @@
   color: #5f6368;
   cursor: pointer;
   white-space: pre-wrap;
+  width: auto;
+  display: inline;
 }
 
 .row-content .editable-content-wrapper .row-textarea:not(textarea):not(:empty) {

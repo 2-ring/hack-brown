@@ -219,8 +219,8 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-top: calc(var(--dock-height) + var(--page-padding-x) + 1rem); /* Header height + bar spacing + gap */
-  padding-bottom: calc(var(--dock-height) + var(--page-padding-x) + 1rem); /* Footer height + bar spacing + gap */
+  padding-top: calc(var(--dock-height) + var(--page-padding-x)); /* Header height + bar spacing */
+  padding-bottom: calc(var(--dock-height) + var(--page-padding-x)); /* Footer height + bar spacing */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
 }
@@ -240,7 +240,7 @@
 /* Section Header - for month/year display */
 .event-section-header {
   margin-top: 0.5rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
   padding: 0 0.5rem;
   text-align: center;
 }
@@ -966,8 +966,8 @@
   }
 
   .event-confirmation-content {
-    padding-top: calc(var(--dock-height) + var(--page-padding-x) + 1rem);
-    padding-bottom: calc(var(--dock-height) + var(--page-padding-x) + 1rem);
+    padding-top: calc(var(--dock-height) + var(--page-padding-x));
+    padding-bottom: calc(var(--dock-height) + var(--page-padding-x));
   }
 
   .event-confirmation-list {
