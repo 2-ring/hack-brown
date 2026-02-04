@@ -8,14 +8,14 @@
   bottom: 0;
   background-color: transparent;
   z-index: 2000;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .settings-popup {
   position: fixed;
-  bottom: 96px;
-  left: 12px;
-  width: calc(280px - 24px);
+  bottom: 80px;
+  left: 16px;
+  width: calc(280px - 32px);
   background-color: white;
   border: 1px solid #e5e5e5;
   border-radius: 12px;

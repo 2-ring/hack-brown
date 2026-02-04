@@ -53,6 +53,7 @@ export function Account() {
                 src={user.user_metadata.avatar_url}
                 alt={user.user_metadata?.name || 'User'}
                 className="account-user-avatar"
+                referrerPolicy="no-referrer"
               />
             ) : (
               <div className="account-user-avatar-placeholder">

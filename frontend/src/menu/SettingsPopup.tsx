@@ -65,7 +65,7 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
             <>
               <div className="settings-popup-user">
                 {userAvatar ? (
-                  <img src={userAvatar} alt={userName} className="settings-popup-avatar" />
+                  <img src={userAvatar} alt={userName} className="settings-popup-avatar" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="settings-popup-avatar-placeholder">
                     {userName.charAt(0).toUpperCase()}
