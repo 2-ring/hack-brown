@@ -7,6 +7,7 @@ import {
   Calendar,
   CrownSimple,
   SignOut,
+  SignIn,
   MoonStars,
   SunHorizon,
   GlobeSimple,
@@ -16,8 +17,6 @@ import {
   GoogleLogo,
   MicrosoftOutlookLogo,
   AppleLogo,
-  PlusCircle,
-  MinusCircle,
   Star,
 } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
@@ -58,6 +57,9 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
   // Settings state (will be persisted to backend/localStorage in future)
   const [useInternationalDate, setUseInternationalDate] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [logoutHovered, setLogoutHovered] = useState(false);
+  const [hoveredStar, setHoveredStar] = useState<string | null>(null);
+  const [hoveredSignOut, setHoveredSignOut] = useState<string | null>(null);
 
   // Mock calendar integrations data - will be replaced with actual backend data
   const [calendars, setCalendars] = useState<CalendarIntegration[]>([
@@ -306,9 +308,12 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                       {provider === 'google' && <GoogleLogo size={20} weight="duotone" />}
                       {provider === 'microsoft' && <MicrosoftOutlookLogo size={20} weight="duotone" />}
                       {provider === 'apple' && <AppleLogo size={20} weight="duotone" />}
-                      <span>{getProviderName(provider)}</span>
-                      <div className="settings-popup-value" style={{ gap: '8px', justifyContent: 'flex-end', display: 'flex', position: 'static' }}>
-                        <MinusCircle size={20} weight="regular" />
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1px' }}>
+                        <span style={{ lineHeight: '1.2' }}>{getProviderName(provider)}</span>
+                        <span style={{ fontSize: '11px', color: '#999', lineHeight: '1.2' }}>Sign in</span>
+                      </div>
+                      <div className="settings-integration-actions">
+                        <SignIn size={20} weight="regular" />
                       </div>
                     </button>
                   );
@@ -320,20 +325,27 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                     {provider === 'google' && <GoogleLogo size={20} weight="duotone" />}
                     {provider === 'microsoft' && <MicrosoftOutlookLogo size={20} weight="duotone" />}
                     {provider === 'apple' && <AppleLogo size={20} weight="duotone" />}
-                    <span>{getProviderName(provider)}</span>
-                    <div className="settings-popup-value" style={{ gap: '8px', justifyContent: 'flex-end', display: 'flex', position: 'static' }}>
-                      <button
-                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
-                        onClick={() => handleDisconnect(calendar!.id)}
-                      >
-                        <PlusCircle size={20} weight="regular" />
-                      </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '1px' }}>
+                      <span style={{ lineHeight: '1.2' }}>{getProviderName(provider)}</span>
+                      <span style={{ fontSize: '11px', color: '#999', lineHeight: '1.2' }}>{calendar!.email}</span>
+                    </div>
+                    <div className="settings-integration-actions">
                       <button
                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
                         onClick={() => !isDefault && handleSetDefault(calendar!.id)}
+                        onMouseEnter={() => setHoveredStar(calendar!.id)}
+                        onMouseLeave={() => setHoveredStar(null)}
                         disabled={isDefault}
                       >
-                        <Star size={20} weight={isDefault ? 'duotone' : 'regular'} style={{ color: '#666' }} />
+                        <Star size={20} weight={isDefault || hoveredStar === calendar!.id ? 'duotone' : 'regular'} style={{ color: '#666' }} />
+                      </button>
+                      <button
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
+                        onClick={() => handleDisconnect(calendar!.id)}
+                        onMouseEnter={() => setHoveredSignOut(calendar!.id)}
+                        onMouseLeave={() => setHoveredSignOut(null)}
+                      >
+                        <SignOut size={20} weight={hoveredSignOut === calendar!.id ? 'bold' : 'regular'} style={{ color: '#d32f2f' }} />
                       </button>
                     </div>
                   </div>
@@ -351,9 +363,14 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
               <Skeleton width={60} height={16} />
             </div>
           ) : (
-            <button className="settings-popup-item settings-popup-logout" onClick={handleLogout}>
-              <SignOut size={20} weight="regular" />
-              <span>Log out</span>
+            <button
+              className="settings-popup-item settings-popup-logout"
+              onClick={handleLogout}
+              onMouseEnter={() => setLogoutHovered(true)}
+              onMouseLeave={() => setLogoutHovered(false)}
+            >
+              <SignOut size={20} weight={logoutHovered ? "bold" : "regular"} />
+              <span style={{ fontWeight: logoutHovered ? 600 : 400 }}>Log out</span>
             </button>
           )}
         </div>

@@ -233,7 +233,7 @@
 .event-confirmation-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
   padding: 0 var(--page-padding-x);
 }
 
@@ -267,7 +267,7 @@
 .event-date-group {
   display: grid;
   grid-template-columns: 60px 1fr;
-  gap: 0.5rem;
+  gap: 0.25rem;
   align-items: start;
 }
 
@@ -284,7 +284,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.0625rem;
+  gap: 0;
   width: 36px;
 }
 
@@ -292,7 +292,7 @@
 .event-date-day-label {
   font-size: 0.75rem;
   font-weight: 800;
-  color: #1170C5;
+  color: #666;
   letter-spacing: 0.05em;
   text-align: center;
   width: 100%;
@@ -306,17 +306,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #1170C5;
-  border: 2px solid #1170C5;
+  background-color: transparent;
+  border: 2px solid transparent;
   transition: all 0.2s ease;
 }
 
 /* Date Number */
 .event-date-number {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #1a1a1a;
   line-height: 1;
+}
+
+/* Today's Date Styling */
+.event-date-header-timing.today .event-date-day-label {
+  color: #1170C5;
+}
+
+.event-date-header-timing.today .event-date-circle {
+  background-color: #1170C5;
+  border: 2px solid #1170C5;
+}
+
+.event-date-header-timing.today .event-date-number {
+  color: #ffffff;
 }
 
 /* Single Event Container - Right Side */

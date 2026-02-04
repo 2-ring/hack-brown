@@ -81,14 +81,14 @@ export function DateHeader({ date }: DateHeaderProps) {
   // - Different years: Include year in display
 
   return (
-    <div className="event-date-header-timing">
+    <div className={`event-date-header-timing ${isToday ? 'today' : ''}`}>
       {/* Day of week label - always show abbreviation */}
       <div className="event-date-day-label">
         {dayOfWeek}
       </div>
 
       {/* Large circular date number */}
-      <div className={`event-date-circle ${isToday ? 'today' : ''}`}>
+      <div className="event-date-circle">
         <span className="event-date-number">{dateNumber}</span>
       </div>
     </div>

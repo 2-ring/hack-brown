@@ -40,11 +40,11 @@ const TEST_EVENTS: CalendarEvent[] = [
   {
     summary: 'Team Standup',
     start: {
-      dateTime: '2026-02-05T10:00:00',
+      dateTime: '2026-02-04T10:00:00',
       timeZone: 'America/New_York'
     },
     end: {
-      dateTime: '2026-02-05T10:30:00',
+      dateTime: '2026-02-04T10:30:00',
       timeZone: 'America/New_York'
     },
     location: 'Conference Room A',
