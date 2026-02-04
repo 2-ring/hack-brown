@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request, redirect
 from typing import Optional
 
 from .service import CalendarService
-from .google_calendar import GoogleCalendarClient, store_google_tokens_from_supabase
+from calendar.google import auth as google_auth, create as google_create
 from auth.middleware import require_auth
 
 # Create blueprint
@@ -326,11 +326,8 @@ def add_session_to_calendar(session_id):
         # Get authenticated user
         user_id = request.user_id
 
-        # Create calendar client for this user
-        calendar_client = GoogleCalendarClient(user_id)
-
         # Check if user has connected Google Calendar
-        if not calendar_client.is_authenticated():
+        if not google_auth.is_authenticated(user_id):
             return jsonify({
                 'error': 'Google Calendar not connected',
                 'message': 'Please connect your Google Calendar account first',
@@ -338,7 +335,7 @@ def add_session_to_calendar(session_id):
             }), 401
 
         # Create events from session
-        calendar_event_ids, conflicts = calendar_client.create_events_from_session(session_id)
+        calendar_event_ids, conflicts = google_create.create_events_from_session(user_id, session_id)
 
         # Prepare response
         has_conflicts = len(conflicts) > 0
@@ -379,12 +376,10 @@ def check_google_calendar_status():
     try:
         user_id = request.user_id
 
-        # Create calendar client
-        calendar_client = GoogleCalendarClient(user_id)
-
         # Check authentication status
-        is_connected = calendar_client.credentials is not None
-        is_valid = calendar_client.is_authenticated()
+        credentials = google_auth.load_credentials(user_id)
+        is_connected = credentials is not None
+        is_valid = google_auth.is_authenticated(user_id)
 
         return jsonify({
             'connected': is_connected,
@@ -430,7 +425,7 @@ def store_google_calendar_tokens():
         provider_token = data['provider_token']
 
         # Store tokens in database
-        store_google_tokens_from_supabase(user_id, provider_token)
+        google_auth.store_google_tokens_from_supabase(user_id, provider_token)
 
         return jsonify({
             'success': True,

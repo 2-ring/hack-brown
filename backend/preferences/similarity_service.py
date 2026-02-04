@@ -713,3 +713,203 @@ class ProductionSimilaritySearch:
         self.cache_misses = 0
         self._total_search_time_ms = 0.0
         self._search_count = 0
+
+    # ========================================================================
+    # Edge Case Handling Methods
+    # ========================================================================
+
+    def find_similar_with_diversity(
+        self,
+        query_event: Dict,
+        k: int = 7,
+        diversity_threshold: float = 0.85
+    ) -> List[Tuple[Dict, float, Dict]]:
+        """
+        Find similar events with diversity filtering.
+
+        Ensures results aren't too similar to each other, providing
+        diverse examples for few-shot learning.
+
+        Args:
+            query_event: Event to search for
+            k: Number of results desired
+            diversity_threshold: Min similarity between results (lower = more diverse)
+
+        Returns:
+            List of diverse similar events
+
+        Example:
+            >>> results = search.find_similar_with_diversity(
+            ...     {'title': 'math homework', 'all_day': True},
+            ...     k=7,
+            ...     diversity_threshold=0.85
+            ... )
+        """
+        # Get more candidates than needed
+        candidates = self.find_similar(query_event, k=k * 3, use_cache=False)
+
+        if not candidates:
+            return []
+
+        # Apply diversity filtering
+        diverse_results = [candidates[0]]  # Always include top result
+
+        for candidate_tuple in candidates[1:]:
+            candidate_event = candidate_tuple[0]
+
+            # Check if too similar to already selected
+            too_similar = False
+            for selected_tuple in diverse_results:
+                selected_event = selected_tuple[0]
+
+                # Compute similarity between candidates
+                score, _ = self.retrieval.similarity.compute_similarity(
+                    candidate_event, selected_event
+                )
+
+                if score > diversity_threshold:
+                    too_similar = True
+                    break
+
+            if not too_similar:
+                diverse_results.append(candidate_tuple)
+
+                if len(diverse_results) >= k:
+                    break
+
+        return diverse_results
+
+    def find_similar_with_fallback(
+        self,
+        query_event: Dict,
+        k: int = 7,
+        min_similarity: float = 0.65
+    ) -> Tuple[List[Tuple[Dict, float, Dict]], bool]:
+        """
+        Find similar events with fallback to defaults if quality is low.
+
+        Args:
+            query_event: Event to search for
+            k: Number of results
+            min_similarity: Minimum acceptable similarity score
+
+        Returns:
+            Tuple of (results, used_fallback)
+                - results: Similar events (or fallback events)
+                - used_fallback: True if fallback was used
+
+        Example:
+            >>> results, is_fallback = search.find_similar_with_fallback(
+            ...     {'title': 'novel event type', 'all_day': True}
+            ... )
+            >>> if is_fallback:
+            ...     print("Used fallback - novel event detected")
+        """
+        results = self.find_similar(query_event, k=k)
+
+        # Check if best result is below threshold
+        if not results or results[0][1] < min_similarity:
+            # Fallback: Return most common examples by event type
+            fallback_results = self._get_fallback_examples(query_event, k)
+            return fallback_results, True
+
+        return results, False
+
+    def detect_novel_event(
+        self,
+        query_event: Dict,
+        threshold: float = 0.5,
+        sample_size: int = 50
+    ) -> Tuple[bool, float]:
+        """
+        Detect when query is very different from all historical events.
+
+        Useful for identifying novel event types that may need special handling.
+
+        Args:
+            query_event: Event to check
+            threshold: Avg similarity threshold for novelty (lower = more novel)
+            sample_size: Number of events to sample for quick check
+
+        Returns:
+            Tuple of (is_novel, avg_similarity)
+                - is_novel: True if event is novel (very different from history)
+                - avg_similarity: Average similarity to historical events
+
+        Example:
+            >>> is_novel, avg_sim = search.detect_novel_event(
+            ...     {'title': 'underwater basket weaving', 'all_day': True}
+            ... )
+            >>> if is_novel:
+            ...     print(f"Novel event (avg similarity: {avg_sim:.2f})")
+        """
+        if not self.retrieval.events:
+            return True, 0.0
+
+        # Sample events for efficiency
+        n_sample = min(sample_size, len(self.retrieval.events))
+        sample_indices = np.random.choice(len(self.retrieval.events), n_sample, replace=False)
+        sample_events = [self.retrieval.events[i] for i in sample_indices]
+
+        # Compute similarities
+        scores = []
+        for event in sample_events:
+            score, _ = self.retrieval.similarity.compute_similarity(query_event, event)
+            scores.append(score)
+
+        avg_similarity = float(np.mean(scores))
+        is_novel = avg_similarity < threshold
+
+        return is_novel, avg_similarity
+
+    def _get_fallback_examples(
+        self,
+        query_event: Dict,
+        k: int
+    ) -> List[Tuple[Dict, float, Dict]]:
+        """
+        Get fallback examples when similarity search quality is low.
+
+        Returns most common/generic events as safe defaults.
+
+        Args:
+            query_event: Query event
+            k: Number of examples needed
+
+        Returns:
+            List of fallback events with scores
+        """
+        if not self.retrieval.events:
+            return []
+
+        # Strategy: Return k random events from same calendar if possible
+        calendar_name = query_event.get('calendar_name', '')
+
+        if calendar_name:
+            # Filter to same calendar
+            same_calendar = [
+                e for e in self.retrieval.events
+                if e.get('calendar_name', '') == calendar_name
+            ]
+
+            if same_calendar:
+                # Return random sample from same calendar
+                n_sample = min(k, len(same_calendar))
+                sample_indices = np.random.choice(len(same_calendar), n_sample, replace=False)
+                fallback_events = [same_calendar[i] for i in sample_indices]
+
+                # Assign moderate scores (0.5)
+                return [
+                    (event, 0.5, {'semantic': 0.5, 'length': 0.5, 'keyword': 0.5, 'temporal': 0.5, 'final': 0.5})
+                    for event in fallback_events
+                ]
+
+        # Fallback to random events from all
+        n_sample = min(k, len(self.retrieval.events))
+        sample_indices = np.random.choice(len(self.retrieval.events), n_sample, replace=False)
+        fallback_events = [self.retrieval.events[i] for i in sample_indices]
+
+        return [
+            (event, 0.5, {'semantic': 0.5, 'length': 0.5, 'keyword': 0.5, 'temporal': 0.5, 'final': 0.5})
+            for event in fallback_events
+        ]
