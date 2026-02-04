@@ -5,6 +5,7 @@ import type { CalendarEvent } from './types'
 import type { LoadingStateConfig } from './types'
 import { TopBar, BottomBar } from './Bar'
 import { Event } from './Event'
+import { DateHeader } from './DateHeader'
 import wordmarkImage from '../../assets/Wordmark.png'
 import './EventsWorkspace.css'
 
@@ -27,7 +28,7 @@ interface EventsWorkspaceProps {
 export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount }: EventsWorkspaceProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
-  const [editingField, setEditingField] = useState<{ eventIndex: number; field: 'summary' | 'date' | 'description' } | null>(null)
+  const [editingField, setEditingField] = useState<{ eventIndex: number; field: 'summary' | 'date' | 'time' | 'location' | 'description' } | null>(null)
   const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
   const [isProcessingEdit, setIsProcessingEdit] = useState(false)
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([])
@@ -69,7 +70,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     }
   }, [editingField])
 
-  const handleEditClick = (eventIndex: number, field: 'summary' | 'date' | 'description', e?: React.MouseEvent) => {
+  const handleEditClick = (eventIndex: number, field: 'summary' | 'date' | 'time' | 'location' | 'description', e?: React.MouseEvent) => {
     // Don't start editing if clicking on an input that's already being edited
     if (e?.target instanceof HTMLInputElement) {
       return
@@ -103,6 +104,20 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       e.preventDefault()
       setEditingField(null)
     }
+  }
+
+  const handleCalendarChange = (eventIndex: number, calendarId: string) => {
+    setEditedEvents(prev => {
+      const updated = [...prev]
+      const event = updated[eventIndex]
+      if (event) {
+        updated[eventIndex] = {
+          ...event,
+          calendar: calendarId
+        }
+      }
+      return updated
+    })
   }
 
   const handleSendRequest = async () => {
@@ -214,6 +229,17 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     })
   }
 
+  const formatTimeRange = (startDateTime: string, endDateTime: string): string => {
+    const startTime = formatTime(startDateTime)
+    const endTime = formatTime(endDateTime)
+
+    if (startTime === endTime) {
+      return startTime
+    }
+
+    return `${startTime} - ${endTime}`
+  }
+
   const buildDescription = (event: CalendarEvent): string => {
     const parts: string[] = []
 
@@ -268,6 +294,29 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     return brightness > 155 ? '#000000' : '#FFFFFF'
   }
 
+  // Group events by date
+  const groupEventsByDate = (events: CalendarEvent[]): Map<string, CalendarEvent[]> => {
+    const grouped = new Map<string, CalendarEvent[]>()
+
+    events.forEach(event => {
+      const date = new Date(event.start.dateTime)
+      // Use date string as key (YYYY-MM-DD)
+      const dateKey = date.toISOString().split('T')[0]
+
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, [])
+      }
+      grouped.get(dateKey)!.push(event)
+    })
+
+    // Sort events within each date by start time
+    grouped.forEach((events, dateKey) => {
+      events.sort((a, b) => new Date(a.start.dateTime).getTime() - new Date(b.start.dateTime).getTime())
+    })
+
+    return grouped
+  }
+
   return (
     <div className="event-confirmation">
       <TopBar
@@ -275,6 +324,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
         eventCount={events.filter(e => e !== null).length}
         isLoading={isLoading}
         expectedEventCount={expectedEventCount}
+        isLoadingCalendars={isLoadingCalendars}
       />
 
       <div className="event-confirmation-content">
@@ -285,6 +335,10 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
               const event = events[index]
               const editedEvent = event ? (editedEvents[index] || event) : null
 
+              // Calculate opacity for skeleton fade effect (like session list)
+              const count = expectedEventCount || 3
+              const skeletonOpacity = 1 - (index / count) * 0.7
+
               return (
                 <Event
                   key={event ? `event-${index}` : `skeleton-${index}`}
@@ -292,39 +346,67 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
                   index={index}
                   isLoading={!event}
                   isLoadingCalendars={isLoadingCalendars}
+                  skeletonOpacity={skeletonOpacity}
+                  calendars={calendars}
                   editingField={editingField}
                   inputRef={inputRef}
                   formatDate={formatDate}
-                  buildDescription={buildDescription}
+                  formatTime={formatTime}
+                  formatTimeRange={formatTimeRange}
                   getCalendarColor={getCalendarColor}
                   getTextColor={getTextColor}
                   onEditClick={handleEditClick}
                   onEditChange={handleEditChange}
                   onEditBlur={handleEditBlur}
                   onEditKeyDown={handleEditKeyDown}
+                  onCalendarChange={handleCalendarChange}
                 />
               )
             })
           ) : (
-            // Complete state - show only actual events (filter out nulls)
-            editedEvents.filter((event): event is CalendarEvent => event !== null).map((event, index) => (
-              <Event
-                key={index}
-                event={event}
-                index={index}
-                isLoadingCalendars={isLoadingCalendars}
-                editingField={editingField}
-                inputRef={inputRef}
-                formatDate={formatDate}
-                buildDescription={buildDescription}
-                getCalendarColor={getCalendarColor}
-                getTextColor={getTextColor}
-                onEditClick={handleEditClick}
-                onEditChange={handleEditChange}
-                onEditBlur={handleEditBlur}
-                onEditKeyDown={handleEditKeyDown}
-              />
-            ))
+            // Complete state - group events by date and show with date headers
+            (() => {
+              const filteredEvents = editedEvents.filter((event): event is CalendarEvent => event !== null)
+              const groupedEvents = groupEventsByDate(filteredEvents)
+
+              // Sort date keys chronologically
+              const sortedDateKeys = Array.from(groupedEvents.keys()).sort()
+
+              return sortedDateKeys.flatMap((dateKey, dateGroupIndex) => {
+                const eventsForDate = groupedEvents.get(dateKey)!
+                const dateObj = new Date(dateKey + 'T00:00:00')
+
+                // Return date header followed by events for that date
+                return [
+                  <DateHeader key={`date-${dateKey}`} date={dateObj} />,
+                  ...eventsForDate.map((event, eventIndex) => {
+                    // Find the original index for proper editing state management
+                    const originalIndex = filteredEvents.indexOf(event)
+                    return (
+                      <Event
+                        key={`${dateKey}-${eventIndex}`}
+                        event={event}
+                        index={originalIndex}
+                        isLoadingCalendars={isLoadingCalendars}
+                        calendars={calendars}
+                        editingField={editingField}
+                        inputRef={inputRef}
+                        formatDate={formatDate}
+                        formatTime={formatTime}
+                        formatTimeRange={formatTimeRange}
+                        getCalendarColor={getCalendarColor}
+                        getTextColor={getTextColor}
+                        onEditClick={handleEditClick}
+                        onEditChange={handleEditChange}
+                        onEditBlur={handleEditBlur}
+                        onEditKeyDown={handleEditKeyDown}
+                        onCalendarChange={handleCalendarChange}
+                      />
+                    )
+                  })
+                ]
+              })
+            })()
           )}
         </div>
       </div>

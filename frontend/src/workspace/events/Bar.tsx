@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X as XIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneRight as SendIcon } from '@phosphor-icons/react'
-import Skeleton from 'react-loading-skeleton'
 import type { LoadingStateConfig } from './types'
+import { CalendarSelector } from './CalendarSelector'
 
 // ============================================================================
 // TOP BAR
@@ -12,13 +12,14 @@ interface TopBarProps {
   eventCount: number
   isLoading: boolean
   expectedEventCount?: number
+  isLoadingCalendars?: boolean
 }
 
-export function TopBar({ wordmarkImage, eventCount, isLoading, expectedEventCount }: TopBarProps) {
+export function TopBar({ wordmarkImage, eventCount, isLoading, expectedEventCount, isLoadingCalendars = false }: TopBarProps) {
   return (
     <div className="event-confirmation-header">
       <div className="header-left">
-        <span>Google Calendar</span>
+        <CalendarSelector isLoading={isLoadingCalendars} />
       </div>
       <div className="header-center">
         <img src={wordmarkImage} alt="DropCal" className="header-wordmark" />

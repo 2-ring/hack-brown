@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { validateFile } from './workspace/input/validation'
 import { Workspace } from './workspace/Workspace'
 import { Menu } from './menu/Menu'
 import { useAuth } from './auth/AuthContext'
-import type { CalendarEvent } from './workspace/events/types'
+import type { CalendarEvent, LoadingStateConfig } from './workspace/events/types'
 import { LOADING_MESSAGES } from './workspace/events/types'
 import type { Session as BackendSession } from './api/types'
 import {
@@ -33,7 +34,7 @@ interface SessionListItem {
   eventCount: number
 }
 
-// Test data for events
+// TEMPORARY: Test data for events
 const TEST_EVENTS: CalendarEvent[] = [
   {
     summary: 'Team Standup',
@@ -93,8 +94,12 @@ const TEST_EVENTS: CalendarEvent[] = [
   }
 ]
 
-function App() {
+// Main content component that handles all the business logic
+function AppContent() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const { sessionId } = useParams<{ sessionId?: string }>()
+
   const [currentGreetingIndex] = useState(() =>
     Math.floor(Math.random() * greetingImagePaths.length)
   )
@@ -102,7 +107,7 @@ function App() {
   const [appState, setAppState] = useState<AppState>('loading')
   const [isProcessing, setIsProcessing] = useState(true)
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
-  const [loadingMessage, setLoadingMessage] = useState<string>(LOADING_MESSAGES.READING_FILE.message)
+  const [loadingConfig, setLoadingConfig] = useState<LoadingStateConfig>(LOADING_MESSAGES.READING_FILE)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState<string>('')
 
@@ -110,31 +115,67 @@ function App() {
   const [currentSession, setCurrentSession] = useState<BackendSession | null>(null)
   const [sessionHistory, setSessionHistory] = useState<BackendSession[]>([])
 
-  // TEMPORARY: Show loading sequence for 5 seconds, then load test data
+  // TEMPORARY: Show loading sequence for 5 seconds, then load test data (only when no sessionId)
   useEffect(() => {
-    const loadingSequence = [
-      { message: LOADING_MESSAGES.READING_FILE.message, delay: 0 },
-      { message: LOADING_MESSAGES.UNDERSTANDING_CONTEXT.message, delay: 1000 },
-      { message: LOADING_MESSAGES.EXTRACTING_EVENTS.message, delay: 2000 },
-      { message: LOADING_MESSAGES.EXTRACTING_FACTS.message, delay: 3500 },
-      { message: LOADING_MESSAGES.FORMATTING_CALENDAR.message, delay: 4500 }
-    ]
+    if (!sessionId) {
+      const loadingSequence = [
+        { config: LOADING_MESSAGES.READING_FILE, delay: 0 },
+        { config: LOADING_MESSAGES.UNDERSTANDING_CONTEXT, delay: 1000 },
+        { config: LOADING_MESSAGES.EXTRACTING_EVENTS, delay: 2000 },
+        { config: LOADING_MESSAGES.EXTRACTING_FACTS, delay: 3500 },
+        { config: LOADING_MESSAGES.FORMATTING_CALENDAR, delay: 4500 }
+      ]
 
-    const timers = loadingSequence.map(({ message, delay }) =>
-      setTimeout(() => setLoadingMessage(message), delay)
-    )
+      const timers = loadingSequence.map(({ config, delay }) =>
+        setTimeout(() => setLoadingConfig(config), delay)
+      )
 
-    const finalTimer = setTimeout(() => {
-      setCalendarEvents(TEST_EVENTS)
-      setAppState('review')
-      setIsProcessing(false)
-    }, 5000)
+      const finalTimer = setTimeout(() => {
+        setCalendarEvents(TEST_EVENTS)
+        setAppState('review')
+        setIsProcessing(false)
+      }, 5000)
 
-    return () => {
-      timers.forEach(clearTimeout)
-      clearTimeout(finalTimer)
+      return () => {
+        timers.forEach(clearTimeout)
+        clearTimeout(finalTimer)
+      }
     }
-  }, [])
+  }, [sessionId])
+
+  // Load session from URL on mount or when sessionId changes
+  useEffect(() => {
+    if (sessionId) {
+      setIsProcessing(true)
+      setAppState('loading')
+      setLoadingConfig(LOADING_MESSAGES.READING_FILE)
+
+      getSession(sessionId)
+        .then(session => {
+          setCurrentSession(session)
+
+          if (session.processed_events && session.processed_events.length > 0) {
+            setCalendarEvents(session.processed_events as CalendarEvent[])
+            setAppState('review')
+          } else {
+            setAppState('input')
+          }
+        })
+        .catch(error => {
+          console.error('Failed to load session:', error)
+          toast.error('Failed to Load Session', {
+            description: 'The session could not be found.',
+            duration: 5000,
+          })
+          navigate('/')
+          setAppState('input')
+        })
+        .finally(() => {
+          setIsProcessing(false)
+        })
+    }
+    // TEMPORARY: When no sessionId, we let the test data loading sequence handle the state
+  }, [sessionId, navigate])
 
   // Load session history when user logs in
   useEffect(() => {
@@ -170,7 +211,7 @@ function App() {
     setAppState('loading')
     setCalendarEvents([])
     setFeedbackMessage('')
-    setLoadingMessage('Uploading file...')
+    setLoadingConfig(LOADING_MESSAGES.READING_FILE)
 
     try {
       // Determine file type
@@ -179,7 +220,7 @@ function App() {
       // Upload file and create session
       const { session } = await apiUploadFile(file, fileType)
       setCurrentSession(session)
-      setLoadingMessage('Processing file...')
+      setLoadingConfig(LOADING_MESSAGES.PROCESSING_FILE)
 
       // Poll for completion
       const completedSession = await pollSession(session.id, (updatedSession) => {
@@ -187,7 +228,7 @@ function App() {
 
         // Update loading message based on status
         if (updatedSession.status === 'processing') {
-          setLoadingMessage('Extracting calendar events...')
+          setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS)
         }
       })
 
@@ -202,6 +243,9 @@ function App() {
       setCalendarEvents(completedSession.processed_events as CalendarEvent[])
       setAppState('review')
 
+      // Navigate to the session URL
+      navigate(`/s/${completedSession.id}`)
+
       // Refresh session history
       getUserSessions().then(setSessionHistory).catch(console.error)
 
@@ -215,7 +259,7 @@ function App() {
     } finally {
       setIsProcessing(false)
     }
-  }, [isProcessing])
+  }, [isProcessing, navigate])
 
   // Process text input
   const processText = useCallback(async (text: string) => {
@@ -231,7 +275,7 @@ function App() {
     setAppState('loading')
     setCalendarEvents([])
     setFeedbackMessage('')
-    setLoadingMessage('Processing text...')
+    setLoadingConfig(LOADING_MESSAGES.PROCESSING_TEXT)
 
     try {
       // Create text session
@@ -244,7 +288,7 @@ function App() {
 
         // Update loading message based on status
         if (updatedSession.status === 'processing') {
-          setLoadingMessage('Extracting calendar events...')
+          setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS)
         }
       })
 
@@ -259,6 +303,9 @@ function App() {
       setCalendarEvents(completedSession.processed_events as CalendarEvent[])
       setAppState('review')
 
+      // Navigate to the session URL
+      navigate(`/s/${completedSession.id}`)
+
       // Refresh session history
       getUserSessions().then(setSessionHistory).catch(console.error)
 
@@ -272,7 +319,7 @@ function App() {
     } finally {
       setIsProcessing(false)
     }
-  }, [isProcessing])
+  }, [isProcessing, navigate])
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {
@@ -306,31 +353,16 @@ function App() {
   }, [])
 
   // Handle session click (load from history)
-  const handleSessionClick = useCallback(async (sessionId: string) => {
-    try {
-      const session = await getSession(sessionId)
-      setCurrentSession(session)
-
-      if (session.processed_events && session.processed_events.length > 0) {
-        setCalendarEvents(session.processed_events as CalendarEvent[])
-        setAppState('review')
-      } else {
-        setAppState('input')
-      }
-
-      setSidebarOpen(false)
-    } catch (error) {
-      toast.error('Failed to load session')
-    }
-  }, [])
+  const handleSessionClick = useCallback((sessionId: string) => {
+    navigate(`/s/${sessionId}`)
+    setSidebarOpen(false)
+  }, [navigate])
 
   // Handle new session
   const handleNewSession = useCallback(() => {
-    setCurrentSession(null)
-    setCalendarEvents([])
-    setAppState('input')
+    navigate('/')
     setSidebarOpen(false)
-  }, [])
+  }, [navigate])
 
   // Handle adding events to Google Calendar
   const handleAddToCalendar = useCallback(async () => {
@@ -425,7 +457,7 @@ function App() {
           appState={appState}
           uploadedFile={null}
           isProcessing={isProcessing}
-          loadingConfig={[{ message: loadingMessage }]}
+          loadingConfig={[loadingConfig]}
           feedbackMessage={feedbackMessage}
           greetingImage={greetingImagePaths[currentGreetingIndex]}
           calendarEvents={calendarEvents}
@@ -441,6 +473,16 @@ function App() {
         />
       </div>
     </div>
+  )
+}
+
+// Router wrapper component
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<AppContent />} />
+      <Route path="/s/:sessionId" element={<AppContent />} />
+    </Routes>
   )
 }
 

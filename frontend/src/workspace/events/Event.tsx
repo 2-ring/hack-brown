@@ -1,28 +1,41 @@
-import { Equals as EqualsIcon, PencilSimple as EditIcon, Calendar as CalendarIcon } from '@phosphor-icons/react'
+import { Equals as EqualsIcon, PencilSimple as EditIcon } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import type { CalendarEvent } from './types'
+import { EventCalendarSelector } from './EventCalendarSelector'
+
+interface GoogleCalendar {
+  id: string
+  summary: string
+  backgroundColor: string
+  foregroundColor?: string
+  primary?: boolean
+}
 
 interface EventProps {
   event: CalendarEvent | null
   index: number
   isLoading?: boolean
   isLoadingCalendars?: boolean
+  skeletonOpacity?: number
+  calendars?: GoogleCalendar[]
 
   // Editing state
-  editingField?: { eventIndex: number; field: 'summary' | 'date' | 'description' } | null
+  editingField?: { eventIndex: number; field: 'summary' | 'date' | 'time' | 'location' | 'description' } | null
   inputRef?: React.RefObject<HTMLInputElement | null>
 
   // Display helpers
   formatDate: (dateTime: string, endDateTime?: string) => string
-  buildDescription: (event: CalendarEvent) => string
+  formatTime: (dateTime: string) => string
+  formatTimeRange: (start: string, end: string) => string
   getCalendarColor: (calendarName: string | undefined) => string
   getTextColor: (backgroundColor: string) => string
 
   // Event handlers
-  onEditClick: (eventIndex: number, field: 'summary' | 'date' | 'description', e?: React.MouseEvent) => void
+  onEditClick: (eventIndex: number, field: 'summary' | 'date' | 'time' | 'location' | 'description', e?: React.MouseEvent) => void
   onEditChange: (eventIndex: number, field: string, value: string) => void
   onEditBlur: () => void
   onEditKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  onCalendarChange?: (eventIndex: number, calendarId: string) => void
 }
 
 export function Event({
@@ -30,21 +43,25 @@ export function Event({
   index,
   isLoading = false,
   isLoadingCalendars = false,
+  skeletonOpacity = 1,
+  calendars = [],
   editingField,
   inputRef,
   formatDate,
-  buildDescription,
+  formatTime,
+  formatTimeRange,
   getCalendarColor,
   getTextColor,
   onEditClick,
   onEditChange,
   onEditBlur,
   onEditKeyDown,
+  onCalendarChange,
 }: EventProps) {
-  // Loading skeleton - simple grey box like session skeletons
+  // Loading skeleton - simple grey box with fade effect like session skeletons
   if (isLoading && !event) {
     return (
-      <div key={`skeleton-${index}`} style={{ padding: '0' }}>
+      <div key={`skeleton-${index}`} style={{ padding: '0', opacity: skeletonOpacity }}>
         <Skeleton height={140} borderRadius={16} />
       </div>
     )
@@ -54,10 +71,13 @@ export function Event({
   if (!event) return null
 
   // Actual event card
+  const calendarColor = getCalendarColor(event.calendar)
+
   return (
     <div
       key={`event-${index}`}
       className="event-confirmation-card"
+      style={{ borderLeft: `4px solid ${calendarColor}` }}
     >
       {/* Title */}
       <div className="event-confirmation-card-row">
@@ -81,70 +101,87 @@ export function Event({
         </div>
       </div>
 
-      {/* Date */}
+      {/* Time Range */}
       <div className="event-confirmation-card-row">
-        <div className="editable-content-wrapper" onClick={(e) => onEditClick(index, 'date', e)}>
-          {editingField?.eventIndex === index && editingField?.field === 'date' ? (
+        <div className="editable-content-wrapper" onClick={(e) => onEditClick(index, 'time', e)}>
+          {editingField?.eventIndex === index && editingField?.field === 'time' ? (
             <input
               ref={inputRef}
               type="text"
-              className="event-confirmation-card-date editable-input"
-              value={formatDate(event.start.dateTime, event.end.dateTime)}
-              onChange={(e) => onEditChange(index, 'date', e.target.value)}
+              className="event-confirmation-card-time editable-input"
+              value={formatTimeRange(event.start.dateTime, event.end.dateTime)}
+              onChange={(e) => onEditChange(index, 'time', e.target.value)}
               onBlur={onEditBlur}
               onKeyDown={onEditKeyDown}
             />
           ) : (
-            <div className="event-confirmation-card-date">
-              {formatDate(event.start.dateTime, event.end.dateTime)}
+            <div className="event-confirmation-card-time">
+              {formatTimeRange(event.start.dateTime, event.end.dateTime)}
             </div>
           )}
           <EditIcon size={14} weight="regular" className="edit-icon" />
         </div>
       </div>
 
-      {/* Description */}
-      <div className="event-confirmation-card-row">
-        <div className="event-confirmation-card-description">
-          <EqualsIcon size={16} weight="bold" className="description-icon" />
-          <div className="editable-content-wrapper" onClick={(e) => onEditClick(index, 'description', e)}>
-            {editingField?.eventIndex === index && editingField?.field === 'description' ? (
-              <input
-                ref={inputRef}
-                type="text"
-                className="editable-input description-input"
-                value={buildDescription(event)}
-                onChange={(e) => onEditChange(index, 'description', e.target.value)}
-                onBlur={onEditBlur}
-                onKeyDown={onEditKeyDown}
-              />
-            ) : (
-              <span>{buildDescription(event)}</span>
-            )}
-            <EditIcon size={14} weight="regular" className="edit-icon" />
+      {/* Location */}
+      {event.location && (
+        <div className="event-confirmation-card-row">
+          <div className="event-confirmation-card-meta">
+            <EqualsIcon size={16} weight="bold" className="meta-icon" />
+            <div className="editable-content-wrapper" onClick={(e) => onEditClick(index, 'location', e)}>
+              {editingField?.eventIndex === index && editingField?.field === 'location' ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="editable-input meta-input"
+                  value={event.location}
+                  onChange={(e) => onEditChange(index, 'location', e.target.value)}
+                  onBlur={onEditBlur}
+                  onKeyDown={onEditKeyDown}
+                />
+              ) : (
+                <span>{event.location}</span>
+              )}
+              <EditIcon size={14} weight="regular" className="edit-icon" />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Calendar badge */}
-      {event.calendar && (
+      {/* Description */}
+      {event.description && (
         <div className="event-confirmation-card-row">
-          {isLoadingCalendars ? (
-            <Skeleton width={100} height={24} borderRadius={12} />
-          ) : (
-            <div
-              className="event-calendar-badge"
-              style={{
-                backgroundColor: getCalendarColor(event.calendar),
-                color: getTextColor(getCalendarColor(event.calendar))
-              }}
-            >
-              <CalendarIcon size={14} weight="fill" />
-              <span>{event.calendar}</span>
+          <div className="event-confirmation-card-meta">
+            <EqualsIcon size={16} weight="bold" className="meta-icon" />
+            <div className="editable-content-wrapper" onClick={(e) => onEditClick(index, 'description', e)}>
+              {editingField?.eventIndex === index && editingField?.field === 'description' ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="editable-input meta-input"
+                  value={event.description}
+                  onChange={(e) => onEditChange(index, 'description', e.target.value)}
+                  onBlur={onEditBlur}
+                  onKeyDown={onEditKeyDown}
+                />
+              ) : (
+                <span>{event.description}</span>
+              )}
+              <EditIcon size={14} weight="regular" className="edit-icon" />
             </div>
-          )}
+          </div>
         </div>
       )}
+
+      {/* Calendar Selector */}
+      <div className="event-confirmation-card-row">
+        <EventCalendarSelector
+          selectedCalendarId={event.calendar}
+          calendars={calendars}
+          isLoading={isLoadingCalendars}
+          onCalendarSelect={(calendarId) => onCalendarChange?.(index, calendarId)}
+        />
+      </div>
     </div>
   )
 }
