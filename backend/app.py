@@ -15,6 +15,8 @@ from processors.pdf import PDFProcessor
 from calendars.service import CalendarService
 from preferences.service import PersonalizationService
 from preferences.models import UserPreferences
+from preferences.pattern_discovery_service import PatternDiscoveryService
+from services.data_collection_service import DataCollectionService
 
 # Database and Storage imports
 from database.models import User, Session as DBSession
@@ -32,7 +34,7 @@ from preferences.agent import PreferenceApplicationAgent
 from extraction.models import ExtractedFacts
 
 # Import route blueprints
-from calendar import calendar_bp
+from calendars.routes import calendar_bp
 from auth.routes import auth_bp
 
 # Import auth middleware
@@ -63,6 +65,12 @@ calendar_service = CalendarService()
 
 # Initialize Personalization service
 personalization_service = PersonalizationService()
+
+# Initialize Pattern Discovery service
+pattern_discovery_service = PatternDiscoveryService(llm)
+
+# Initialize Data Collection service
+data_collection_service = DataCollectionService(calendar_service)
 
 # Initialize Agents
 agent_0_context = ContextUnderstandingAgent(llm)
@@ -263,6 +271,8 @@ def apply_preferences_endpoint():
     """
     Agent 5: Apply user preferences to extracted facts.
 
+    Supports both new pattern format and legacy preferences format.
+
     Requires authentication. User ID is extracted from JWT token.
 
     Expects JSON body:
@@ -282,31 +292,71 @@ def apply_preferences_endpoint():
         if not facts_dict:
             return jsonify({'error': 'No facts provided'}), 400
 
-        # Load user preferences
-        preferences = personalization_service.load_preferences(user_id)
-
-        if not preferences:
-            # No preferences, return facts unchanged
-            return jsonify({
-                'enhanced_facts': facts_dict,
-                'preferences_applied': False,
-                'message': 'No user preferences found. Run analysis first.'
-            })
-
         # Convert dict to ExtractedFacts model
         facts = ExtractedFacts(**facts_dict)
 
-        # Use the Preference Application Agent
-        enhanced_facts = agent_5_preferences.execute(facts, preferences)
+        # Try to load new patterns first (preferred)
+        patterns = personalization_service.load_patterns(user_id)
+        preferences = None
+        historical_events = []
 
-        return jsonify({
-            'enhanced_facts': enhanced_facts.model_dump(),
-            'preferences_applied': True,
-            'user_id': user_id,
-            'events_analyzed': preferences.total_events_analyzed
-        })
+        if patterns:
+            # New pattern format - fetch historical events for similarity search
+            try:
+                comprehensive_data = data_collection_service.collect_comprehensive_data(
+                    user_id=user_id,
+                    max_events=200  # Get recent events for similarity search
+                )
+                historical_events = comprehensive_data.get('events', [])
+            except Exception as e:
+                print(f"Warning: Could not fetch historical events: {e}")
+                historical_events = []
+
+            # Use the Preference Application Agent with new patterns
+            enhanced_facts = agent_5_preferences.execute(
+                facts=facts,
+                discovered_patterns=patterns,
+                historical_events=historical_events
+            )
+
+            return jsonify({
+                'enhanced_facts': enhanced_facts.model_dump(),
+                'preferences_applied': True,
+                'user_id': user_id,
+                'events_analyzed': patterns.get('total_events_analyzed', 0),
+                'pattern_format': 'new'
+            })
+
+        else:
+            # Fall back to legacy preferences format
+            preferences = personalization_service.load_preferences(user_id)
+
+            if not preferences:
+                # No preferences or patterns, return facts unchanged
+                return jsonify({
+                    'enhanced_facts': facts_dict,
+                    'preferences_applied': False,
+                    'message': 'No user patterns or preferences found. Run pattern discovery first.'
+                })
+
+            # Use the Preference Application Agent with legacy format
+            enhanced_facts = agent_5_preferences.execute(
+                facts=facts,
+                user_preferences=preferences
+            )
+
+            return jsonify({
+                'enhanced_facts': enhanced_facts.model_dump(),
+                'preferences_applied': True,
+                'user_id': user_id,
+                'events_analyzed': preferences.total_events_analyzed,
+                'pattern_format': 'legacy'
+            })
 
     except Exception as e:
+        print(f"Error in preference application: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Preference application failed: {str(e)}'}), 500
 
 
@@ -370,6 +420,142 @@ def delete_preferences():
 
     except Exception as e:
         return jsonify({'error': f'Failed to delete preferences: {str(e)}'}), 500
+
+
+@app.route('/api/personalization/discover', methods=['POST'])
+@require_auth
+def discover_patterns():
+    """
+    Discover user's formatting patterns from calendar history.
+
+    Uses the new simplified approach:
+    - Statistical analysis for style patterns
+    - LLM-based calendar and color pattern summaries
+    - Stores patterns for use by Agent 5
+
+    Requires authentication. User ID is extracted from JWT token.
+
+    Expects JSON body:
+    {
+        "max_events": 500  # Optional, default 500
+    }
+
+    Returns discovered patterns.
+    """
+    try:
+        # Get user_id from auth middleware (set by @require_auth)
+        user_id = request.user_id
+
+        data = request.get_json() or {}
+        max_events = data.get('max_events', 500)
+
+        # Step 1: Collect comprehensive calendar data
+        print(f"\n{'='*60}")
+        print(f"PATTERN DISCOVERY for user {user_id}")
+        print(f"{'='*60}")
+
+        comprehensive_data = data_collection_service.collect_comprehensive_data(
+            user_id=user_id,
+            max_events=max_events
+        )
+
+        events_count = len(comprehensive_data.get('events', []))
+
+        if events_count < 10:
+            return jsonify({
+                'success': False,
+                'error': f'Need at least 10 events to discover patterns. Found {events_count}.'
+            }), 400
+
+        # Step 2: Discover patterns
+        patterns = pattern_discovery_service.discover_patterns(
+            comprehensive_data=comprehensive_data,
+            user_id=user_id
+        )
+
+        # Step 3: Save patterns
+        success = personalization_service.save_patterns(patterns)
+
+        if not success:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save patterns'
+            }), 500
+
+        return jsonify({
+            'success': True,
+            'patterns': patterns,
+            'events_analyzed': patterns['total_events_analyzed'],
+            'message': f'Successfully discovered patterns from {events_count} events'
+        })
+
+    except Exception as e:
+        print(f"Error in pattern discovery: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Pattern discovery failed: {str(e)}'}), 500
+
+
+@app.route('/api/personalization/patterns', methods=['GET'])
+@require_auth
+def get_patterns():
+    """
+    Get the authenticated user's discovered patterns.
+
+    Requires authentication. User ID is extracted from JWT token.
+
+    Returns discovered patterns if they exist.
+    """
+    try:
+        # Get user_id from auth middleware (set by @require_auth)
+        user_id = request.user_id
+
+        patterns = personalization_service.load_patterns(user_id)
+
+        if not patterns:
+            return jsonify({
+                'exists': False,
+                'message': f'No patterns found for user {user_id}. Run pattern discovery first.'
+            }), 404
+
+        return jsonify({
+            'exists': True,
+            'patterns': patterns,
+            'last_updated': patterns.get('last_updated'),
+            'events_analyzed': patterns.get('total_events_analyzed', 0)
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to get patterns: {str(e)}'}), 500
+
+
+@app.route('/api/personalization/patterns', methods=['DELETE'])
+@require_auth
+def delete_patterns():
+    """
+    Delete the authenticated user's discovered patterns.
+
+    Requires authentication. User ID is extracted from JWT token.
+    """
+    try:
+        # Get user_id from auth middleware (set by @require_auth)
+        user_id = request.user_id
+
+        success = personalization_service.delete_patterns(user_id)
+
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Patterns deleted for user {user_id}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'No patterns to delete for user {user_id}'
+            }), 404
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete patterns: {str(e)}'}), 500
 
 
 # ============================================================================

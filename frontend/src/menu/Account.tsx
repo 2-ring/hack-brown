@@ -57,7 +57,6 @@ export function Account() {
             onClick={signIn}
             icon={GoogleIcon}
             variant="signin"
-            className="google"
           >
             Sign in with Google
           </MenuButton>
@@ -66,7 +65,6 @@ export function Account() {
             onClick={signIn}
             icon={MicrosoftIcon}
             variant="signin"
-            className="microsoft"
           >
             Sign in with Microsoft
           </MenuButton>
@@ -75,7 +73,6 @@ export function Account() {
             onClick={signIn}
             icon={AppleIcon}
             variant="signin"
-            className="apple"
           >
             Sign in with Apple
           </MenuButton>

@@ -1,7 +1,9 @@
 """
 Agent 5: Preference Application
-Applies user's learned preferences to extracted facts using few-shot learning
-from similar historical events.
+
+Applies user's learned preferences to extracted facts using:
+- Discovered patterns (calendar summaries, color patterns, style stats)
+- Few-shot learning from similar historical events
 """
 
 from langchain_anthropic import ChatAnthropic
@@ -16,8 +18,12 @@ from preferences.similarity import ProductionSimilaritySearch
 
 class PreferenceApplicationAgent(BaseAgent):
     """
-    Enhances extracted facts with user's learned preferences.
-    Optional agent that runs between fact extraction and formatting.
+    Single agent that handles:
+    - Calendar selection
+    - Color selection
+    - Title formatting
+
+    Uses discovered patterns + few-shot examples for personalization.
     """
 
     def __init__(self, llm: ChatAnthropic):
@@ -35,30 +41,40 @@ class PreferenceApplicationAgent(BaseAgent):
     def execute(
         self,
         facts: ExtractedFacts,
-        user_preferences: UserPreferences,
+        discovered_patterns: Optional[Dict] = None,
+        user_preferences: Optional[UserPreferences] = None,
         historical_events: Optional[List[Dict]] = None
     ) -> ExtractedFacts:
         """
-        Apply user preferences to enhance extracted facts using few-shot learning
-        from similar historical events.
+        Apply user preferences to enhance extracted facts.
 
         Args:
             facts: ExtractedFacts from Agent 2
-            user_preferences: Learned user preferences
+            discovered_patterns: Patterns from PatternDiscoveryService (preferred)
+                - calendar_patterns: Dict[cal_id, summary]
+                - color_patterns: List[str]
+                - style_stats: Dict
+            user_preferences: Legacy UserPreferences (fallback, optional)
             historical_events: User's historical events for similarity search
 
         Returns:
-            Enhanced ExtractedFacts with preferences applied
+            Enhanced ExtractedFacts with calendar + color + formatting applied
         """
         if not facts:
             raise ValueError("No facts provided for preference application")
 
-        if not user_preferences:
-            self.log_info("No user preferences available, returning facts unchanged")
+        # Prefer discovered_patterns, fall back to user_preferences
+        if not discovered_patterns and not user_preferences:
+            self.log_info("No patterns or preferences available, returning facts unchanged")
             return facts
 
         # Build preference context for LLM
-        preferences_context = self._build_preferences_context(user_preferences)
+        if discovered_patterns:
+            preferences_context = self._build_patterns_context(discovered_patterns)
+            self.log_info("Using discovered patterns for personalization")
+        else:
+            preferences_context = self._build_preferences_context(user_preferences)
+            self.log_info("Using legacy preferences for personalization")
 
         # Build few-shot examples from similar historical events
         few_shot_examples = self._build_few_shot_examples_from_history(
@@ -72,44 +88,157 @@ class PreferenceApplicationAgent(BaseAgent):
 
 {few_shot_examples}
 
-IMPORTANT - CALENDAR SELECTION:
-- Analyze event content (title, type, location) and match against calendar usage patterns
-- Use the calendar_name from patterns (e.g., "UAPPLY", "Classes", "Work", "Default")
-- If a pattern clearly matches with high confidence, assign that calendar
-- If no pattern matches or confidence is low, set calendar to "Default" (primary)
-- Only use high-confidence calendar patterns
-- Always include the calendar field in your response, even if it's "Default"
+IMPORTANT - TASK OVERVIEW:
+You must format this event to match the user's personal style:
+1. SELECT CALENDAR: Based on calendar patterns and similar examples
+2. SELECT COLOR: Based on color patterns and similar examples
+3. FORMAT TITLE: Match capitalization, length, and structure from similar examples
+4. SET ALL FIELDS: Include all event details (start, end, duration, location, description)
+
+CALENDAR SELECTION:
+- Review calendar patterns above - which calendar fits this event type?
+- Check which calendars similar examples belong to
+- If a pattern clearly matches, assign that calendar
+- If no pattern matches or confidence is low, use "Default" (primary calendar)
+- Always include the calendar field in your response
+
+Think step-by-step, then output the complete enhanced event.
 """
 
         preference_prompt = ChatPromptTemplate.from_messages([
             ("system", full_system_prompt),
-            ("human", f"""YOUR TASK - Apply these same techniques to the following event facts:
+            ("human", f"""NEW EVENT TO FORMAT:
 
-{facts.model_dump()}
+{facts.model_dump_json(indent=2)}
 
-INSTRUCTIONS:
-For EACH fact in the input, follow this exact process:
-1. Identify which patterns apply (if any) - be specific
-2. Explain your reasoning - why do these patterns match?
-3. Apply the patterns to enhance the fact - show the enhanced version
-
-IMPORTANT:
-- Only apply patterns that clearly match - don't force patterns that don't fit
-- If no patterns apply, keep the fact as-is and use default calendar
-- Preserve all original information while adding enhancements
-- Be consistent with the user's discovered patterns
-
-Provide enhanced facts:""")
+Apply the user's patterns and style to format this event completely.
+Return the enhanced ExtractedFacts with calendar, colorId, and formatted title.""")
         ])
 
-        # Run preference application
+        # Run preference application (single LLM call)
         chain = preference_prompt | self.llm
         result = chain.invoke({})
 
         return result
 
+    # =========================================================================
+    # NEW: Build context from discovered patterns
+    # =========================================================================
+
+    def _build_patterns_context(self, patterns: Dict) -> str:
+        """
+        Build preference context from discovered patterns.
+
+        Args:
+            patterns: Output from PatternDiscoveryService
+
+        Returns:
+            Formatted context string for LLM
+        """
+
+        calendar_patterns = patterns.get('calendar_patterns', {})
+        color_patterns = patterns.get('color_patterns', [])
+        style_stats = patterns.get('style_stats', {})
+        total_events = patterns.get('total_events_analyzed', 0)
+
+        # Format calendar summaries
+        calendar_text = self._format_calendar_summaries(calendar_patterns)
+
+        # Format color patterns
+        color_text = "\n".join(f"  - {p}" for p in color_patterns)
+
+        # Format style stats
+        style_text = self._format_style_stats(style_stats)
+
+        context = f"""
+USER'S PREFERENCES (Learned from {total_events} historical events)
+
+{'='*60}
+CALENDAR USAGE PATTERNS:
+{'='*60}
+{calendar_text}
+
+{'='*60}
+COLOR USAGE PATTERNS:
+{'='*60}
+{color_text}
+
+{'='*60}
+STYLE PREFERENCES:
+{'='*60}
+{style_text}
+"""
+        return context
+
+    def _format_calendar_summaries(self, calendar_patterns: Dict) -> str:
+        """Format calendar patterns for prompt"""
+        if not calendar_patterns:
+            return "  (No calendar patterns discovered)"
+
+        lines = []
+        for cal_id, pattern in calendar_patterns.items():
+            name = pattern.get('name', cal_id)
+            is_primary = pattern.get('is_primary', False)
+            desc = pattern.get('description', '')
+            event_types = pattern.get('event_types', [])
+            examples = pattern.get('examples', [])
+            never_contains = pattern.get('never_contains', [])
+
+            primary_str = " ⭐ PRIMARY CALENDAR" if is_primary else ""
+
+            lines.append(f"\nCalendar: {name}{primary_str}")
+            lines.append(f"  Description: {desc}")
+
+            if event_types:
+                lines.append(f"  Event types: {', '.join(event_types)}")
+
+            if examples:
+                lines.append(f"  Example titles:")
+                for ex in examples[:5]:
+                    lines.append(f"    - \"{ex}\"")
+
+            if never_contains:
+                lines.append(f"  Never contains: {', '.join(never_contains)}")
+
+        return "\n".join(lines)
+
+    def _format_style_stats(self, style_stats: Dict) -> str:
+        """Format style statistics for prompt"""
+        if not style_stats:
+            return "  (No style statistics available)"
+
+        cap = style_stats.get('capitalization', {})
+        length = style_stats.get('length', {})
+        special = style_stats.get('special_chars', {})
+
+        lines = [
+            f"  Capitalization: {cap.get('pattern', 'Unknown')} ({cap.get('consistency', 'unknown')} consistent)",
+            f"  Typical length: {length.get('average_words', '?')} words",
+        ]
+
+        if special.get('uses_brackets'):
+            lines.append(f"  Uses brackets in titles: Yes ({special.get('brackets_frequency', '?')} of events)")
+
+        if special.get('uses_parentheses'):
+            lines.append(f"  Uses parentheses in titles: Yes ({special.get('parentheses_frequency', '?')} of events)")
+
+        if special.get('uses_emojis'):
+            lines.append(f"  Uses emojis in titles: Yes")
+
+        if special.get('uses_dashes'):
+            lines.append(f"  Uses dashes in titles: Yes")
+
+        if special.get('uses_colons'):
+            lines.append(f"  Uses colons in titles: Yes")
+
+        return "\n".join(lines)
+
+    # =========================================================================
+    # LEGACY: Build context from UserPreferences (backward compatibility)
+    # =========================================================================
+
     def _build_preferences_context(self, preferences: UserPreferences) -> str:
-        """Build preference context string for LLM"""
+        """Build preference context string for LLM (legacy format)"""
 
         def format_patterns(pattern_list):
             """Format a list of DiscoveredPattern objects for LLM"""
@@ -181,6 +310,10 @@ USER SETTINGS:
 """
         return context
 
+    # =========================================================================
+    # Few-shot examples from historical events
+    # =========================================================================
+
     def _build_few_shot_examples_from_history(
         self,
         query_facts: ExtractedFacts,
@@ -202,6 +335,7 @@ USER SETTINGS:
 
         # Build similarity index if not already built
         if self.similarity_search is None:
+            self.log_info("Building similarity index...")
             self.similarity_search = ProductionSimilaritySearch()
             self.similarity_search.build_index(historical_events)
 
@@ -216,7 +350,7 @@ USER SETTINGS:
         try:
             similar_events = self.similarity_search.find_similar_with_diversity(
                 query_event,
-                k=5,  # Get 5 diverse examples
+                k=7,  # Get 7 diverse examples
                 diversity_threshold=0.85
             )
         except Exception as e:
@@ -227,90 +361,41 @@ USER SETTINGS:
             return self._build_few_shot_examples()
 
         # Format as few-shot examples
-        examples_text = """
-EXAMPLES FROM YOUR CALENDAR HISTORY (Learn from these real examples):
+        examples_text = f"""
+{'='*60}
+SIMILAR EVENTS FROM YOUR HISTORY (Learn from these):
+{'='*60}
 
-Your formatting style based on similar events you've created:
+These are real events you've created that are similar to the new event.
+Use them to understand your formatting style.
 """
 
         for i, (event, score, breakdown) in enumerate(similar_events, 1):
             # Extract relevant fields
             title = event.get('summary', event.get('title', 'Untitled'))
-            calendar = event.get('calendar_name', 'Default')
+            calendar = event.get('_source_calendar_name', event.get('calendar_name', 'Unknown'))
             color_id = event.get('colorId', '')
-            description = event.get('description', '')
             location = event.get('location', '')
 
-            example = f"""
-EXAMPLE {i} (Similarity: {score:.2f}):
-Event from your history: "{title}"
-  • Calendar: {calendar}"""
+            examples_text += f"""
+Example {i} (Similarity: {score:.2f}):
+  Title: "{title}"
+  Calendar: {calendar}"""
 
             if color_id:
-                example += f"\n  • Color ID: {color_id}"
+                examples_text += f"\n  Color ID: {color_id}"
             if location:
-                example += f"\n  • Location: {location}"
-            if description and len(description) < 100:
-                example += f"\n  • Description: {description[:100]}"
+                examples_text += f"\n  Location: {location}"
 
-            # Add similarity breakdown to show why it matched
-            example += f"\n  • Why similar: "
-            reasons = []
-            if breakdown['semantic'] > 0.7:
-                reasons.append(f"semantically related ({breakdown['semantic']:.2f})")
-            if breakdown['keyword'] > 0.5:
-                reasons.append(f"shared keywords ({breakdown['keyword']:.2f})")
-            if breakdown['temporal'] == 1.0:
-                reasons.append("same type (all-day/timed)")
+        examples_text += f"\n\n{'='*60}\n"
 
-            example += ", ".join(reasons) if reasons else "general match"
-            examples_text += example + "\n"
-
-        examples_text += """
----
-
-Use these examples to understand how YOU format similar events. Apply the same style and patterns to the new event.
-"""
         return examples_text
 
     def _build_few_shot_examples(self) -> str:
         """Build static few-shot examples as fallback when no history available"""
         return """
-EXAMPLES OF PATTERN APPLICATION (Generic examples - use with caution):
+EXAMPLE PATTERN APPLICATION (Generic examples - adapt to user's style):
 
-EXAMPLE 1 - Calendar Selection Based on Content:
-Input fact: {"summary": "UAPPLY team meeting", "start": "2024-03-15T14:00:00"}
-Step 1 - Identify applicable patterns:
-  ✓ Calendar usage: Events with "UAPPLY" → UAPPLY calendar
-Step 2 - Reasoning: Event title contains "UAPPLY", matches organizational pattern
-Step 3 - Apply patterns:
-Enhanced fact: {"summary": "UAPPLY team meeting", "start": "2024-03-15T14:00:00", "calendar": "UAPPLY"}
-
-EXAMPLE 2 - Academic Event to Primary:
-Input fact: {"summary": "MATH 0540 office hours", "start": "2024-03-15T15:00:00"}
-Step 1 - Identify applicable patterns:
-  ✓ Title format: Office hours use "COURSE OH" format
-  ✓ Calendar: Primary calendar used for ALL academic events
-Step 2 - Reasoning: Office hours is academic, user's primary holds all academics
-Step 3 - Apply patterns:
-Enhanced fact: {"summary": "MATH 0540 OH", "start": "2024-03-15T15:00:00", "calendar": "Default"}
-
-EXAMPLE 3 - No Specific Pattern:
-Input fact: {"summary": "dentist appointment", "start": "2024-03-16T10:00:00"}
-Step 1 - Identify applicable patterns: None match
-Step 2 - Reasoning: Personal appointment, no specialized calendar, use primary
-Step 3 - Apply patterns:
-Enhanced fact: {"summary": "dentist appointment", "start": "2024-03-16T10:00:00", "calendar": "Default"}
-
-EXAMPLE 4 - Multiple Patterns Applied:
-Input fact: {"summary": "CS class", "start": "2024-03-17T09:00:00", "duration_minutes": 50}
-Step 1 - Identify applicable patterns:
-  ✓ Title format: Class titles include course code
-  ✓ Duration: Lectures are typically 50 minutes (already correct)
-  ✓ Calendar: Academic classes go to Classes calendar
-  ✓ Color: Academic events use color ID 2
-Step 2 - Reasoning: Matches multiple academic event patterns
-Step 3 - Apply patterns:
-Enhanced fact: {"summary": "CS 0200 Lecture", "start": "2024-03-17T09:00:00", "duration_minutes": 50, "calendar": "Classes", "colorId": "2"}
-
----"""
+These are examples of how to apply patterns. The actual formatting should
+match the user's discovered patterns and similar events.
+"""

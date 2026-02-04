@@ -30,6 +30,10 @@ class PersonalizationService:
         # TODO: Add cache size limits if needed (e.g., LRU eviction)
         self._preferences_cache = {}
 
+        # In-memory cache for discovered patterns
+        # Maps user_id -> Dict (pattern discovery output)
+        self._patterns_cache = {}
+
     def _get_preferences_path(self, user_id: str) -> str:
         """Get file path for user's preferences"""
         return os.path.join(self.user_data_dir, f'{user_id}_preferences.json')
@@ -166,3 +170,128 @@ class PersonalizationService:
                     pass
 
         return preferences
+
+    # =========================================================================
+    # Pattern Storage Methods (New Simplified Approach)
+    # =========================================================================
+
+    def _get_patterns_path(self, user_id: str) -> str:
+        """Get file path for user's discovered patterns"""
+        return os.path.join(self.user_data_dir, f'{user_id}_patterns.json')
+
+    def load_patterns(self, user_id: str) -> Optional[dict]:
+        """
+        Load discovered patterns from cache or disk.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            Dict with patterns if exists, None otherwise
+            Dict format:
+                - user_id: str
+                - calendar_patterns: Dict[calendar_id, summary]
+                - color_patterns: List[pattern descriptions]
+                - style_stats: Dict with statistics
+                - total_events_analyzed: int
+        """
+        # Check cache first
+        if user_id in self._patterns_cache:
+            return self._patterns_cache[user_id]
+
+        # Not in cache, try loading from disk
+        patterns_path = self._get_patterns_path(user_id)
+
+        if not os.path.exists(patterns_path):
+            return None
+
+        try:
+            with open(patterns_path, 'r') as f:
+                patterns = json.load(f)
+
+                # Populate cache
+                self._patterns_cache[user_id] = patterns
+
+                return patterns
+        except Exception as e:
+            print(f"Error loading patterns for {user_id}: {e}")
+            return None
+
+    def save_patterns(self, patterns: dict) -> bool:
+        """
+        Save discovered patterns to disk and cache.
+
+        Args:
+            patterns: Dict from PatternDiscoveryService.discover_patterns()
+
+        Returns:
+            True if successful, False otherwise
+        """
+        user_id = patterns.get('user_id')
+        if not user_id:
+            print("Error: patterns dict missing user_id")
+            return False
+
+        patterns_path = self._get_patterns_path(user_id)
+
+        try:
+            # Add timestamp
+            patterns['last_updated'] = datetime.utcnow().isoformat() + 'Z'
+
+            # Save to disk
+            with open(patterns_path, 'w') as f:
+                json.dump(patterns, f, indent=2)
+
+            # Update cache
+            self._patterns_cache[user_id] = patterns
+
+            return True
+
+        except Exception as e:
+            print(f"Error saving patterns for {user_id}: {e}")
+            return False
+
+    def has_patterns(self, user_id: str) -> bool:
+        """
+        Check if user has discovered patterns.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            True if patterns exist, False otherwise
+        """
+        # Check cache first for fast path
+        if user_id in self._patterns_cache:
+            return True
+
+        patterns_path = self._get_patterns_path(user_id)
+        return os.path.exists(patterns_path)
+
+    def delete_patterns(self, user_id: str) -> bool:
+        """
+        Delete user's discovered patterns from disk and cache.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            True if successful, False otherwise
+        """
+        patterns_path = self._get_patterns_path(user_id)
+
+        try:
+            # Remove from cache
+            if user_id in self._patterns_cache:
+                del self._patterns_cache[user_id]
+
+            # Remove from disk
+            if os.path.exists(patterns_path):
+                os.remove(patterns_path)
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            print(f"Error deleting patterns for {user_id}: {e}")
+            return False
