@@ -87,7 +87,7 @@ export function Account() {
       <div className="account-container">
         <button
           className="account-user-button"
-          onClick={() => setIsSettingsOpen(true)}
+          onClick={() => setIsSettingsOpen(prev => !prev)}
         >
           <div className="account-user-info">
             {user.user_metadata?.avatar_url ? (

@@ -2,13 +2,13 @@
 
 /* Fixed button height constant */
 :root {
-  --menu-button-height: 44px;
+  --menu-button-height: 56px;
 }
 
 /* Increase button height on mobile for better touch targets */
 @media (max-width: 768px) {
   :root {
-    --menu-button-height: 52px;
+    --menu-button-height: 64px;
   }
 }
 

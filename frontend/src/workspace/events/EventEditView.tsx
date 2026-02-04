@@ -26,6 +26,7 @@ import Skeleton from 'react-loading-skeleton'
 import { Clock as ClockIcon, MapPin as LocationIcon, TextAlignLeft as DescriptionIcon, Globe as GlobeIcon, ArrowsClockwise as RepeatIcon } from '@phosphor-icons/react'
 import type { CalendarEvent } from './types'
 import { editViewVariants, editSectionVariants } from './animations'
+import { TimeInput } from './inputs'
 import './EventEditView.css'
 
 interface GoogleCalendar {
@@ -45,7 +46,7 @@ interface EventEditViewProps {
   getCalendarColor: (calendarName: string | undefined) => string
 }
 
-type EditableField = 'summary' | 'location' | 'description' | 'startDate' | 'endDate' | 'timezone' | 'repeat'
+type EditableField = 'summary' | 'location' | 'description' | 'startDate' | 'startTime' | 'endDate' | 'endTime' | 'timezone' | 'repeat'
 
 export function EventEditView({
   event,
@@ -221,19 +222,21 @@ export function EventEditView({
                       )}
                     </div>
                     {!isAllDay && (
-                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick('startDate', e)}>
-                        {editingField === 'startDate' ? (
-                          <input
-                            ref={inputRef as React.RefObject<HTMLInputElement>}
-                            type="text"
-                            className="date-text editable-input"
-                            value={formatTimeForDisplay(editedEvent.start.dateTime)}
-                            onChange={(e) => {
-                              // For now, just keep the display value
-                              // TODO: Implement time parsing
+                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick('startTime', e)}>
+                        {editingField === 'startTime' ? (
+                          <TimeInput
+                            value={editedEvent.start.dateTime}
+                            onChange={(newTime) => {
+                              setEditedEvent(prev => ({
+                                ...prev,
+                                start: {
+                                  ...prev.start,
+                                  dateTime: newTime
+                                }
+                              }))
                             }}
                             onBlur={handleEditBlur}
-                            onKeyDown={handleEditKeyDown}
+                            className="date-text editable-input"
                           />
                         ) : (
                           <span className="date-text">{formatTimeForDisplay(editedEvent.start.dateTime)}</span>
@@ -261,19 +264,21 @@ export function EventEditView({
                       )}
                     </div>
                     {!isAllDay && (
-                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick('endDate', e)}>
-                        {editingField === 'endDate' ? (
-                          <input
-                            ref={inputRef as React.RefObject<HTMLInputElement>}
-                            type="text"
-                            className="date-text editable-input"
-                            value={formatTimeForDisplay(editedEvent.end.dateTime)}
-                            onChange={(e) => {
-                              // For now, just keep the display value
-                              // TODO: Implement time parsing
+                      <div className="editable-content-wrapper" onClick={(e) => handleEditClick('endTime', e)}>
+                        {editingField === 'endTime' ? (
+                          <TimeInput
+                            value={editedEvent.end.dateTime}
+                            onChange={(newTime) => {
+                              setEditedEvent(prev => ({
+                                ...prev,
+                                end: {
+                                  ...prev.end,
+                                  dateTime: newTime
+                                }
+                              }))
                             }}
                             onBlur={handleEditBlur}
-                            onKeyDown={handleEditKeyDown}
+                            className="date-text editable-input"
                           />
                         ) : (
                           <span className="date-text">{formatTimeForDisplay(editedEvent.end.dateTime)}</span>

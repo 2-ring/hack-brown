@@ -231,6 +231,18 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       return '#1170C5'
     }
 
+    // Test calendar colors (for demo purposes)
+    const testCalendarColors: { [key: string]: string } = {
+      'work': '#D50000',      // Red
+      'school': '#F4511E',    // Deep Orange
+      'personal': '#0B8043',  // Green
+    }
+
+    const testColor = testCalendarColors[calendarName.toLowerCase()]
+    if (testColor) {
+      return testColor
+    }
+
     // Find matching calendar by name (case-insensitive)
     const calendar = calendars.find(cal =>
       cal.summary.toLowerCase() === calendarName.toLowerCase()

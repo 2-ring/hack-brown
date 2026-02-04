@@ -60,17 +60,13 @@ export function Event({
       style={{ borderLeft: `8px solid ${calendarColor}` }}
       onClick={onClick}
     >
-      {/* Title */}
+      {/* Title with Time */}
       <div className="event-confirmation-card-row">
         <div className="event-confirmation-card-title">
-          {event.summary}
-        </div>
-      </div>
-
-      {/* Time Range */}
-      <div className="event-confirmation-card-row">
-        <div className="event-confirmation-card-time">
-          {formatTimeRange(event.start.dateTime, event.end.dateTime)}
+          {event.summary}{' '}
+          <span className="event-confirmation-card-time-inline">
+            ({formatTimeRange(event.start.dateTime, event.end.dateTime)})
+          </span>
         </div>
       </div>
 

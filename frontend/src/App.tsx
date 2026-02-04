@@ -62,7 +62,6 @@ const TEST_EVENTS: CalendarEvent[] = [
       timeZone: 'America/New_York'
     },
     location: 'Zoom Meeting',
-    description: 'Quarterly review presentation for client stakeholders',
     calendar: 'Work'
   },
   {
@@ -89,8 +88,6 @@ const TEST_EVENTS: CalendarEvent[] = [
       dateTime: '2026-02-10T16:00:00',
       timeZone: 'America/New_York'
     },
-    location: 'Blue State Coffee',
-    description: 'Catch up on project ideas',
     calendar: 'Personal'
   },
   {
@@ -103,7 +100,6 @@ const TEST_EVENTS: CalendarEvent[] = [
       dateTime: '2026-03-02T11:00:00',
       timeZone: 'America/New_York'
     },
-    location: 'Main Office',
     description: 'Q2 project planning and team alignment',
     calendar: 'Work'
   },
@@ -118,7 +114,6 @@ const TEST_EVENTS: CalendarEvent[] = [
       timeZone: 'America/New_York'
     },
     location: 'Dr. Smith Dental',
-    description: 'Regular checkup and cleaning',
     calendar: 'Personal'
   },
   {

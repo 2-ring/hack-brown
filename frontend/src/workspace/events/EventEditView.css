@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 0 var(--page-padding-x);
+  padding: 0.5rem var(--page-padding-x);
   animation: fadeIn 0.2s ease;
 }
 
@@ -67,6 +67,11 @@
   font-family: inherit;
   caret-color: #7C8FFF;
   min-width: 0;
+}
+
+/* Allow overflow for time input dropdowns */
+.event-edit-overlay .editable-content-wrapper:has(.time-input-container) {
+  overflow: visible;
 }
 
 @keyframes fadeIn {

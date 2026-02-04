@@ -1,91 +1,101 @@
-/* TimeInput Styles */
-
 .time-input-container {
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .time-input {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #333;
-  background: white;
-  transition: border-color 0.2s;
-}
-
-.time-input:focus {
+  border: none;
   outline: none;
-  border-color: #1170C5;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  caret-color: #7C8FFF;
 }
 
 .time-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  max-height: 300px;
+  top: calc(100% + 8px);
+  left: -12px;
+  min-width: 200px;
+  max-height: 280px;
   overflow-y: auto;
   background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
+  animation: dropdownSlideIn 0.15s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .time-option {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 16px;
   border: none;
   background: none;
   text-align: left;
   font-size: 14px;
   color: #333;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.1s;
+  border-radius: 0;
+}
+
+.time-option:first-child {
+  border-radius: 12px 12px 0 0;
+}
+
+.time-option:last-child {
+  border-radius: 0 0 12px 12px;
 }
 
 .time-option:hover {
-  background-color: #f5f5f5;
+  background-color: rgba(124, 143, 255, 0.08);
 }
 
 .time-option:active {
-  background-color: #e8e8e8;
+  background-color: rgba(124, 143, 255, 0.15);
 }
 
-/* Mobile variant */
 .time-input-mobile {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 16px; /* Larger for mobile */
-  color: #333;
-  background: white;
-}
-
-.time-input-mobile:focus {
+  border: none;
   outline: none;
-  border-color: #1170C5;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
-/* Scrollbar styling for dropdown */
 .time-dropdown::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .time-dropdown::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+  background: transparent;
 }
 
 .time-dropdown::-webkit-scrollbar-thumb {
-  background: #c0c0c0;
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
 }
 
 .time-dropdown::-webkit-scrollbar-thumb:hover {
-  background: #a0a0a0;
+  background: rgba(0, 0, 0, 0.3);
 }
