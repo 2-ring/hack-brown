@@ -106,7 +106,7 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding-left: calc(26px + 0.25rem);
+  padding-left: calc(26px + var(--brand-logo-gap));
   height: 26px;
 }
 

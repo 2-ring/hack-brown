@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { Mailbox, FingerprintSimple, ShootingStar, Link } from '@phosphor-icons/react'
-import wordmark from '../assets/brand/light/wordmark.png'
+import { Mailbox, FingerprintSimple, ShootingStar, Link, Drop } from '@phosphor-icons/react'
+import wordImageLight from '../assets/brand/light/word.png'
 import './Welcome.css'
 
 export function Welcome() {
@@ -9,7 +9,10 @@ export function Welcome() {
   return (
     <div className="welcome">
       <header className="welcome-header">
-        <img src={wordmark} alt="DropCal" className="welcome-wordmark" />
+        <div className="welcome-logo">
+          <Drop size={32} weight="fill" color="#1170C5" />
+          <img src={wordImageLight} alt="DropCal" className="welcome-word" />
+        </div>
         <nav className="welcome-nav">
           <a href="mailto:contact@dropcal.app" className="welcome-link">
             <Mailbox size={20} weight="duotone" />

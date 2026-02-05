@@ -32,7 +32,13 @@
   z-index: 10;
 }
 
-.welcome-wordmark {
+.welcome-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--brand-logo-gap);
+}
+
+.welcome-word {
   height: 32px;
   width: auto;
 }

@@ -6,6 +6,7 @@ import { Workspace } from './workspace/Workspace'
 import { Menu } from './menu/Menu'
 import { Plans } from './payment/Plans'
 import { Welcome } from './welcome/Welcome'
+import { NotFound } from './NotFound'
 import { useAuth } from './auth/AuthContext'
 import { GuestSessionManager } from './auth/GuestSessionManager'
 import { AuthModal } from './auth/AuthModal'
@@ -540,6 +541,7 @@ function App() {
         <Route path="/s/:sessionId" element={<AppContent />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/welcome" element={<Welcome />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </NotificationProvider>
   )

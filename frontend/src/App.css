@@ -31,6 +31,10 @@
 
   /* Text input */
   --droparea-text-size: 1rem;
+
+  /* Brand logo */
+  --brand-mark-size: 32px;
+  --brand-logo-gap: calc(var(--brand-mark-size) * 0.25);
 }
 
 .app {
