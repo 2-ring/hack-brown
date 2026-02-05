@@ -1,14 +1,15 @@
 /* Menu Button Component Styles */
 
-/* Fixed button height constant */
+/* Fixed button height constant - matches --dock-height from EventsWorkspace.css (56px desktop, 64px mobile) */
+/* DO NOT REVERT: This was intentionally increased to match the dock bars for visual consistency */
 :root {
-  --menu-button-height: 44px;
+  --menu-button-height: 56px;
 }
 
 /* Increase button height on mobile for better touch targets */
 @media (max-width: 768px) {
   :root {
-    --menu-button-height: 48px;
+    --menu-button-height: 64px;
   }
 }
 
@@ -35,13 +36,14 @@
   cursor: not-allowed;
 }
 
-/* Action button variant (New events, View calendar) */
+/* Action button variant (New events, View calendar) - intentionally smaller than account button */
 .menu-button-action {
   padding: 0 16px;
   background-color: white;
   color: #333;
   width: calc(100% - 2rem);
   margin: 0 1rem 0.5rem 1rem;
+  height: 44px; /* Override to keep action buttons smaller */
 }
 
 .menu-button-action:first-child {

@@ -6,6 +6,7 @@ import { Account } from './Account'
 import { MenuButton } from './MenuButton'
 import { SkeletonSessionGroup } from '../components/skeletons'
 import { getCalendarProviders } from '../api/backend-client'
+import { Tooltip } from '../components/Tooltip'
 import './Menu.css'
 import markImage from '../assets/Mark.png'
 import wordImage from '../assets/Word.png'
@@ -148,12 +149,16 @@ export function Menu({
       {/* Dock when sidebar is closed */}
       {!isOpen && (
         <div className="sidebar-dock">
-          <button className="dock-icon-button" onClick={onToggle} title="Expand sidebar">
-            <SidebarIcon size={20} weight="regular" />
-          </button>
-          <button className="dock-icon-button" onClick={onNewSession} title="Start new">
-            <PlusCircle size={20} weight="regular" />
-          </button>
+          <Tooltip content="Expand sidebar">
+            <button className="dock-icon-button" onClick={onToggle}>
+              <SidebarIcon size={20} weight="duotone" />
+            </button>
+          </Tooltip>
+          <Tooltip content="Start new session">
+            <button className="dock-icon-button" onClick={onNewSession}>
+              <CalendarStar size={20} weight="duotone" />
+            </button>
+          </Tooltip>
         </div>
       )}
 
@@ -172,20 +177,24 @@ export function Menu({
           <div className="sidebar-logo">
             <img src={wordImage} alt="DropCal" className="word-logo" />
           </div>
-          <button className="sidebar-toggle" onClick={onToggle}>
-            <SidebarIcon size={20} weight="regular" className="sidebar-icon" />
-            <CaretCircleLeft size={20} weight="regular" className="sidebar-chevron" />
-          </button>
+          <Tooltip content="Close sidebar">
+            <button className="sidebar-toggle" onClick={onToggle}>
+              <SidebarIcon size={20} weight="duotone" className="sidebar-icon" />
+              <CaretCircleLeft size={20} weight="duotone" className="sidebar-chevron" />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="sidebar-content">
-          <MenuButton
-            onClick={onNewSession}
-            icon={<CalendarStar size={20} weight="duotone" />}
-            variant="primary"
-          >
-            Start new
-          </MenuButton>
+          <Tooltip content="Start new session">
+            <MenuButton
+              onClick={onNewSession}
+              icon={<CalendarStar size={20} weight="duotone" />}
+              variant="primary"
+            >
+              Start new
+            </MenuButton>
+          </Tooltip>
 
           <MenuButton
             onClick={() => window.open(getCalendarUrl(), '_blank')?.focus()}

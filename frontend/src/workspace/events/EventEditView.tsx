@@ -20,13 +20,13 @@
  * Position it where you want it in the render order to control animation timing.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import Skeleton from 'react-loading-skeleton'
 import { Clock as ClockIcon, MapPin as LocationIcon, TextAlignLeft as DescriptionIcon, Globe as GlobeIcon, ArrowsClockwise as RepeatIcon } from '@phosphor-icons/react'
 import type { CalendarEvent } from './types'
 import { editViewVariants, editSectionVariants } from './animations'
-import { TimeInput, type CursorBehavior } from './inputs'
+import { TimeInput } from './inputs'
 import './EventEditView.css'
 
 interface GoogleCalendar {
@@ -69,21 +69,6 @@ export function EventEditView({
     }))
   }
 
-  const getCursorBehavior = (field: EditableField): CursorBehavior => {
-    switch (field) {
-      case 'summary':
-        return 'select-all'
-      case 'description':
-      case 'location':
-        return 'end'
-      case 'startTime':
-      case 'endTime':
-        return 'before-suffix'
-      default:
-        return 'end'
-    }
-  }
-
   const handleEditClick = (field: EditableField, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setEditingField(field)
@@ -91,11 +76,10 @@ export function EventEditView({
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus()
-        const behavior = getCursorBehavior(field)
-
-        if (behavior === 'select-all') {
+        // Title: select all, others: cursor at end
+        if (field === 'summary') {
           inputRef.current.select()
-        } else if (behavior === 'end') {
+        } else {
           const length = inputRef.current.value.length
           inputRef.current.setSelectionRange(length, length)
         }
@@ -262,7 +246,6 @@ export function EventEditView({
                           onFocus={() => setEditingField('startTime')}
                           onBlur={handleEditBlur}
                           isEditing={editingField === 'startTime'}
-                          cursorBehavior="before-suffix"
                           className="date-text"
                         />
                       </div>
@@ -303,7 +286,6 @@ export function EventEditView({
                           onFocus={() => setEditingField('endTime')}
                           onBlur={handleEditBlur}
                           isEditing={editingField === 'endTime'}
-                          cursorBehavior="before-suffix"
                           className="date-text"
                         />
                       </div>

@@ -2,6 +2,5 @@ export {
   TimeInput,
   TimeInputDesktop,
   TimeInputMobile,
-  type TimeInputProps,
-  type CursorBehavior
+  type TimeInputProps
 } from './TimeInput'

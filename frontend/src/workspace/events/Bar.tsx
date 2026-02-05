@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react'
+import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import type { LoadingStateConfig } from './types'
 import { CalendarSelector } from './CalendarSelector'
+import { Tooltip } from '../../components/Tooltip'
 
 // ============================================================================
 // TOP BAR
@@ -116,11 +117,11 @@ export function BottomBar({
                   >
                     {IconComponent && (
                       <div className="loading-progress-icon">
-                        <IconComponent size={16} weight="bold" />
+                        <IconComponent size={20} weight="duotone" />
                       </div>
                     )}
                     <div className="loading-progress-text">
-                      <div className="loading-progress-message" style={{ fontStyle: 'italic' }}>
+                      <div className="loading-progress-message">
                         {step.message}
                       </div>
                       {step.submessage && (
@@ -150,13 +151,14 @@ export function BottomBar({
                 {viewState === 'editing' ? (
                   /* Edit Mode: Cancel + Request Changes + Save */
                   <>
-                    <button
-                      className="event-confirmation-icon-button cancel"
-                      onClick={onCancel}
-                      title="Cancel"
-                    >
-                      <FirstAidIcon size={20} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
-                    </button>
+                    <Tooltip content="Cancel">
+                      <button
+                        className="event-confirmation-icon-button cancel"
+                        onClick={onCancel}
+                      >
+                        <FirstAidIcon size={20} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
+                      </button>
+                    </Tooltip>
                     <button
                       className="event-confirmation-request-button"
                       onClick={onRequestChanges}
@@ -164,24 +166,26 @@ export function BottomBar({
                       <ChatIcon size={18} weight="bold" />
                       <span>Request changes</span>
                     </button>
-                    <button
-                      className="event-confirmation-icon-button confirm"
-                      onClick={onCancel}
-                      title="Save changes"
-                    >
-                      <CheckIcon size={24} weight="bold" />
-                    </button>
+                    <Tooltip content="Save changes">
+                      <button
+                        className="event-confirmation-icon-button confirm"
+                        onClick={onCancel}
+                      >
+                        <CheckIcon size={24} weight="bold" />
+                      </button>
+                    </Tooltip>
                   </>
                 ) : viewState === 'editing-chat' ? (
                   /* Edit Mode with Chat: Cancel + Input + Send */
                   <>
-                    <button
-                      className="event-confirmation-icon-button cancel"
-                      onClick={onCancel}
-                      title="Back to edit"
-                    >
-                      <FirstAidIcon size={20} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
-                    </button>
+                    <Tooltip content="Back to edit">
+                      <button
+                        className="event-confirmation-icon-button cancel"
+                        onClick={onCancel}
+                      >
+                        <FirstAidIcon size={20} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
+                      </button>
+                    </Tooltip>
                     <div className="event-confirmation-chat-input-wrapper">
                       <input
                         type="text"
@@ -193,25 +197,27 @@ export function BottomBar({
                         autoFocus
                       />
                     </div>
-                    <button
-                      className="event-confirmation-icon-button send"
-                      onClick={onSend}
-                      disabled={!changeRequest.trim() || isProcessingEdit}
-                      title="Send"
-                    >
-                      <SendIcon size={22} weight="fill" />
-                    </button>
+                    <Tooltip content="Send">
+                      <button
+                        className="event-confirmation-icon-button send"
+                        onClick={onSend}
+                        disabled={!changeRequest.trim() || isProcessingEdit}
+                      >
+                        <SendIcon size={22} weight="fill" />
+                      </button>
+                    </Tooltip>
                   </>
                 ) : viewState === 'chat' ? (
                   /* Chat Expanded: Cancel + Input + Send */
                   <>
-                    <button
-                      className="event-confirmation-icon-button cancel"
-                      onClick={onCancel}
-                      title="Cancel"
-                    >
-                      <FirstAidIcon size={20} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
-                    </button>
+                    <Tooltip content="Cancel">
+                      <button
+                        className="event-confirmation-icon-button cancel"
+                        onClick={onCancel}
+                      >
+                        <FirstAidIcon size={20} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
+                      </button>
+                    </Tooltip>
                     <div className="event-confirmation-chat-input-wrapper">
                       <input
                         type="text"
@@ -223,14 +229,15 @@ export function BottomBar({
                         autoFocus
                       />
                     </div>
-                    <button
-                      className="event-confirmation-icon-button send"
-                      onClick={onSend}
-                      disabled={!changeRequest.trim() || isProcessingEdit}
-                      title="Send"
-                    >
-                      <SendIcon size={22} weight="fill" />
-                    </button>
+                    <Tooltip content="Send">
+                      <button
+                        className="event-confirmation-icon-button send"
+                        onClick={onSend}
+                        disabled={!changeRequest.trim() || isProcessingEdit}
+                      >
+                        <SendIcon size={22} weight="fill" />
+                      </button>
+                    </Tooltip>
                   </>
                 ) : (
                   /* Default: Request Changes + Confirm */
@@ -243,13 +250,14 @@ export function BottomBar({
                       <span>Request changes</span>
                     </button>
                     {onConfirm && (
-                      <button
-                        className="event-confirmation-icon-button confirm"
-                        onClick={onConfirm}
-                        title="Add to Calendar"
-                      >
-                        <CalendarCheckIcon size={24} weight="bold" />
-                      </button>
+                      <Tooltip content="Create events">
+                        <button
+                          className="event-confirmation-icon-button confirm"
+                          onClick={onConfirm}
+                        >
+                          <CalendarStarIcon size={24} weight="duotone" />
+                        </button>
+                      </Tooltip>
                     )}
                   </>
                 )}
