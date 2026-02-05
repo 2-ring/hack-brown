@@ -55,6 +55,29 @@ CRITICAL RULES:
 4. Keep all other fields (location, description, attendees) as-is
 5. Dates and times are already normalized - just combine them into ISO 8601
 
+CRITICAL FORMAT REQUIREMENTS (VALIDATION ENFORCED):
+These formats are STRICTLY VALIDATED. Incorrect formats will be rejected:
+
+✅ dateTime MUST be: ISO 8601 with timezone (YYYY-MM-DDTHH:MM:SS±HH:MM or Z)
+   - CORRECT: "2026-02-05T14:00:00-05:00", "2026-02-05T14:00:00Z"
+   - WRONG: "2026-02-05 14:00:00", "2026-02-05T14:00:00" (missing timezone)
+
+✅ timeZone MUST be: Valid IANA timezone
+   - CORRECT: "America/New_York", "UTC", "Europe/London", "America/Chicago"
+   - WRONG: "EST", "Eastern", "GMT-5" (use IANA format)
+
+✅ summary MUST be: ≤100 characters
+   - System will truncate if longer
+
+✅ recurrence MUST be: Valid RRULE format
+   - MUST start with "RRULE:"
+   - MUST contain FREQ parameter
+   - CORRECT: "RRULE:FREQ=WEEKLY;BYDAY=TU,TH", "RRULE:FREQ=DAILY"
+   - WRONG: "FREQ=WEEKLY;BYDAY=TU" (missing RRULE: prefix)
+   - WRONG: "RRULE:BYDAY=TU" (missing FREQ)
+   - Valid FREQ: DAILY, WEEKLY, MONTHLY, YEARLY
+   - Valid BYDAY: MO, TU, WE, TH, FR, SA, SU
+
 Examples:
 
 Input facts (normalized):

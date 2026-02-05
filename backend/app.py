@@ -6,6 +6,9 @@ import os
 import threading
 from werkzeug.utils import secure_filename
 from typing import Optional
+import logging
+import traceback
+from pydantic import ValidationError
 
 from processors.factory import InputProcessorFactory, InputType
 from processors.audio import AudioProcessor
@@ -47,6 +50,13 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Register blueprints
 app.register_blueprint(auth_bp)
@@ -101,6 +111,64 @@ input_processor_factory.register_processor(InputType.PDF, pdf_processor)
 
 # Initialize session processor
 session_processor = SessionProcessor(llm, input_processor_factory)
+
+
+# ============================================================================
+# Validation Error Handling Utilities
+# ============================================================================
+
+def format_validation_error(error: ValidationError, stage: str) -> dict:
+    """
+    Format ValidationError into user-friendly error details.
+
+    Args:
+        error: Pydantic ValidationError
+        stage: Pipeline stage ('identification', 'extraction', 'formatting')
+
+    Returns:
+        Dictionary with formatted error details
+    """
+    errors = []
+    for err in error.errors():
+        field = '.'.join(str(loc) for loc in err['loc'])
+        message = err['msg']
+        error_type = err['type']
+
+        errors.append({
+            'field': field,
+            'message': message,
+            'type': error_type,
+            'input': err.get('input', 'N/A')
+        })
+
+    return {
+        'stage': stage,
+        'errors': errors,
+        'suggestion': get_suggestion_for_stage(stage)
+    }
+
+
+def get_validation_summary(error: ValidationError) -> str:
+    """Get one-line summary of validation errors."""
+    error_count = len(error.errors())
+    first_error = error.errors()[0]
+    field = '.'.join(str(loc) for loc in first_error['loc'])
+    message = first_error['msg']
+
+    if error_count == 1:
+        return f"{field}: {message}"
+    else:
+        return f"{field}: {message} (+{error_count-1} more errors)"
+
+
+def get_suggestion_for_stage(stage: str) -> str:
+    """Get user-facing suggestion based on pipeline stage."""
+    suggestions = {
+        'identification': 'Please ensure your input contains clear event information (date, time, title).',
+        'extraction': 'The event information could not be properly formatted. Check that dates are in YYYY-MM-DD format and times are in HH:MM:SS format.',
+        'formatting': 'The event could not be formatted for your calendar. Check that timezones and recurrence rules are valid.'
+    }
+    return suggestions.get(stage, 'Please check your input and try again.')
 
 
 # ============================================================================
@@ -202,14 +270,23 @@ def process_input():
         # Continue without preferences (will use defaults)
         pass
 
-    # Step 3: Run full agent pipeline
+    # Step 3: Run full agent pipeline with validation error handling
     try:
-        # Agent 1: Event Identification (no context needed - LLM handles implicitly)
-        identification_result = agent_1_identification.execute(
-            raw_input,
-            metadata,
-            requires_vision
-        )
+        # Agent 1: Event Identification
+        try:
+            identification_result = agent_1_identification.execute(
+                raw_input,
+                metadata,
+                requires_vision
+            )
+        except ValidationError as e:
+            logger.error(f"Validation error in Agent 1 (Identification): {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Event identification failed',
+                'details': format_validation_error(e, 'identification'),
+                'error_type': 'validation_error'
+            }), 400
 
         # Check if any events were found
         if not identification_result.has_events:
@@ -219,28 +296,83 @@ def process_input():
                 'message': 'No calendar events found in input'
             })
 
-        # Step 4: Extract and format each event
+        # Step 4: Extract and format each event with per-event error handling
         formatted_events = []
-        for event in identification_result.events:
-            # Agent 2: Fact Extraction
-            facts = agent_2_extraction.execute(
-                event.raw_text,
-                event.description
-            )
+        validation_warnings = []
 
-            # Agent 3: Calendar Formatting (with user preferences)
-            calendar_event = agent_3_formatting.execute(facts, user_preferences)
-            formatted_events.append(calendar_event.model_dump())
+        for idx, event in enumerate(identification_result.events):
+            try:
+                # Agent 2: Fact Extraction
+                try:
+                    facts = agent_2_extraction.execute(
+                        event.raw_text,
+                        event.description
+                    )
 
-        # Return results
-        return jsonify({
+                    # Log soft warning for long titles (>8 words)
+                    if len(facts.title.split()) > 8:
+                        warning = f"Event {idx+1}: Title is long ({len(facts.title.split())} words). Consider shortening."
+                        validation_warnings.append(warning)
+                        logger.warning(warning)
+
+                except ValidationError as e:
+                    logger.error(f"Validation error in Agent 2 (Extraction) for event {idx+1}: {e}")
+                    validation_warnings.append(
+                        f"Event {idx+1} ('{event.description[:50]}...'): Failed validation - {get_validation_summary(e)}"
+                    )
+                    continue
+
+                # Agent 3: Calendar Formatting
+                try:
+                    calendar_event = agent_3_formatting.execute(facts, user_preferences)
+                    formatted_events.append(calendar_event.model_dump())
+
+                except ValidationError as e:
+                    logger.error(f"Validation error in Agent 3 (Formatting) for event {idx+1}: {e}")
+                    validation_warnings.append(
+                        f"Event {idx+1} ('{facts.title}'): Calendar formatting failed - {get_validation_summary(e)}"
+                    )
+                    continue
+
+            except Exception as e:
+                # Catch any other unexpected errors for this event
+                logger.error(f"Unexpected error processing event {idx+1}: {e}\n{traceback.format_exc()}")
+                validation_warnings.append(
+                    f"Event {idx+1}: Unexpected error - {str(e)}"
+                )
+                continue
+
+        # Return results with warnings if any events failed
+        response = {
             'success': True,
             'num_events': len(formatted_events),
             'events': formatted_events
-        })
+        }
+
+        if validation_warnings:
+            response['warnings'] = validation_warnings
+            response['message'] = f"Successfully processed {len(formatted_events)} of {len(identification_result.events)} events"
+
+        return jsonify(response)
+
+    except ValidationError as e:
+        # Top-level validation error (shouldn't happen if we caught all above)
+        logger.error(f"Top-level validation error: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Event extraction failed due to validation errors',
+            'details': format_validation_error(e, 'extraction'),
+            'error_type': 'validation_error'
+        }), 400
 
     except Exception as e:
-        return jsonify({'error': f'Event extraction failed: {str(e)}'}), 500
+        # Catch-all for unexpected errors
+        logger.error(f"Unexpected error in extraction pipeline: {e}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': f'Event extraction failed: {str(e)}',
+            'error_type': 'internal_error'
+        }), 500
 
 
 # ============================================================================
