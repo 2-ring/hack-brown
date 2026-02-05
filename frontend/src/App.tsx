@@ -403,7 +403,7 @@ function AppContent() {
   }, [navigate])
 
   // Handle adding events to Google Calendar
-  const handleAddToCalendar = useCallback(async () => {
+  const handleAddToCalendar = useCallback(async (editedEvents?: CalendarEvent[]) => {
     if (!currentSession) {
       toast.error('No Session', {
         description: 'No session available to add to calendar.',
@@ -418,7 +418,8 @@ function AppContent() {
         description: 'Creating events in Google Calendar...',
       })
 
-      const result = await addSessionToCalendar(currentSession.id)
+      // Pass edited events for correction logging
+      const result = await addSessionToCalendar(currentSession.id, editedEvents)
 
       // Dismiss loading toast
       toast.dismiss('calendar-add')

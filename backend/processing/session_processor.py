@@ -12,6 +12,7 @@ from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import FactExtractionAgent
 from extraction.agents.formatting import CalendarFormattingAgent
 from extraction.title_generator import get_title_generator
+from events.service import EventService
 
 
 class SessionProcessor:
@@ -103,7 +104,9 @@ class SessionProcessor:
             DBSession.update_extracted_events(session_id, extracted_events)
 
             # Step 3: Process each event (Fact Extraction + Formatting)
-            processed_events = []
+            # Get session to access user_id
+            session = DBSession.get_by_id(session_id)
+            user_id = session['user_id']
 
             for event in identification_result.events:
                 # Agent 2: Fact Extraction
@@ -114,10 +117,28 @@ class SessionProcessor:
 
                 # Agent 3: Calendar Formatting
                 calendar_event = self.agent_3_formatting.execute(facts)
-                processed_events.append(calendar_event.model_dump())
 
-            # Save processed events and mark as complete
-            DBSession.update_processed_events(session_id, processed_events)
+                # Create event in unified events table
+                EventService.create_dropcal_event(
+                    user_id=user_id,
+                    session_id=session_id,
+                    summary=calendar_event.summary,
+                    start_time=calendar_event.start.get('dateTime') if calendar_event.start else None,
+                    end_time=calendar_event.end.get('dateTime') if calendar_event.end else None,
+                    start_date=calendar_event.start.get('date') if calendar_event.start else None,
+                    end_date=calendar_event.end.get('date') if calendar_event.end else None,
+                    is_all_day=calendar_event.start.get('date') is not None if calendar_event.start else False,
+                    description=calendar_event.description,
+                    location=calendar_event.location,
+                    calendar_name=calendar_event.calendar,
+                    color_id=calendar_event.colorId,
+                    original_input=event.raw_text,
+                    extracted_facts=facts.model_dump(),
+                    system_suggestion=calendar_event.model_dump()
+                )
+
+            # Mark session as complete
+            DBSession.update_status(session_id, 'processed')
 
         except Exception as e:
             # Mark session as error
@@ -198,7 +219,9 @@ class SessionProcessor:
             DBSession.update_extracted_events(session_id, extracted_events)
 
             # Step 3: Process each event
-            processed_events = []
+            # Get session to access user_id
+            session = DBSession.get_by_id(session_id)
+            user_id = session['user_id']
 
             for event in identification_result.events:
                 # Agent 2: Fact Extraction
@@ -209,10 +232,28 @@ class SessionProcessor:
 
                 # Agent 3: Calendar Formatting
                 calendar_event = self.agent_3_formatting.execute(facts)
-                processed_events.append(calendar_event.model_dump())
 
-            # Save processed events and mark as complete
-            DBSession.update_processed_events(session_id, processed_events)
+                # Create event in unified events table
+                EventService.create_dropcal_event(
+                    user_id=user_id,
+                    session_id=session_id,
+                    summary=calendar_event.summary,
+                    start_time=calendar_event.start.get('dateTime') if calendar_event.start else None,
+                    end_time=calendar_event.end.get('dateTime') if calendar_event.end else None,
+                    start_date=calendar_event.start.get('date') if calendar_event.start else None,
+                    end_date=calendar_event.end.get('date') if calendar_event.end else None,
+                    is_all_day=calendar_event.start.get('date') is not None if calendar_event.start else False,
+                    description=calendar_event.description,
+                    location=calendar_event.location,
+                    calendar_name=calendar_event.calendar,
+                    color_id=calendar_event.colorId,
+                    original_input=event.raw_text,
+                    extracted_facts=facts.model_dump(),
+                    system_suggestion=calendar_event.model_dump()
+                )
+
+            # Mark session as complete
+            DBSession.update_status(session_id, 'processed')
 
         except Exception as e:
             # Mark session as error

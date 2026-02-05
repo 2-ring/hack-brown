@@ -17,7 +17,8 @@ from .service import (
     CalendarEventSimilarity,
     TwoStageRetrieval,
     ProductionSimilaritySearch,
-    event_to_text
+    event_to_text,
+    compute_embedding
 )
 
 from .evaluation import (
@@ -41,6 +42,7 @@ __all__ = [
     'TwoStageRetrieval',
     'ProductionSimilaritySearch',
     'event_to_text',
+    'compute_embedding',
     # Evaluation
     'SimilarityEvaluator',
     'run_evaluation_report',

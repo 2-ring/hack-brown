@@ -26,7 +26,7 @@ interface GoogleCalendar {
 
 interface EventsWorkspaceProps {
   events: (CalendarEvent | null)[]
-  onConfirm?: () => void
+  onConfirm?: (editedEvents?: CalendarEvent[]) => void
   isLoading?: boolean
   loadingConfig?: LoadingStateConfig[]
   expectedEventCount?: number
@@ -202,6 +202,15 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendRequest()
+    }
+  }
+
+  // Wrap onConfirm to pass edited events
+  const handleConfirm = () => {
+    if (onConfirm) {
+      // Filter out null events and pass edited events
+      const validEditedEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
+      onConfirm(validEditedEvents)
     }
   }
 
@@ -492,7 +501,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
         onChangeRequestChange={setChangeRequest}
         onSend={handleSendRequest}
         onKeyDown={handleKeyDown}
-        onConfirm={onConfirm}
+        onConfirm={handleConfirm}
         isScrollable={isScrollable}
       />
     </div>

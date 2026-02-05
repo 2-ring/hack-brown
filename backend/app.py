@@ -22,8 +22,9 @@ from preferences.pattern_discovery_service import PatternDiscoveryService
 from services.data_collection_service import DataCollectionService
 
 # Database and Storage imports
-from database.models import User, Session as DBSession
+from database.models import User, Session as DBSession, Event
 from storage.file_handler import FileStorage
+from events.service import EventService
 
 # Import agent modules
 from extraction.agents.identification import EventIdentificationAgent
@@ -450,13 +451,13 @@ def apply_preferences_endpoint():
         historical_events = []
 
         if patterns:
-            # New pattern format - fetch historical events for similarity search
+            # New pattern format - fetch historical events from database
             try:
-                comprehensive_data = data_collection_service.collect_comprehensive_data(
+                # Get historical events with embeddings (fast, from events table)
+                historical_events = EventService.get_historical_events_with_embeddings(
                     user_id=user_id,
-                    max_events=200  # Get recent events for similarity search
+                    limit=200
                 )
-                historical_events = comprehensive_data.get('events', [])
             except Exception as e:
                 print(f"Warning: Could not fetch historical events: {e}")
                 historical_events = []
@@ -465,7 +466,8 @@ def apply_preferences_endpoint():
             enhanced_facts = agent_5_preferences.execute(
                 facts=facts,
                 discovered_patterns=patterns,
-                historical_events=historical_events
+                historical_events=historical_events,
+                user_id=user_id
             )
 
             return jsonify({

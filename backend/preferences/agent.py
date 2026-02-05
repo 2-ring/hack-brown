@@ -43,7 +43,8 @@ class PreferenceApplicationAgent(BaseAgent):
         facts: ExtractedFacts,
         discovered_patterns: Optional[Dict] = None,
         user_preferences: Optional[UserPreferences] = None,
-        historical_events: Optional[List[Dict]] = None
+        historical_events: Optional[List[Dict]] = None,
+        user_id: Optional[str] = None
     ) -> ExtractedFacts:
         """
         Apply user preferences to enhance extracted facts.
@@ -55,6 +56,7 @@ class PreferenceApplicationAgent(BaseAgent):
                 - style_stats: Dict
             user_preferences: Legacy UserPreferences (fallback, optional)
             historical_events: User's historical events for similarity search
+            user_id: User UUID (for querying corrections)
 
         Returns:
             Enhanced ExtractedFacts with category + formatting applied
@@ -81,12 +83,17 @@ class PreferenceApplicationAgent(BaseAgent):
             facts, historical_events
         )
 
+        # Build correction learning context (learn from past mistakes)
+        correction_context = self._build_correction_learning_context(facts, user_id)
+
         # Combine into full prompt
         full_system_prompt = f"""{self.system_prompt}
 
 {preferences_context}
 
 {few_shot_examples}
+
+{correction_context}
 
 IMPORTANT - TASK OVERVIEW:
 You must format this event to match the user's personal style:
@@ -392,3 +399,121 @@ EXAMPLE PATTERN APPLICATION (Generic examples - adapt to user's style):
 These are examples of how to apply patterns. The actual formatting should
 match the user's discovered patterns and similar events.
 """
+
+    def _build_correction_learning_context(
+        self,
+        facts: ExtractedFacts,
+        user_id: Optional[str]
+    ) -> str:
+        """
+        Build correction learning context from past user corrections.
+
+        Queries corrections where Agent 5 saw similar facts and user made changes.
+        Shows what was wrong and what user wanted instead.
+
+        Args:
+            facts: Current ExtractedFacts Agent 5 is processing
+            user_id: User UUID for querying their corrections
+
+        Returns:
+            Formatted correction learning context for prompt
+        """
+        if not user_id:
+            return ""
+
+        try:
+            from feedback.correction_query_service import CorrectionQueryService
+
+            # Convert facts to dict for querying
+            facts_dict = facts.model_dump()
+
+            # Query corrections (Agent 5 use case)
+            query_service = CorrectionQueryService()
+            corrections = query_service.query_for_preference_application(
+                user_id=user_id,
+                facts=facts_dict,
+                k=5  # Top 5 most similar corrections
+            )
+
+            if not corrections:
+                return ""
+
+            # Format corrections as learning examples
+            context = f"""
+{'='*60}
+CORRECTION LEARNING (Learn from past mistakes):
+{'='*60}
+You've made similar formatting mistakes before. The user corrected them.
+Avoid repeating these mistakes:
+
+"""
+
+            for i, correction in enumerate(corrections, 1):
+                extracted_facts = correction.get('extracted_facts', {})
+                system_suggestion = correction.get('system_suggestion', {})
+                user_final = correction.get('user_final', {})
+                fields_changed = correction.get('fields_changed', [])
+
+                context += f"\nCorrection {i}:\n"
+                context += f"  Facts you saw: {self._format_facts_summary(extracted_facts)}\n"
+                context += f"  You formatted as: {self._format_event_summary(system_suggestion)}\n"
+                context += f"  User changed it to: {self._format_event_summary(user_final)}\n"
+                context += f"  What changed: {', '.join(fields_changed)}\n"
+
+                # Add specific change details
+                if 'title_change' in correction and correction['title_change']:
+                    tc = correction['title_change']
+                    context += f"    → Title: '{tc.get('from')}' → '{tc.get('to')}' ({tc.get('change_type')})\n"
+
+                if 'calendar_change' in correction and correction['calendar_change']:
+                    cc = correction['calendar_change']
+                    context += f"    → Calendar: '{cc.get('from')}' → '{cc.get('to')}'\n"
+
+                if 'color_change' in correction and correction['color_change']:
+                    colc = correction['color_change']
+                    context += f"    → Color: {colc.get('from')} → {colc.get('to')}\n"
+
+                if 'time_change' in correction and correction['time_change']:
+                    tc = correction['time_change']
+                    context += f"    → Time: {tc.get('from')} → {tc.get('to')} ({tc.get('change_type')})\n"
+
+            context += "\n" + "="*60 + "\n"
+            context += "Apply these learnings to avoid similar mistakes.\n"
+
+            self.log_info(f"Found {len(corrections)} relevant corrections for learning")
+            return context
+
+        except Exception as e:
+            # Don't fail - just log and continue without correction learning
+            self.log_error(f"Failed to query corrections: {e}")
+            return ""
+
+    def _format_facts_summary(self, facts: Dict) -> str:
+        """Format facts dict as a brief summary"""
+        parts = []
+        if facts.get('title'):
+            parts.append(f"title:'{facts['title']}'")
+        if facts.get('date'):
+            parts.append(f"date:{facts['date']}")
+        if facts.get('time'):
+            parts.append(f"time:{facts['time']}")
+        if facts.get('location'):
+            parts.append(f"loc:'{facts['location']}'")
+        return ', '.join(parts) if parts else '(empty)'
+
+    def _format_event_summary(self, event: Dict) -> str:
+        """Format event dict as a brief summary"""
+        parts = []
+        if event.get('summary'):
+            parts.append(f"title:'{event['summary']}'")
+        if event.get('calendar'):
+            parts.append(f"calendar:{event['calendar']}")
+        if event.get('colorId'):
+            parts.append(f"color:{event['colorId']}")
+        if event.get('start'):
+            start = event['start']
+            if 'dateTime' in start:
+                parts.append(f"time:{start['dateTime']}")
+            elif 'date' in start:
+                parts.append(f"date:{start['date']}")
+        return ', '.join(parts) if parts else '(empty)'

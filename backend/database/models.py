@@ -880,3 +880,316 @@ class Session:
         supabase = get_supabase()
         response = supabase.table("sessions").delete().eq("id", session_id).execute()
         return len(response.data) > 0
+
+    @staticmethod
+    def add_event(session_id: str, event_id: str) -> Dict[str, Any]:
+        """
+        Add an event ID to session's event_ids array.
+
+        Args:
+            session_id: Session's UUID
+            event_id: Event UUID to add
+
+        Returns:
+            Dict containing updated session data
+        """
+        supabase = get_supabase()
+
+        # Get current event_ids
+        session = Session.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session {session_id} not found")
+
+        event_ids = session.get('event_ids', [])
+        if event_id not in event_ids:
+            event_ids.append(event_id)
+
+        response = supabase.table("sessions").update({
+            "event_ids": event_ids
+        }).eq("id", session_id).execute()
+        return response.data[0]
+
+
+class Event:
+    """Event model for unified event storage."""
+
+    @staticmethod
+    def create(
+        user_id: str,
+        provider: str,
+        summary: str,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        is_all_day: bool = False,
+        is_draft: bool = False,
+        provider_account_id: Optional[str] = None,
+        provider_event_id: Optional[str] = None,
+        description: Optional[str] = None,
+        location: Optional[str] = None,
+        timezone: Optional[str] = None,
+        calendar_name: Optional[str] = None,
+        color_id: Optional[str] = None,
+        original_input: Optional[str] = None,
+        extracted_facts: Optional[Dict] = None,
+        system_suggestion: Optional[Dict] = None,
+        event_embedding: Optional[List[float]] = None
+    ) -> Dict[str, Any]:
+        """
+        Create a new event.
+
+        Args:
+            user_id: User's UUID
+            provider: Event provider ('dropcal', 'google', etc.)
+            summary: Event title
+            start_time: Start timestamp (for non-all-day events)
+            end_time: End timestamp (for non-all-day events)
+            start_date: Start date (for all-day events)
+            end_date: End date (for all-day events)
+            is_all_day: Whether event is all-day
+            is_draft: Whether event is draft (only for dropcal)
+            provider_account_id: Provider account email (NULL for dropcal)
+            provider_event_id: Provider's event ID
+            description: Event description
+            location: Event location
+            timezone: IANA timezone
+            calendar_name: Calendar name
+            color_id: Color ID
+            original_input: Original raw input (for dropcal events)
+            extracted_facts: Agent 2 output (for dropcal events)
+            system_suggestion: Agent 5 output (for dropcal events)
+            event_embedding: 384-dim embedding vector
+
+        Returns:
+            Dict containing the created event data
+        """
+        supabase = get_supabase()
+
+        data = {
+            "user_id": user_id,
+            "provider": provider,
+            "summary": summary,
+            "is_all_day": is_all_day,
+            "is_draft": is_draft
+        }
+
+        # Optional fields
+        if provider_account_id:
+            data["provider_account_id"] = provider_account_id
+        if provider_event_id:
+            data["provider_event_id"] = provider_event_id
+        if start_time:
+            data["start_time"] = start_time
+        if end_time:
+            data["end_time"] = end_time
+        if start_date:
+            data["start_date"] = start_date
+        if end_date:
+            data["end_date"] = end_date
+        if description:
+            data["description"] = description
+        if location:
+            data["location"] = location
+        if timezone:
+            data["timezone"] = timezone
+        if calendar_name:
+            data["calendar_name"] = calendar_name
+        if color_id:
+            data["color_id"] = color_id
+        if original_input:
+            data["original_input"] = original_input
+        if extracted_facts:
+            data["extracted_facts"] = extracted_facts
+        if system_suggestion:
+            data["system_suggestion"] = system_suggestion
+        if event_embedding:
+            data["event_embedding"] = event_embedding
+
+        response = supabase.table("events").insert(data).execute()
+        return response.data[0]
+
+    @staticmethod
+    def get_by_id(event_id: str) -> Optional[Dict[str, Any]]:
+        """Get event by ID."""
+        supabase = get_supabase()
+        response = supabase.table("events").select("*").eq("id", event_id).execute()
+        return response.data[0] if response.data else None
+
+    @staticmethod
+    def get_by_user(
+        user_id: str,
+        provider: Optional[str] = None,
+        is_draft: Optional[bool] = None,
+        limit: int = 500
+    ) -> List[Dict[str, Any]]:
+        """
+        Get events for a user.
+
+        Args:
+            user_id: User's UUID
+            provider: Filter by provider (optional)
+            is_draft: Filter by draft status (optional)
+            limit: Maximum number to return
+
+        Returns:
+            List of event dicts
+        """
+        supabase = get_supabase()
+
+        query = supabase.table("events").select("*").eq("user_id", user_id).is_("deleted_at", None)
+
+        if provider:
+            query = query.eq("provider", provider)
+        if is_draft is not None:
+            query = query.eq("is_draft", is_draft)
+
+        response = query.order("created_at", desc=True).limit(limit).execute()
+        return response.data
+
+    @staticmethod
+    def get_historical_events(
+        user_id: str,
+        limit: int = 500
+    ) -> List[Dict[str, Any]]:
+        """Get historical events (from providers, not dropcal) for pattern learning."""
+        supabase = get_supabase()
+        response = supabase.table("events").select("*")\
+            .eq("user_id", user_id)\
+            .neq("provider", "dropcal")\
+            .is_("deleted_at", None)\
+            .order("start_time", desc=True)\
+            .limit(limit).execute()
+        return response.data
+
+    @staticmethod
+    def get_pending_drafts(user_id: str) -> List[Dict[str, Any]]:
+        """Get dropcal events pending user review."""
+        supabase = get_supabase()
+        response = supabase.table("events").select("*")\
+            .eq("user_id", user_id)\
+            .eq("provider", "dropcal")\
+            .eq("is_draft", True)\
+            .is_("deleted_at", None)\
+            .order("created_at", desc=True).execute()
+        return response.data
+
+    @staticmethod
+    def update(event_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update event fields.
+
+        Args:
+            event_id: Event UUID
+            updates: Dict of fields to update
+
+        Returns:
+            Dict containing updated event data
+        """
+        supabase = get_supabase()
+        response = supabase.table("events").update(updates).eq("id", event_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def confirm_draft(
+        event_id: str,
+        user_edits: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Confirm a draft event, optionally with user edits.
+
+        Args:
+            event_id: Event UUID
+            user_edits: Dict of user modifications (optional)
+
+        Returns:
+            Dict containing updated event data
+        """
+        supabase = get_supabase()
+
+        updates = {"is_draft": False}
+
+        if user_edits:
+            # User made changes - mark as modified and track corrections
+            updates["user_modified"] = True
+            updates.update(user_edits)
+
+            # Add to correction_history
+            event = Event.get_by_id(event_id)
+            correction_history = event.get('correction_history', [])
+
+            correction_entry = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "changes": user_edits
+            }
+            correction_history.append(correction_entry)
+            updates["correction_history"] = correction_history
+
+        response = supabase.table("events").update(updates).eq("id", event_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def soft_delete(event_id: str) -> Dict[str, Any]:
+        """Soft delete an event."""
+        supabase = get_supabase()
+        response = supabase.table("events").update({
+            "deleted_at": datetime.utcnow().isoformat()
+        }).eq("id", event_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def get_conflicting_events(
+        user_id: str,
+        start_time: str,
+        end_time: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Get events that conflict with the given time range.
+
+        Args:
+            user_id: User's UUID
+            start_time: Start timestamp (ISO format)
+            end_time: End timestamp (ISO format)
+
+        Returns:
+            List of conflicting events
+        """
+        supabase = get_supabase()
+
+        # Use the get_conflicting_events SQL function
+        response = supabase.rpc('get_conflicting_events', {
+            'p_user_id': user_id,
+            'p_start_time': start_time,
+            'p_end_time': end_time
+        }).execute()
+
+        return response.data
+
+    @staticmethod
+    def find_similar_events(
+        user_id: str,
+        query_embedding: List[float],
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Find similar events using vector similarity search.
+
+        Args:
+            user_id: User's UUID
+            query_embedding: 384-dim embedding vector
+            limit: Number of similar events to return
+
+        Returns:
+            List of similar events with similarity scores
+        """
+        supabase = get_supabase()
+
+        # Query using cosine distance
+        # Note: Supabase pgvector uses <=> operator for cosine distance
+        response = supabase.rpc('find_similar_events', {
+            'p_user_id': user_id,
+            'p_embedding': query_embedding,
+            'p_limit': limit
+        }).execute()
+
+        return response.data

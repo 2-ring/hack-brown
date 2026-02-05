@@ -252,13 +252,13 @@ class TitleGenerator:
                 title_parts.append(keyword.title())
 
         # Priority 4: Course codes (if we still have space, add as context)
-        # Lower priority per user feedback - "Math Exams" is better than "MATH180 Exams"
+        # Lower priority per user feedback - "MATH Exams" is better than "MATH180 Exams"
         if count_words(title_parts) < max_words and entities.get('course_codes'):
             # Extract just the subject (e.g., "MATH" from "MATH180")
             course_code = entities['course_codes'][0]
             subject = re.match(r'^([A-Z]+)', course_code)
             if subject:
-                subject_name = subject.group(1).capitalize()
+                subject_name = subject.group(1)  # Keep all caps (ENGN, MATH, CS, etc.)
                 # Only add if not redundant and fits
                 if subject_name.lower() not in " ".join(title_parts).lower():
                     if count_words([subject_name] + title_parts) <= max_words:

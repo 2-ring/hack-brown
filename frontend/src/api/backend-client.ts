@@ -325,8 +325,14 @@ export async function checkGoogleCalendarStatus(): Promise<{
 
 /**
  * Add a session's processed events to Google Calendar.
+ *
+ * @param sessionId - The session ID
+ * @param events - Optional: User's edited events (for correction logging)
  */
-export async function addSessionToCalendar(sessionId: string): Promise<{
+export async function addSessionToCalendar(
+  sessionId: string,
+  events?: any[]
+): Promise<{
   success: boolean;
   calendar_event_ids: string[];
   num_events_created: number;
@@ -336,9 +342,13 @@ export async function addSessionToCalendar(sessionId: string): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
+  // Prepare request body if events are provided (for correction logging)
+  const body = events ? JSON.stringify({ events }) : undefined;
+
   const response = await fetch(`${API_URL}/api/sessions/${sessionId}/add-to-calendar`, {
     method: 'POST',
     headers,
+    body,
   });
 
   return handleResponse(response);

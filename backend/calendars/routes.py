@@ -317,6 +317,12 @@ def add_session_to_calendar(session_id):
     Path parameters:
     - session_id: UUID of the session to add to calendar
 
+    Optional request body:
+    {
+        "events": [...],  // User's edited events (for correction logging)
+        "extracted_facts": [...]  // Optional: ExtractedFacts from Agent 2
+    }
+
     Returns:
         - success: Whether all events were created successfully
         - calendar_event_ids: List of Google Calendar event IDs
@@ -334,6 +340,28 @@ def add_session_to_calendar(session_id):
                 'message': 'Please connect your calendar account first',
                 'authenticated': False
             }), 401
+
+        # Get user-submitted events if provided (for correction logging)
+        request_data = request.get_json() or {}
+        user_submitted_events = request_data.get('events')
+        extracted_facts_list = request_data.get('extracted_facts')
+
+        # Log corrections if user provided edited events
+        if user_submitted_events:
+            from feedback.correction_service import CorrectionStorageService
+            correction_service = CorrectionStorageService()
+
+            try:
+                correction_ids = correction_service.store_corrections_from_session(
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_submitted_events=user_submitted_events,
+                    extracted_facts_list=extracted_facts_list
+                )
+                print(f"Stored {len(correction_ids)} corrections for user {user_id}")
+            except Exception as e:
+                # Don't fail the request if correction logging fails
+                print(f"Warning: Failed to log corrections: {e}")
 
         # Create events from session (uses primary provider)
         calendar_event_ids, conflicts = factory.create_events_from_session(user_id, session_id)

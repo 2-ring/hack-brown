@@ -922,3 +922,36 @@ class ProductionSimilaritySearch:
             (event, 0.5, {'semantic': 0.5, 'length': 0.5, 'keyword': 0.5, 'temporal': 0.5, 'final': 0.5})
             for event in fallback_events
         ]
+
+
+# ============================================================================
+# Global embedding utility (for EventService)
+# ============================================================================
+
+# Global model instance (lazy loaded)
+_global_model: Optional[SentenceTransformer] = None
+
+
+def get_embedding_model() -> SentenceTransformer:
+    """Get or create global embedding model (singleton)."""
+    global _global_model
+    if _global_model is None:
+        print("Loading global sentence transformer model...")
+        _global_model = SentenceTransformer('all-MiniLM-L6-v2')
+        _global_model.max_seq_length = 128
+        print("✓ Global model loaded")
+    return _global_model
+
+
+def compute_embedding(text: str) -> np.ndarray:
+    """
+    Compute embedding for text (utility for EventService).
+
+    Args:
+        text: Text to embed
+
+    Returns:
+        384-dim embedding vector as numpy array
+    """
+    model = get_embedding_model()
+    return model.encode(text, convert_to_numpy=True)

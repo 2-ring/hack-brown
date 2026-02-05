@@ -1,14 +1,14 @@
 .time-input-container {
   position: relative;
-  width: 150px;
-  padding: 0 12px;
+  display: inline-block;
 }
 
 .time-input {
+  width: 120px;
+  padding: 0 8px 0 0;
   border: none;
   outline: none;
   background: transparent;
-  padding: 0;
   margin: 0;
   font-family: inherit;
   font-size: 14px;
@@ -16,7 +16,7 @@
   caret-color: var(--interactive);
   cursor: pointer;
   text-align: right;
-  width: 100%;
+  box-sizing: border-box;
 }
 
 .time-input[readonly] {
@@ -30,8 +30,8 @@
 .time-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
   right: 0;
+  width: 120px;
   max-height: 280px;
   overflow-y: auto;
   background: var(--background);
@@ -39,6 +39,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   animation: dropdownSlideIn 0.15s ease-out;
+  box-sizing: border-box;
 }
 
 @keyframes dropdownSlideIn {
@@ -54,7 +55,7 @@
 
 .time-option {
   width: 100%;
-  padding: 10px 0;
+  padding: 10px 8px 10px 0;
   border: none;
   background: none;
   text-align: right;
@@ -63,6 +64,7 @@
   cursor: pointer;
   transition: background-color 0.1s;
   border-radius: 0;
+  box-sizing: border-box;
 }
 
 .time-option:first-child {
