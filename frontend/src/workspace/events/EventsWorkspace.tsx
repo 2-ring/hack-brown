@@ -76,12 +76,19 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       }
     }
 
-    // Check initially and when content changes
-    checkScrollable()
+    // Use requestAnimationFrame to ensure DOM has updated
+    // and add a small timeout to wait for animations to complete
+    const rafId = requestAnimationFrame(() => {
+      const timeoutId = setTimeout(checkScrollable, 100)
+      return () => clearTimeout(timeoutId)
+    })
 
     // Also check on window resize
     window.addEventListener('resize', checkScrollable)
-    return () => window.removeEventListener('resize', checkScrollable)
+    return () => {
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', checkScrollable)
+    }
   }, [events, editedEvents, isLoading, editingEventIndex])
 
   const handleEventClick = (eventIndex: number) => {

@@ -51,8 +51,15 @@ export const lightTheme: Theme = {
   // Component-specific
   tooltipBackground: '#1a1a1a',
   tooltipText: '#ffffff',
-  skeletonBackground: '#f5f5f5',
-  skeletonBorder: '#e5e5e5',
+  skeletonBackground: '#f0f0f0',
+  skeletonBorder: '#fafafa',
   toggleActive: '#1a73e8',
   toggleInactive: '#dadce0',
+
+  // Gradients for fade effects
+  gradientFade0: 'rgba(255, 255, 255, 0)',
+  gradientFade40: 'rgba(255, 255, 255, 0.5)',
+  gradientFade65: 'rgba(255, 255, 255, 0.8)',
+  gradientFade85: 'rgba(255, 255, 255, 0.95)',
+  gradientFade100: 'rgba(255, 255, 255, 1)',
 };

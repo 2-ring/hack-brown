@@ -1,23 +1,22 @@
 .time-input-container {
   position: relative;
-  flex: 1;
-  min-width: 0;
+  display: inline-block;
 }
 
 .time-input {
-  width: 100%;
   border: none;
   outline: none;
   background: transparent;
-  padding: 0;
+  padding: 0 12px 0 0;
   margin: 0;
   font-family: inherit;
   font-size: inherit;
   color: inherit;
   caret-color: var(--interactive);
   cursor: pointer;
-  position: relative;
-  z-index: 2;
+  text-align: right;
+  width: 150px;
+  box-sizing: border-box;
 }
 
 .time-input[readonly] {
@@ -30,14 +29,14 @@
 
 .time-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
-  left: -12px;
-  min-width: 200px;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 150px;
   max-height: 280px;
   overflow-y: auto;
   background: var(--background);
-  border-radius: 12px;
-  box-shadow: var(--shadow-heavy);
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   animation: dropdownSlideIn 0.15s ease-out;
 }
@@ -55,10 +54,10 @@
 
 .time-option {
   width: 100%;
-  padding: 10px 16px;
+  padding: 10px 12px;
   border: none;
   background: none;
-  text-align: left;
+  text-align: right;
   font-size: 14px;
   color: var(--text-primary);
   cursor: pointer;
@@ -67,7 +66,7 @@
 }
 
 .time-option:first-child {
-  border-radius: 12px 12px 0 0;
+  border-radius: 0;
 }
 
 .time-option:last-child {

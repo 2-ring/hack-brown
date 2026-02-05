@@ -53,6 +53,13 @@ export type Theme = {
   skeletonBorder: string;
   toggleActive: string;
   toggleInactive: string;
+
+  // Gradients for fade effects
+  gradientFade0: string;
+  gradientFade40: string;
+  gradientFade65: string;
+  gradientFade85: string;
+  gradientFade100: string;
 }
 
 export type ThemeMode = 'light' | 'dark';

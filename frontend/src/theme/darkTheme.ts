@@ -55,4 +55,11 @@ export const darkTheme: Theme = {
   skeletonBorder: '#3a3a3a',
   toggleActive: '#4A9EFF',
   toggleInactive: '#4a4a4a',
+
+  // Gradients for fade effects
+  gradientFade0: 'rgba(26, 26, 26, 0)',
+  gradientFade40: 'rgba(26, 26, 26, 0.5)',
+  gradientFade65: 'rgba(26, 26, 26, 0.8)',
+  gradientFade85: 'rgba(26, 26, 26, 0.95)',
+  gradientFade100: 'rgba(26, 26, 26, 1)',
 };
