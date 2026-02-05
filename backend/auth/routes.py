@@ -7,7 +7,7 @@ Separate from calendar connections - this is purely for authentication.
 from flask import Blueprint, jsonify, request
 from typing import Dict, Any
 
-from database.models import User
+from database.models import User, Session as DBSession
 from auth.middleware import require_auth
 from database.supabase_client import get_supabase
 
@@ -111,7 +111,28 @@ def sync_user_profile():
             )
             user = User.get_by_id(user_id)
 
-        return jsonify({
+        # Migrate guest sessions to authenticated user account
+        request_data = request.get_json() or {}
+        guest_session_ids = request_data.get('guest_session_ids', [])
+        migrated_sessions = []
+
+        if guest_session_ids:
+            supabase = get_supabase()
+            for session_id in guest_session_ids:
+                try:
+                    session = DBSession.get_by_id(session_id)
+                    if session and session.get('guest_mode'):
+                        # Transfer ownership from guest to authenticated user
+                        supabase.table("sessions").update({
+                            "user_id": user_id,
+                            "guest_mode": False
+                        }).eq("id", session_id).execute()
+                        migrated_sessions.append(session_id)
+                except Exception as e:
+                    print(f"Failed to migrate guest session {session_id}: {e}")
+                    # Continue with other sessions even if one fails
+
+        response_data = {
             'success': True,
             'user': {
                 'id': user['id'],
@@ -125,7 +146,14 @@ def sync_user_profile():
             'is_new_user': is_new_user,
             'provider': provider,
             'message': 'Account created successfully' if is_new_user else 'Welcome back'
-        })
+        }
+
+        # Add migration info if sessions were migrated
+        if migrated_sessions:
+            response_data['migrated_sessions'] = migrated_sessions
+            response_data['migrated_count'] = len(migrated_sessions)
+
+        return jsonify(response_data)
 
     except Exception as e:
         return jsonify({'error': f'Profile sync failed: {str(e)}'}), 500

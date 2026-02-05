@@ -640,14 +640,15 @@ class Session:
     """Session model for database operations."""
 
     @staticmethod
-    def create(user_id: str, input_type: str, input_content: str) -> Dict[str, Any]:
+    def create(user_id: str, input_type: str, input_content: str, guest_mode: bool = False) -> Dict[str, Any]:
         """
         Create a new session.
 
         Args:
-            user_id: User's UUID
+            user_id: User's UUID (or guest_<uuid> for guest sessions)
             input_type: Type of input ('text', 'image', 'audio', 'email')
             input_content: Original text or file path
+            guest_mode: Whether this is a guest session (default: False)
 
         Returns:
             Dict containing the created session data
@@ -658,7 +659,8 @@ class Session:
             "user_id": user_id,
             "input_type": input_type,
             "input_content": input_content,
-            "status": "pending"
+            "status": "pending",
+            "guest_mode": guest_mode
         }
 
         response = supabase.table("sessions").insert(data).execute()

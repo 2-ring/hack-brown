@@ -1,10 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 import os
 import sys
 import threading
+import uuid
 from werkzeug.utils import secure_filename
 from typing import Optional
 import logging
@@ -58,6 +61,14 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Configure rate limiting (for guest endpoints)
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    storage_uri="memory://",
+    default_limits=["200 per day", "50 per hour"]
+)
 
 # Configure logging
 logging.basicConfig(
@@ -895,6 +906,171 @@ def get_user_sessions():
 
     except Exception as e:
         return jsonify({'error': f'Failed to get sessions: {str(e)}'}), 500
+
+
+# ============================================================================
+# Guest Mode Endpoints (No Authentication Required)
+# ============================================================================
+
+@app.route('/api/sessions/guest', methods=['POST'])
+@limiter.limit("10 per hour")
+def create_guest_text_session():
+    """
+    Create a guest session with text input (no authentication required).
+
+    Allows users to process up to 3 sessions before requiring sign-in.
+    Rate limited to 10 requests per hour per IP address.
+
+    Expects JSON body:
+    {
+        "input_type": "text",
+        "input_content": "Meeting tomorrow at 2pm"
+    }
+
+    Returns the created session object with guest_mode=True.
+    """
+    try:
+        data = request.get_json()
+
+        input_type = data.get('input_type', 'text')
+        input_content = data.get('input_content')
+
+        if not input_content:
+            return jsonify({'error': 'No input content provided'}), 400
+
+        # Generate anonymous guest ID
+        guest_id = f"guest_{uuid.uuid4()}"
+
+        # Create session in database with guest_mode=True
+        session = DBSession.create(
+            user_id=guest_id,
+            input_type=input_type,
+            input_content=input_content,
+            guest_mode=True
+        )
+
+        # Start processing in background thread
+        thread = threading.Thread(
+            target=session_processor.process_text_session,
+            args=(session['id'], input_content)
+        )
+        thread.daemon = True
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'session': session,
+            'message': 'Guest session created, processing started'
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Failed to create guest text session: {e}")
+        return jsonify({'error': f'Failed to create guest session: {str(e)}'}), 500
+
+
+@app.route('/api/upload/guest', methods=['POST'])
+@limiter.limit("10 per hour")
+def upload_guest_file():
+    """
+    Upload an image or audio file as guest (no authentication required).
+
+    Allows users to process up to 3 sessions before requiring sign-in.
+    Rate limited to 10 requests per hour per IP address.
+
+    Expects multipart/form-data with:
+    - file: The file to upload
+    - input_type: 'image' or 'audio'
+
+    Returns the created session object with guest_mode=True and file path.
+    """
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        file_type = request.form.get('input_type', 'image')  # 'image' or 'audio'
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Validate file type
+        if not FileStorage.validate_file_type(file.content_type, file_type):
+            return jsonify({
+                'error': f'Invalid file type. Expected {file_type}, got {file.content_type}'
+            }), 400
+
+        # Generate anonymous guest ID for storage path
+        guest_id = f"guest_{uuid.uuid4()}"
+
+        # Upload to Supabase Storage (uses guest_id as user_id)
+        file_path = FileStorage.upload_file(
+            file=file,
+            filename=file.filename,
+            user_id=guest_id,
+            file_type=file_type
+        )
+
+        # Create session in database with guest_mode=True
+        session = DBSession.create(
+            user_id=guest_id,
+            input_type=file_type,
+            input_content=file_path,
+            guest_mode=True
+        )
+
+        # Start processing in background thread
+        thread = threading.Thread(
+            target=session_processor.process_file_session,
+            args=(session['id'], file_path, file_type)
+        )
+        thread.daemon = True
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'session': session,
+            'file_url': file_path,
+            'message': 'Guest file uploaded, processing started'
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Failed to upload guest file: {e}")
+        return jsonify({'error': f'Guest file upload failed: {str(e)}'}), 500
+
+
+@app.route('/api/sessions/guest/<session_id>', methods=['GET'])
+@limiter.limit("50 per hour")
+def get_guest_session(session_id):
+    """
+    Get a guest session by ID (no authentication required).
+
+    Only returns sessions with guest_mode=True.
+    Authenticated sessions require the regular /api/sessions/<id> endpoint.
+    Rate limited to 50 requests per hour per IP address.
+
+    Returns the session object if found and is a guest session, error otherwise.
+    """
+    try:
+        session = DBSession.get_by_id(session_id)
+
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+
+        # Verify this is a guest session
+        if not session.get('guest_mode'):
+            return jsonify({
+                'error': 'This session requires authentication',
+                'requires_auth': True
+            }), 401
+
+        return jsonify({
+            'success': True,
+            'session': session
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to get guest session: {e}")
+        return jsonify({'error': f'Failed to get session: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
