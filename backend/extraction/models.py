@@ -8,40 +8,6 @@ from typing import Optional, List
 
 
 # ============================================================================
-# Agent 0: Context Understanding & Intent Analysis
-# ============================================================================
-
-class UserContext(BaseModel):
-    """User's role and context"""
-    role: str = Field(description="User's likely role: 'student', 'professional', 'organizer', 'attendee', etc.")
-    domain: str = Field(description="Domain/context: 'academic', 'professional', 'personal', 'social', etc.")
-    task_type: str = Field(description="Type of task: 'semester_planning', 'single_event', 'coordinating_meeting', 'conference_attendance', 'importing_schedule', etc.")
-
-
-class ExtractionGuidance(BaseModel):
-    """Guidance for the extraction agent"""
-    include: List[str] = Field(description="Types of events TO extract: ['assignments', 'exams', 'meetings', 'deadlines', etc.]")
-    exclude: List[str] = Field(description="Types of content to IGNORE: ['readings', 'office_hours', 'course_description', 'grading_policy', etc.]")
-    reasoning: str = Field(description="Why these inclusion/exclusion decisions make sense given user intent")
-
-
-class IntentAnalysis(BaseModel):
-    """Analysis of user's intent and goals"""
-    primary_goal: str = Field(description="What the user wants to accomplish: 'Schedule all assignment deadlines', 'Add this single event', 'Import team meeting schedule', etc.")
-    confidence: str = Field(description="Confidence in intent understanding: 'high', 'medium', 'low'")
-    extraction_guidance: ExtractionGuidance = Field(description="Specific guidance for extraction agent")
-    expected_event_count: str = Field(description="Estimated number of events: 'single event', '5-10 events', '15-20 events', etc.")
-    domain_assumptions: str = Field(description="Key assumptions about this domain: 'Academic calendar, assignments are non-negotiable dates', 'Professional context, tentative meetings need confirmation', etc.")
-
-
-class ContextResult(BaseModel):
-    """Complete context understanding output"""
-    title: str = Field(description="Short session title (3 words max, aim for 2). Just the essential name, no dates or descriptions. Examples: 'CS101 Deadlines', 'AI Safety Talk', 'Team Schedule', 'Shabbat Dinner', 'MATH180 Exams'")
-    user_context: UserContext = Field(description="User's role and context")
-    intent_analysis: IntentAnalysis = Field(description="Deep analysis of user intent and goals")
-
-
-# ============================================================================
 # Agent 1: Event Identification
 # ============================================================================
 

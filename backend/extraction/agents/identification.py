@@ -3,7 +3,8 @@ Event Identification Agent (Agent 1)
 Identifies distinct calendar events in the input.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
+from pathlib import Path
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -26,67 +27,37 @@ class EventIdentificationAgent(BaseAgent):
         """
         super().__init__("Agent1_EventIdentification")
         self.llm = llm.with_structured_output(IdentificationResult)
-        self.prompt_template = self.load_prompt("identification.txt")
+
+        # Load prompt from extraction/prompts directory
+        prompt_path = Path(__file__).parent.parent / "prompts" / "identification.txt"
+        with open(prompt_path, 'r') as f:
+            self.prompt_template = f.read()
 
     def execute(
         self,
         raw_input: str,
         metadata: Dict[str, Any],
-        context: Optional[Dict[str, Any]] = None,
         requires_vision: bool = False
     ) -> IdentificationResult:
         """
         Identify all calendar events in the input.
+        No context parameter needed - LLM handles context implicitly.
 
         Args:
             raw_input: Raw text input
             metadata: Additional metadata (may contain image data)
-            context: Optional context from Agent 0 for guidance
             requires_vision: Whether vision processing is needed
 
         Returns:
             IdentificationResult with list of identified events
         """
-        # Build context guidance if available
-        context_guidance = self._build_context_guidance(context)
-
-        # Format the system prompt with context guidance
-        system_prompt = self.prompt_template.format(context_guidance=context_guidance)
+        # Load the system prompt directly (no context guidance needed)
+        system_prompt = self.prompt_template
 
         if requires_vision:
             return self._execute_vision(metadata, system_prompt)
         else:
             return self._execute_text(raw_input, system_prompt)
-
-    def _build_context_guidance(self, context: Optional[Dict[str, Any]]) -> str:
-        """Build context guidance string from Agent 0's output"""
-        if not context:
-            return ""
-
-        intent = context.get('intent_analysis', {})
-        guidance = intent.get('extraction_guidance', {})
-        include = guidance.get('include', [])
-        exclude = guidance.get('exclude', [])
-        reasoning = guidance.get('reasoning', '')
-
-        if not (include or exclude):
-            return ""
-
-        context_guidance = f"""
-
-CONTEXT UNDERSTANDING:
-The input has been analyzed and the following guidance should inform your extraction:
-
-PRIMARY USER GOAL: {intent.get('primary_goal', 'Not specified')}
-
-EXTRACTION GUIDANCE:
-- INCLUDE these types of events: {', '.join(include) if include else 'All calendar events'}
-- EXCLUDE these types of content: {', '.join(exclude) if exclude else 'Standard non-event content'}
-- REASONING: {reasoning}
-
-Use this guidance to make smart decisions about what is and isn't a calendar event the user wants.
-"""
-        return context_guidance
 
     def _execute_text(self, raw_input: str, system_prompt: str) -> IdentificationResult:
         """Execute text-only processing"""

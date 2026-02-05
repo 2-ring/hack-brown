@@ -23,7 +23,6 @@ from database.models import User, Session as DBSession
 from storage.file_handler import FileStorage
 
 # Import agent modules
-from extraction.agents.context import ContextUnderstandingAgent
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import FactExtractionAgent
 from extraction.agents.formatting import CalendarFormattingAgent
@@ -73,7 +72,6 @@ pattern_discovery_service = PatternDiscoveryService(llm)
 data_collection_service = DataCollectionService(calendar_service)
 
 # Initialize Agents
-agent_0_context = ContextUnderstandingAgent(llm)
 agent_1_identification = EventIdentificationAgent(llm)
 agent_2_extraction = FactExtractionAgent(llm)
 agent_3_formatting = CalendarFormattingAgent(llm)
@@ -117,7 +115,7 @@ def process_input():
     Unified endpoint for processing all input types and extracting calendar events.
     Handles: text, audio, images, PDFs, and other text files.
 
-    Runs full agent pipeline: Context → Identification → Extraction → Formatting
+    Runs full agent pipeline: Identification → Extraction → Formatting
 
     For text input: Send JSON with {"text": "your text here"}
     For file input: Send multipart/form-data with file upload
@@ -204,14 +202,10 @@ def process_input():
 
     # Step 3: Run full agent pipeline
     try:
-        # Agent 0: Context Understanding
-        context_result = agent_0_context.execute(raw_input, metadata, requires_vision)
-
-        # Agent 1: Event Identification
+        # Agent 1: Event Identification (no context needed - LLM handles implicitly)
         identification_result = agent_1_identification.execute(
             raw_input,
             metadata,
-            context_result.model_dump(),
             requires_vision
         )
 
@@ -219,7 +213,6 @@ def process_input():
         if not identification_result.has_events:
             return jsonify({
                 'success': True,
-                'session_title': context_result.session_title,
                 'events': [],
                 'message': 'No calendar events found in input'
             })
@@ -240,8 +233,6 @@ def process_input():
         # Return results
         return jsonify({
             'success': True,
-            'session_title': context_result.session_title,
-            'user_context': context_result.user_context.model_dump(),
             'num_events': len(formatted_events),
             'events': formatted_events
         })
