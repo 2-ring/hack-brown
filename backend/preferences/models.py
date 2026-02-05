@@ -132,12 +132,17 @@ class UserPreferences(BaseModel):
     # User settings from Google Calendar API
     timezone: Optional[str] = Field(
         default=None,
-        description="User's default timezone from Google Calendar settings"
+        description="User's default timezone from Google Calendar settings (e.g., 'America/New_York')"
     )
 
     default_event_length: Optional[int] = Field(
         default=None,
         description="User's default event length in minutes from Google Calendar settings"
+    )
+
+    date_format: str = Field(
+        default="MM/DD/YYYY",
+        description="User's preferred date format (default: US format MM/DD/YYYY)"
     )
 
     # Discovered pattern categories

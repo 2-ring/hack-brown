@@ -5,7 +5,7 @@ Returns events in universal format (Google Calendar JSON).
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from . import auth
 
@@ -111,3 +111,40 @@ def check_conflicts(
     except HttpError as error:
         print(f"Error checking Google Calendar conflicts: {error}")
         return []
+
+
+def get_calendar_settings(user_id: str) -> Optional[Dict]:
+    """
+    Fetch user's Google Calendar settings including timezone.
+
+    Args:
+        user_id: User's UUID
+
+    Returns:
+        Dict with timezone and other settings, or None if error
+
+    Raises:
+        Exception: If not authenticated
+    """
+    credentials = auth.load_credentials(user_id)
+
+    if not credentials:
+        raise Exception("Not authenticated with Google Calendar")
+
+    if not auth.refresh_if_needed(user_id, credentials):
+        raise Exception("Failed to refresh Google Calendar credentials")
+
+    try:
+        service = build('calendar', 'v3', credentials=credentials)
+
+        # Fetch timezone setting
+        timezone_setting = service.settings().get(setting='timezone').execute()
+        timezone = timezone_setting.get('value')
+
+        return {
+            'timezone': timezone
+        }
+
+    except HttpError as error:
+        print(f"Error fetching Google Calendar settings: {error}")
+        return None

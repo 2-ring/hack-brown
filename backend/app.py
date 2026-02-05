@@ -178,7 +178,31 @@ def process_input():
     else:
         return jsonify({'error': 'No file or text provided'}), 400
 
-    # Step 2: Run full agent pipeline
+    # Step 2: Load user preferences (if authenticated)
+    user_preferences = None
+    try:
+        # Check if user is authenticated (JWT token in header)
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            # User is authenticated - try to load their preferences
+            from auth.middleware import verify_token
+            token = auth_header.replace('Bearer ', '')
+            decoded = verify_token(token)
+            if decoded:
+                user_id = decoded.get('sub')
+                # Load preferences from file
+                preferences_obj = personalization_service.load_preferences(user_id)
+                if preferences_obj:
+                    user_preferences = {
+                        'timezone': preferences_obj.timezone or 'America/New_York',
+                        'date_format': preferences_obj.date_format or 'MM/DD/YYYY'
+                    }
+    except Exception as e:
+        print(f"Note: Could not load user preferences: {e}")
+        # Continue without preferences (will use defaults)
+        pass
+
+    # Step 3: Run full agent pipeline
     try:
         # Agent 0: Context Understanding
         context_result = agent_0_context.execute(raw_input, metadata, requires_vision)
@@ -200,7 +224,7 @@ def process_input():
                 'message': 'No calendar events found in input'
             })
 
-        # Step 3: Extract and format each event
+        # Step 4: Extract and format each event
         formatted_events = []
         for event in identification_result.events:
             # Agent 2: Fact Extraction
@@ -209,8 +233,8 @@ def process_input():
                 event.description
             )
 
-            # Agent 3: Calendar Formatting
-            calendar_event = agent_3_formatting.execute(facts)
+            # Agent 3: Calendar Formatting (with user preferences)
+            calendar_event = agent_3_formatting.execute(facts, user_preferences)
             formatted_events.append(calendar_event.model_dump())
 
         # Return results

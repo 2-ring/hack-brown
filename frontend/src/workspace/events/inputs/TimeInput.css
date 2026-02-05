@@ -1,22 +1,22 @@
 .time-input-container {
   position: relative;
-  display: inline-block;
+  width: 150px;
+  padding: 0 12px;
 }
 
 .time-input {
   border: none;
   outline: none;
   background: transparent;
-  padding: 0 12px 0 0;
+  padding: 0;
   margin: 0;
   font-family: inherit;
-  font-size: inherit;
+  font-size: 14px;
   color: inherit;
   caret-color: var(--interactive);
   cursor: pointer;
   text-align: right;
-  width: 150px;
-  box-sizing: border-box;
+  width: 100%;
 }
 
 .time-input[readonly] {
@@ -30,8 +30,8 @@
 .time-dropdown {
   position: absolute;
   top: calc(100% + 4px);
+  left: 0;
   right: 0;
-  width: 150px;
   max-height: 280px;
   overflow-y: auto;
   background: var(--background);
@@ -54,7 +54,7 @@
 
 .time-option {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 0;
   border: none;
   background: none;
   text-align: right;

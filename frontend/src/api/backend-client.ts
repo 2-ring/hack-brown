@@ -407,3 +407,32 @@ export async function disconnectCalendarProvider(provider: string): Promise<{
 
   return handleResponse(response);
 }
+
+/**
+ * Get user preferences (timezone, date format, etc.).
+ */
+export async function getUserPreferences(): Promise<{
+  exists: boolean;
+  preferences?: {
+    user_id: string;
+    timezone: string | null;
+    date_format: string;
+    last_analyzed: string | null;
+    total_events_analyzed: number;
+  };
+  message?: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/personalization/preferences`, {
+    method: 'GET',
+    headers,
+  });
+
+  // Handle 404 as a valid response (no preferences yet)
+  if (response.status === 404) {
+    return { exists: false };
+  }
+
+  return handleResponse(response);
+}

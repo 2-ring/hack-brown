@@ -134,6 +134,7 @@ def store_google_tokens_from_supabase(user_id: str, provider_token: dict) -> Non
 
     This should be called when the user connects their Google Calendar.
     Ensures the provider connection exists and has 'calendar' in usage array.
+    Also fetches and stores the user's timezone from Google Calendar settings.
 
     Args:
         user_id: User's Supabase user ID
@@ -199,3 +200,28 @@ def store_google_tokens_from_supabase(user_id: str, provider_token: dict) -> Non
     # Set as primary calendar provider if none is set
     if not user.get('primary_calendar_provider'):
         User.set_primary_calendar(user_id, 'google')
+
+    # Fetch and store timezone from Google Calendar settings
+    try:
+        from . import fetch
+        settings = fetch.get_calendar_settings(user_id)
+        if settings and settings.get('timezone'):
+            # Store timezone in user preferences
+            from preferences.service import PersonalizationService
+            preference_service = PersonalizationService()
+
+            # Load existing preferences or create new ones
+            preferences = preference_service.load_preferences(user_id)
+            if preferences:
+                preferences.timezone = settings['timezone']
+                preference_service.save_preferences(preferences)
+            else:
+                # Create new preferences with timezone
+                from preferences.models import UserPreferences
+                new_preferences = UserPreferences(
+                    user_id=user_id,
+                    timezone=settings['timezone']
+                )
+                preference_service.save_preferences(new_preferences)
+    except Exception as e:
+        print(f"Warning: Could not fetch/store timezone for user {user_id}: {e}")

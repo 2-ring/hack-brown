@@ -18,6 +18,7 @@ import {
   MicrosoftOutlookLogo,
   AppleLogo,
   Star,
+  Clock,
 } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -26,7 +27,7 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import './SettingsPopup.css';
 import { useState, useEffect, useRef } from 'react';
-import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider } from '../api/backend-client';
+import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider, getUserPreferences } from '../api/backend-client';
 import { Tooltip } from '../components/Tooltip';
 import { useTheme } from '../theme';
 
@@ -61,6 +62,7 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
 
   // Settings state (will be persisted to backend/localStorage in future)
   const [useInternationalDate, setUseInternationalDate] = useState(false);
+  const [userTimezone, setUserTimezone] = useState<string | null>(null);
   const [logoutHovered, setLogoutHovered] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<string | null>(null);
   const [hoveredSignOut, setHoveredSignOut] = useState<string | null>(null);
@@ -73,8 +75,26 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
   useEffect(() => {
     if (viewMode === 'integrations') {
       fetchCalendarProviders();
+    } else if (viewMode === 'main') {
+      fetchUserPreferences();
     }
   }, [viewMode]);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchUserPreferences();
+  }, []);
+
+  const fetchUserPreferences = async () => {
+    try {
+      const response = await getUserPreferences();
+      if (response.exists && response.preferences) {
+        setUserTimezone(response.preferences.timezone);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user preferences:', error);
+    }
+  };
 
   const fetchCalendarProviders = async () => {
     try {
@@ -318,6 +338,14 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                   </AnimatePresence>
                 </div>
               </button>
+
+              <div className="settings-popup-item" style={{ cursor: 'default', opacity: 0.8 }}>
+                <Clock size={20} weight="duotone" />
+                <span>Timezone</span>
+                <div className="settings-popup-value">
+                  {userTimezone || 'Not set'}
+                </div>
+              </div>
 
               <button
                 className="settings-popup-item"
