@@ -1,12 +1,13 @@
 import type { Icon } from '@phosphor-icons/react'
 import {
-  FileText as FileTextIcon,
-  Database as DatabaseIcon,
-  Article as ArticleIcon,
-  CalendarBlank as CalendarIcon,
-  Sparkle as SparkleIcon,
-  ListBullets as ListBulletsIcon,
-  NotePencil as NotePencilIcon,
+  BookOpenText,
+  Files,
+  ClipboardText,
+  GraduationCap,
+  Binoculars,
+  Info,
+  PaintBrush,
+  Calendar,
 } from '@phosphor-icons/react'
 
 // Calendar event types
@@ -68,27 +69,27 @@ export interface LoadingPhase {
 // Single-message loading states that reflect actual API calls
 export const LOADING_MESSAGES = {
   // File processing
-  READING_FILE: { message: 'Reading file...', icon: FileTextIcon },
-  PROCESSING_FILE: { message: 'Processing file content...', icon: DatabaseIcon },
+  READING_FILE: { message: 'Reading file...', icon: BookOpenText },
+  PROCESSING_FILE: { message: 'Processing file content...', icon: Files },
 
   // Text processing
-  PROCESSING_TEXT: { message: 'Processing text...', icon: ArticleIcon },
+  PROCESSING_TEXT: { message: 'Processing text...', icon: ClipboardText },
 
   // Context understanding
-  UNDERSTANDING_CONTEXT: { message: 'Understanding context and intent...', icon: ListBulletsIcon },
+  UNDERSTANDING_CONTEXT: { message: 'Understanding context and intent...', icon: GraduationCap },
 
   // Event extraction
-  EXTRACTING_EVENTS: { message: 'Extracting calendar events...', icon: SparkleIcon },
+  EXTRACTING_EVENTS: { message: 'Extracting calendar events...', icon: Binoculars },
 
   // Fact extraction
-  EXTRACTING_FACTS: { message: 'Analyzing event details...', icon: ListBulletsIcon },
+  EXTRACTING_FACTS: { message: 'Analyzing event details...', icon: Info },
 
   // Calendar formatting
-  FORMATTING_CALENDAR: { message: 'Formatting for calendar...', icon: NotePencilIcon },
+  FORMATTING_CALENDAR: { message: 'Formatting for calendar...', icon: PaintBrush },
 
   // Multi-event progress
   PROCESSING_EVENTS: (current: number, total: number) => ({
     message: `Processing event ${current} of ${total}...`,
-    icon: CalendarIcon,
+    icon: Calendar,
   }),
 } as const

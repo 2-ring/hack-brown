@@ -5,14 +5,17 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthContext.tsx'
 import { SkeletonWrapper } from './components/skeletons'
+import { ThemeProvider } from './theme'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <SkeletonWrapper>
-          <App />
-        </SkeletonWrapper>
+        <ThemeProvider>
+          <SkeletonWrapper>
+            <App />
+          </SkeletonWrapper>
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

@@ -9,9 +9,10 @@ export interface TimeInputProps {
   isEditing?: boolean
   placeholder?: string
   className?: string
+  startTime?: string // If provided, shows duration from this time
 }
 
-export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, placeholder, className }: TimeInputProps) {
+export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, placeholder, className, startTime }: TimeInputProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -43,32 +44,43 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
     const times: { value: string; label: string }[] = []
     const baseDate = new Date(value)
     const today = new Date(baseDate.toDateString())
+    const startDate = startTime ? new Date(startTime) : null
 
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
         const time = new Date(today)
         time.setHours(hour, minute, 0, 0)
 
-        const duration = Math.abs(time.getTime() - baseDate.getTime()) / (1000 * 60)
-        const hours = Math.floor(duration / 60)
-        const mins = duration % 60
+        const timeLabel = time.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
 
         let durationText = ''
-        if (hours > 0 && mins > 0) {
-          durationText = ` (${hours} hr ${mins} mins)`
-        } else if (hours > 0) {
-          durationText = ` (${hours} hr)`
-        } else if (mins > 0) {
-          durationText = ` (${mins} mins)`
+        if (startDate) {
+          const duration = (time.getTime() - startDate.getTime()) / (1000 * 60)
+          if (duration >= 0) {
+            const hours = Math.floor(duration / 60)
+            const mins = duration % 60
+
+            if (hours > 0 && mins > 0) {
+              durationText = ` (${hours} hr ${mins} mins)`
+            } else if (hours > 1) {
+              durationText = ` (${hours} hrs)`
+            } else if (hours === 1) {
+              durationText = ` (1 hr)`
+            } else if (mins > 0) {
+              durationText = ` (${mins} mins)`
+            } else {
+              durationText = ` (0 mins)`
+            }
+          }
         }
 
         times.push({
           value: time.toISOString(),
-          label: time.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }) + durationText
+          label: timeLabel + durationText
         })
       }
     }
@@ -98,14 +110,13 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
 
   const handleInputFocus = () => {
     onFocus?.()
+    setIsOpen(true)
   }
 
   const timeSuggestions = generateTimeSuggestions()
-  const filteredSuggestions = inputValue
-    ? timeSuggestions.filter(t =>
-        t.label.toLowerCase().includes(inputValue.toLowerCase())
-      ).slice(0, 10)
-    : []
+  const filteredSuggestions = timeSuggestions
+    .filter(t => !inputValue || t.label.toLowerCase().includes(inputValue.toLowerCase()))
+    .slice(0, 10)
 
   return (
     <div className="time-input-container">
@@ -121,7 +132,7 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
         readOnly={!isEditing}
       />
 
-      {isOpen && filteredSuggestions.length > 0 && (
+      {isOpen && isEditing && filteredSuggestions.length > 0 && (
         <div className="time-dropdown">
           {filteredSuggestions.map((time, index) => (
             <button

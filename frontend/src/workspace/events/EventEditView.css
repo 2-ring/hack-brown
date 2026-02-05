@@ -49,6 +49,11 @@
   animation: shimmer 1.5s ease-in-out;
 }
 
+/* Disable shimmer when dropdown is open to prevent overflow conflicts */
+.event-edit-overlay .editable-content-wrapper:has(.time-dropdown)::before {
+  display: none;
+}
+
 @keyframes shimmer {
   0% {
     left: -100%;
