@@ -24,6 +24,7 @@ repos:
       - id: black
         language_version: python3.11
         files: ^backend/.*\.py$
+        args: ['--skip-string-normalization']  # Less strict
 
   # Python linting
   - repo: https://github.com/PyCQA/flake8

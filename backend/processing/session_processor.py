@@ -11,7 +11,7 @@ from processors.factory import InputProcessorFactory, InputType
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import FactExtractionAgent
 from extraction.agents.formatting import CalendarFormattingAgent
-from extraction.agents.guest_formatting import GuestFormattingAgent
+from extraction.agents.standard_formatting import StandardFormattingAgent
 from extraction.title_generator import get_title_generator
 from events.service import EventService
 
@@ -37,16 +37,16 @@ class SessionProcessor:
         self.agent_1_identification = EventIdentificationAgent(llm)
         self.agent_2_extraction = FactExtractionAgent(llm)
         self.agent_3_formatting = CalendarFormattingAgent(llm)
-        self.agent_3_guest_formatting = GuestFormattingAgent(llm)
+        self.agent_3_standard_formatting = StandardFormattingAgent(llm)
 
         # Initialize title generator
         self.title_generator = get_title_generator()
 
-    def _should_use_guest_formatting(self, session: dict) -> bool:
+    def _should_use_standard_formatting(self, session: dict) -> bool:
         """
-        Determine if we should use guest formatting agent.
+        Determine if we should use standard formatting agent.
 
-        Uses guest formatting for:
+        Uses standard formatting for:
         1. Guest sessions (guest_mode=True)
         2. Users with minimal calendar history (< MIN_HISTORY_THRESHOLD events)
 
@@ -54,7 +54,7 @@ class SessionProcessor:
             session: Session dictionary from database
 
         Returns:
-            True if guest formatting should be used
+            True if standard formatting should be used
         """
         # Check if guest session
         if session.get('guest_mode'):
@@ -65,7 +65,7 @@ class SessionProcessor:
         try:
             event_count = Event.count_user_events(user_id)
             if event_count < self.MIN_HISTORY_THRESHOLD:
-                print(f"Using guest formatting: User has only {event_count} events (threshold: {self.MIN_HISTORY_THRESHOLD})")
+                print(f"Using standard formatting: User has only {event_count} events (threshold: {self.MIN_HISTORY_THRESHOLD})")
                 return True
         except Exception as e:
             print(f"Error checking event count: {e}. Defaulting to standard formatting.")
@@ -145,13 +145,13 @@ class SessionProcessor:
             user_id = session['user_id']
 
             # Determine which formatting agent to use
-            use_guest_formatting = self._should_use_guest_formatting(session)
+            use_standard_formatting = self._should_use_standard_formatting(session)
             formatting_agent = (
-                self.agent_3_guest_formatting if use_guest_formatting
+                self.agent_3_standard_formatting if use_standard_formatting
                 else self.agent_3_formatting
             )
 
-            agent_type = "guest" if use_guest_formatting else "personalized"
+            agent_type = "standard" if use_standard_formatting else "personalized"
             print(f"Using {agent_type} formatting agent for session {session_id}")
 
             for event in identification_result.events:
@@ -161,7 +161,7 @@ class SessionProcessor:
                     event.description
                 )
 
-                # Agent 3: Calendar Formatting (guest or personalized)
+                # Agent 3: Calendar Formatting (standard or personalized)
                 calendar_event = formatting_agent.execute(facts)
 
                 # Create event in unified events table
@@ -270,13 +270,13 @@ class SessionProcessor:
             user_id = session['user_id']
 
             # Determine which formatting agent to use
-            use_guest_formatting = self._should_use_guest_formatting(session)
+            use_standard_formatting = self._should_use_standard_formatting(session)
             formatting_agent = (
-                self.agent_3_guest_formatting if use_guest_formatting
+                self.agent_3_standard_formatting if use_standard_formatting
                 else self.agent_3_formatting
             )
 
-            agent_type = "guest" if use_guest_formatting else "personalized"
+            agent_type = "standard" if use_standard_formatting else "personalized"
             print(f"Using {agent_type} formatting agent for session {session_id}")
 
             for event in identification_result.events:
@@ -286,7 +286,7 @@ class SessionProcessor:
                     event.description
                 )
 
-                # Agent 3: Calendar Formatting (guest or personalized)
+                # Agent 3: Calendar Formatting (standard or personalized)
                 calendar_event = formatting_agent.execute(facts)
 
                 # Create event in unified events table

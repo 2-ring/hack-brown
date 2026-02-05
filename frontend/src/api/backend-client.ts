@@ -4,6 +4,7 @@
  */
 
 import { getAccessToken } from '../auth/supabase';
+import { GuestSessionManager } from '../auth/GuestSessionManager';
 import type {
   Session,
   CreateSessionResponse,
@@ -497,13 +498,24 @@ export async function uploadGuestFile(
 }
 
 /**
- * Get guest session by ID (no auth).
+ * Get guest session by ID with access token verification.
+ * Retrieves the access token from localStorage and includes it in the request.
  */
 export async function getGuestSession(sessionId: string): Promise<Session> {
-  const response = await fetch(`${API_URL}/api/sessions/guest/${sessionId}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
+  // Retrieve the access token for this session from localStorage
+  const accessToken = GuestSessionManager.getAccessToken(sessionId);
+
+  if (!accessToken) {
+    throw new Error('Access token not found for guest session. Please create a new session.');
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/sessions/guest/${sessionId}?access_token=${encodeURIComponent(accessToken)}`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
 
   const data = await handleResponse<GetSessionResponse>(response);
   return data.session;

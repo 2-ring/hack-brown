@@ -1051,26 +1051,36 @@ def upload_guest_file():
 @limiter.limit("50 per hour")
 def get_guest_session(session_id):
     """
-    Get a guest session by ID (no authentication required).
+    Get a guest session by ID with access token verification.
 
-    Only returns sessions with guest_mode=True.
+    Requires access_token query parameter for security.
+    Only returns sessions with guest_mode=True and matching access token.
     Authenticated sessions require the regular /api/sessions/<id> endpoint.
     Rate limited to 50 requests per hour per IP address.
 
-    Returns the session object if found and is a guest session, error otherwise.
+    Query params:
+        access_token: The access token returned when the session was created
+
+    Returns the session object if token is valid, error otherwise.
     """
     try:
-        session = DBSession.get_by_id(session_id)
+        # Get access token from query parameter
+        access_token = request.args.get('access_token')
+
+        if not access_token:
+            return jsonify({
+                'error': 'Access token required',
+                'message': 'Please provide access_token query parameter'
+            }), 401
+
+        # Verify token and retrieve session in one query
+        session = DBSession.verify_guest_token(session_id, access_token)
 
         if not session:
-            return jsonify({'error': 'Session not found'}), 404
-
-        # Verify this is a guest session
-        if not session.get('guest_mode'):
             return jsonify({
-                'error': 'This session requires authentication',
-                'requires_auth': True
-            }), 401
+                'error': 'Invalid session or access token',
+                'message': 'Session not found or access token is incorrect'
+            }), 403
 
         return jsonify({
             'success': True,

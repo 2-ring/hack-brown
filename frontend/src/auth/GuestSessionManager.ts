@@ -10,6 +10,7 @@ const TOAST_DISMISSED_KEY = 'dropcal_guest_toast_dismissed';
 interface GuestSession {
   id: string;
   timestamp: number;
+  accessToken: string; // Secure token for session access
 }
 
 interface GuestStorage {
@@ -26,11 +27,21 @@ export class GuestSessionManager {
     return JSON.parse(stored);
   }
 
-  static addGuestSession(sessionId: string): void {
+  static addGuestSession(sessionId: string, accessToken: string): void {
     const storage = this.getGuestSessions();
-    storage.sessions.push({ id: sessionId, timestamp: Date.now() });
+    storage.sessions.push({
+      id: sessionId,
+      timestamp: Date.now(),
+      accessToken
+    });
     storage.count += 1;
     localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(storage));
+  }
+
+  static getAccessToken(sessionId: string): string | null {
+    const storage = this.getGuestSessions();
+    const session = storage.sessions.find(s => s.id === sessionId);
+    return session?.accessToken || null;
   }
 
   static getSessionCount(): number {

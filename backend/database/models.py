@@ -3,6 +3,7 @@ Database models for User and Session operations.
 Provides CRUD operations for Supabase tables.
 """
 
+import secrets
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from .supabase_client import get_supabase
@@ -651,7 +652,7 @@ class Session:
             guest_mode: Whether this is a guest session (default: False)
 
         Returns:
-            Dict containing the created session data
+            Dict containing the created session data (includes access_token for guest sessions)
         """
         supabase = get_supabase()
 
@@ -662,6 +663,10 @@ class Session:
             "status": "pending",
             "guest_mode": guest_mode
         }
+
+        # Generate secure access token for guest sessions
+        if guest_mode:
+            data["access_token"] = secrets.token_hex(32)  # 64-char hex string
 
         response = supabase.table("sessions").insert(data).execute()
         return response.data[0]
@@ -867,6 +872,28 @@ class Session:
             "title": title
         }).eq("id", session_id).execute()
         return response.data[0]
+
+    @staticmethod
+    def verify_guest_token(session_id: str, access_token: str) -> Optional[Dict[str, Any]]:
+        """
+        Verify guest session access token and return session if valid.
+
+        Args:
+            session_id: Session's UUID
+            access_token: Access token to verify
+
+        Returns:
+            Dict containing session data if token is valid, None otherwise
+        """
+        supabase = get_supabase()
+
+        response = supabase.table("sessions").select("*")\
+            .eq("id", session_id)\
+            .eq("guest_mode", True)\
+            .eq("access_token", access_token)\
+            .execute()
+
+        return response.data[0] if response.data else None
 
     @staticmethod
     def delete(session_id: str) -> bool:

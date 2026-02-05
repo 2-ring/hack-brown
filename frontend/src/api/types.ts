@@ -30,6 +30,8 @@ export interface Session {
   added_to_calendar: boolean;
   calendar_event_ids?: string[];
   error_message?: string;
+  guest_mode?: boolean;
+  access_token?: string; // Secure token for guest session access
   created_at: string;
   updated_at: string;
 }

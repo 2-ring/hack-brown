@@ -236,9 +236,9 @@ function AppContent() {
 
       setCurrentSession(session)
 
-      // Track guest session
-      if (!user) {
-        GuestSessionManager.addGuestSession(session.id)
+      // Track guest session with access token
+      if (!user && session.access_token) {
+        GuestSessionManager.addGuestSession(session.id, session.access_token)
       }
 
       setLoadingConfig(LOADING_MESSAGES.PROCESSING_FILE)
@@ -320,9 +320,9 @@ function AppContent() {
 
       setCurrentSession(session)
 
-      // Track guest session
-      if (!user) {
-        GuestSessionManager.addGuestSession(session.id)
+      // Track guest session with access token
+      if (!user && session.access_token) {
+        GuestSessionManager.addGuestSession(session.id, session.access_token)
       }
 
       // Poll for completion (use guest endpoint if not authenticated)
