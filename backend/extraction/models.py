@@ -50,11 +50,11 @@ class RecurrenceInfo(BaseModel):
 
 
 class ExtractedFacts(BaseModel):
-    """Semantic facts extracted from event text"""
+    """Semantic facts extracted and normalized from event text"""
     title: str = Field(description="Event title/name extracted from the text")
-    date: Optional[str] = Field(default=None, description="Date as written: 'tomorrow', 'Feb 25', 'Friday', 'next week', etc. Do NOT normalize.")
-    time: Optional[str] = Field(default=None, description="Start time as written: '2pm', '14:00', '6:30pm', 'afternoon', etc. Do NOT normalize.")
-    end_time: Optional[str] = Field(default=None, description="End time if explicitly mentioned: '3pm', '15:00', etc.")
+    date: Optional[str] = Field(default=None, description="Normalized date in YYYY-MM-DD format: '2026-02-05', '2026-12-25', etc.")
+    time: Optional[str] = Field(default=None, description="Normalized start time in HH:MM:SS 24-hour format: '14:00:00', '09:30:00', etc.")
+    end_time: Optional[str] = Field(default=None, description="Normalized end time in HH:MM:SS 24-hour format if explicitly mentioned")
     duration: Optional[str] = Field(default=None, description="Duration if mentioned: '90 minutes', '2 hours', '30 min', etc.")
     location: Optional[str] = Field(default=None, description="Location/venue: 'Conference Room B', 'Zoom', 'Olive Garden', etc.")
     notes: Optional[str] = Field(default=None, description="Additional notes or context: 'bring laptop', 'closed-book', etc.")

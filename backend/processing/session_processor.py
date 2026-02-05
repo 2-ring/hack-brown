@@ -5,12 +5,13 @@ Connects the existing LangChain agents to the session workflow.
 
 from typing import Optional
 import os
+import threading
 from database.models import Session as DBSession
 from processors.factory import InputProcessorFactory, InputType
-from extraction.agents.context import ContextUnderstandingAgent
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import FactExtractionAgent
 from extraction.agents.formatting import CalendarFormattingAgent
+from extraction.title_generator import get_title_generator
 
 
 class SessionProcessor:
@@ -28,10 +29,35 @@ class SessionProcessor:
         self.input_processor_factory = input_processor_factory
 
         # Initialize all agents
-        self.agent_0_context = ContextUnderstandingAgent(llm)
         self.agent_1_identification = EventIdentificationAgent(llm)
         self.agent_2_extraction = FactExtractionAgent(llm)
         self.agent_3_formatting = CalendarFormattingAgent(llm)
+
+        # Initialize title generator
+        self.title_generator = get_title_generator()
+
+    def _generate_and_update_title(self, session_id: str, text: str, metadata: dict = None) -> None:
+        """
+        Generate title asynchronously and update session.
+        Runs in background thread.
+
+        Args:
+            session_id: Session ID to update
+            text: Input text for title generation
+            metadata: Optional metadata for vision inputs
+        """
+        try:
+            # Generate title
+            title = self.title_generator.generate(text, max_words=3, vision_metadata=metadata)
+
+            # Update session with title
+            DBSession.update_title(session_id, title)
+
+            print(f"✓ Title generated for session {session_id}: '{title}'")
+        except Exception as e:
+            print(f"Error generating title for session {session_id}: {e}")
+            # Don't fail the entire session if title generation fails
+            # Just leave it without a title
 
     def process_text_session(self, session_id: str, text: str) -> None:
         """
@@ -45,14 +71,18 @@ class SessionProcessor:
             # Update status to processing
             DBSession.update_status(session_id, 'processing')
 
-            # Step 1: Context Understanding
-            context_result = self.agent_0_context.execute(text, {}, requires_vision=False)
+            # Launch title generation in background (runs in parallel with pipeline)
+            title_thread = threading.Thread(
+                target=self._generate_and_update_title,
+                args=(session_id, text, {}),
+                daemon=True
+            )
+            title_thread.start()
 
-            # Step 2: Event Identification
+            # Step 1: Event Identification
             identification_result = self.agent_1_identification.execute(
                 text,
                 {},
-                context_result.model_dump(),
                 requires_vision=False
             )
 
@@ -136,15 +166,18 @@ class SessionProcessor:
                 text = file_path
                 metadata = {'source': file_type, 'file_path': file_path}
 
-            # Now process like text
-            # Step 1: Context Understanding
-            context_result = self.agent_0_context.execute(text, metadata, requires_vision)
+            # Launch title generation in background (runs in parallel with pipeline)
+            title_thread = threading.Thread(
+                target=self._generate_and_update_title,
+                args=(session_id, text, metadata),
+                daemon=True
+            )
+            title_thread.start()
 
-            # Step 2: Event Identification
+            # Step 1: Event Identification
             identification_result = self.agent_1_identification.execute(
                 text,
                 metadata,
-                context_result.model_dump(),
                 requires_vision
             )
 

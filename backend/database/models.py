@@ -848,6 +848,25 @@ class Session:
         return response.data[0]
 
     @staticmethod
+    def update_title(session_id: str, title: str) -> Dict[str, Any]:
+        """
+        Update session title.
+
+        Args:
+            session_id: Session's UUID
+            title: Generated title for the session
+
+        Returns:
+            Dict containing updated session data
+        """
+        supabase = get_supabase()
+
+        response = supabase.table("sessions").update({
+            "title": title
+        }).eq("id", session_id).execute()
+        return response.data[0]
+
+    @staticmethod
     def delete(session_id: str) -> bool:
         """
         Delete a session.

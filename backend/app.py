@@ -35,6 +35,7 @@ from extraction.models import ExtractedFacts
 # Import route blueprints
 from calendars.routes import calendar_bp
 from auth.routes import auth_bp
+from sessions.routes import sessions_bp
 
 # Import auth middleware
 from auth.middleware import require_auth
@@ -50,6 +51,7 @@ CORS(app)
 # Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(calendar_bp)
+app.register_blueprint(sessions_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
