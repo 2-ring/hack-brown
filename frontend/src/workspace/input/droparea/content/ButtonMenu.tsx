@@ -36,7 +36,7 @@ export function ButtonMenu({
             onClick={onImageClick}
             title="Upload Image"
           >
-            <ImagesIcon size={24} weight="regular" />
+            <ImagesIcon size={24} weight="duotone" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -52,7 +52,7 @@ export function ButtonMenu({
             onClick={onDocumentClick}
             title="Upload Document"
           >
-            <FileIcon size={24} weight="regular" />
+            <FileIcon size={24} weight="duotone" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -80,7 +80,7 @@ export function ButtonMenu({
             onClick={onAudioClick}
             title="Record Audio"
           >
-            <MicrophoneIcon size={24} weight="regular" />
+            <MicrophoneIcon size={24} weight="duotone" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -96,7 +96,7 @@ export function ButtonMenu({
             onClick={onTextClick}
             title="Text Input"
           >
-            <TextIcon size={24} weight="regular" />
+            <TextIcon size={24} weight="duotone" />
           </motion.div>
         )}
       </AnimatePresence>

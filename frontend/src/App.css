@@ -44,12 +44,11 @@
 
 .content {
   width: 100%;
-  padding: 4rem 1rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0;
+  justify-content: center;
   flex: 1;
   overflow-y: auto;
   transition: margin-left 0.3s ease, width 0.3s ease;
@@ -68,20 +67,26 @@
   width: calc(100% - 280px);
 }
 
-.greeting-container {
+.input-state-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  animation: fadeIn 0.5s ease-in;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
+  gap: 1.5rem;
+  padding: 2rem 1rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.input-state-container > .greeting-row {
+  margin-bottom: 1rem;
 }
 
 .greeting-row {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin: 0;
+  padding: 0;
 }
 
 .greeting-logo {
@@ -322,7 +327,7 @@
 }
 
 .error-message {
-  margin-top: 2rem;
+  margin: 0;
   padding: 1rem 2rem;
   background-color: var(--error-background);
   border: 2px solid var(--error);
@@ -645,7 +650,16 @@
 
   /* Content adjustments */
   .content {
-    padding: 5.5rem 1rem 2rem;
+    padding: 0;
+  }
+
+  .input-state-container {
+    gap: 1.25rem;
+    padding: 5rem 1rem 2rem;
+  }
+
+  .input-state-container > .greeting-row {
+    margin-bottom: 0.75rem;
   }
 
   .greeting-row {

@@ -73,10 +73,10 @@ export function Workspace({
         </div>
       )}
 
-      {/* Show logo and greeting in input state */}
+      {/* Input State */}
       {appState === 'input' && (
         <motion.div
-          className="greeting-container"
+          className="input-state-container"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
@@ -89,22 +89,19 @@ export function Workspace({
             />
             <h1 className="greeting-text">{greeting}</h1>
           </div>
-        </motion.div>
-      )}
 
-      {/* Input State */}
-      {appState === 'input' && (
-        <InputWorkspace
-          uploadedFile={uploadedFile}
-          isProcessing={isProcessing}
-          feedbackMessage={feedbackMessage}
-          isGuestMode={isGuestMode}
-          onFileUpload={onFileUpload}
-          onAudioSubmit={onAudioSubmit}
-          onTextSubmit={onTextSubmit}
-          onClearFile={onClearFile}
-          onClearFeedback={() => {}} // Handled by notification system
-        />
+          <InputWorkspace
+            uploadedFile={uploadedFile}
+            isProcessing={isProcessing}
+            feedbackMessage={feedbackMessage}
+            isGuestMode={isGuestMode}
+            onFileUpload={onFileUpload}
+            onAudioSubmit={onAudioSubmit}
+            onTextSubmit={onTextSubmit}
+            onClearFile={onClearFile}
+            onClearFeedback={() => {}} // Handled by notification system
+          />
+        </motion.div>
       )}
 
       {/* Events State (loading or review) */}
