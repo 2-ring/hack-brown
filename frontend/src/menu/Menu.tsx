@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { PlusCircle, SidebarSimple as SidebarIcon, CalendarBlank, CalendarStar, ArrowSquareOut, Images, Files, Pen, Microphone, CaretCircleLeft, GoogleLogo, MicrosoftOutlookLogo, AppleLogo } from '@phosphor-icons/react'
+import { SidebarSimple as SidebarIcon, CalendarBlank, CalendarStar, ArrowSquareOut, Images, Files, Pen, Microphone, CaretCircleLeft, GoogleLogo, MicrosoftOutlookLogo, AppleLogo } from '@phosphor-icons/react'
 import type { SessionListItem } from '../sessions'
 import type { InputType } from '../sessions'
 import { Account } from './Account'

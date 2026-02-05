@@ -653,3 +653,56 @@ def disconnect_calendar_provider():
 
     except Exception as e:
         return jsonify({'error': f'Failed to disconnect provider: {str(e)}'}), 500
+
+
+# ============================================================================
+# Smart Sync Endpoint
+# ============================================================================
+
+@calendar_bp.route('/api/calendar/sync', methods=['POST'])
+@require_auth
+def sync_calendar():
+    """
+    Smart sync endpoint - backend decides strategy automatically.
+
+    Call this endpoint:
+    - When app opens
+    - When user navigates to events view
+    - When user clicks refresh
+
+    Backend handles:
+    - Skip if synced < 2 min ago
+    - Incremental sync if has sync token
+    - Full sync if first time
+    - Fast incremental if recently synced but no token
+
+    Returns:
+        {
+            'success': true,
+            'strategy': 'incremental' | 'full' | 'skip' | 'fast_incremental',
+            'synced_at': '2026-02-05T12:34:56Z',
+            'is_first_sync': false,
+            'last_synced_at': '2026-02-05T12:30:00Z',
+            'minutes_since_last_sync': 4,
+            'total_events_in_db': 234,
+            'events_added': 2,
+            'events_updated': 1,
+            'events_deleted': 0
+        }
+    """
+    try:
+        user_id = request.user_id
+
+        from calendars.sync_service import SmartSyncService
+        sync_service = SmartSyncService()
+
+        results = sync_service.sync(user_id)
+
+        return jsonify(results)
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Sync failed: {str(e)}'}), 500

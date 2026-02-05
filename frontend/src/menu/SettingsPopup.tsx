@@ -13,7 +13,6 @@ import {
   GlobeSimple,
   FootballHelmet,
   CaretLeft,
-  Check,
   GoogleLogo,
   MicrosoftOutlookLogo,
   AppleLogo,
@@ -69,7 +68,6 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
 
   // Calendar integrations data from backend
   const [calendars, setCalendars] = useState<CalendarIntegration[]>([]);
-  const [calendarsLoading, setCalendarsLoading] = useState(false);
 
   // Fetch calendar providers from backend
   useEffect(() => {
@@ -98,7 +96,6 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
 
   const fetchCalendarProviders = async () => {
     try {
-      setCalendarsLoading(true);
       const response = await getCalendarProviders();
 
       // Map backend response to CalendarIntegration format
@@ -117,8 +114,6 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
       setCalendars(providerData);
     } catch (error) {
       console.error('Failed to fetch calendar providers:', error);
-    } finally {
-      setCalendarsLoading(false);
     }
   };
 
@@ -193,19 +188,6 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
       // TODO: Implement Apple Calendar flow (requires Apple ID + app password)
       console.log('Apple Calendar integration not yet implemented');
       alert('Apple calendar integration coming soon!');
-    }
-  };
-
-  const getProviderIcon = (provider: string, size: number = 20) => {
-    switch (provider) {
-      case 'google':
-        return <GoogleLogo size={size} weight="regular" />;
-      case 'microsoft':
-        return <MicrosoftOutlookLogo size={size} weight="regular" />;
-      case 'apple':
-        return <span className="apple-icon">􀣺</span>;
-      default:
-        return null;
     }
   };
 

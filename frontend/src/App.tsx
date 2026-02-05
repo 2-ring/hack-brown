@@ -17,6 +17,7 @@ import {
   pollSession,
   addSessionToCalendar
 } from './api/backend-client'
+import { syncCalendar } from './api/sync'
 import './App.css'
 
 // Import all greeting images dynamically
@@ -215,10 +216,28 @@ function AppContent() {
     // TEMPORARY: When no sessionId, we let the test data loading sequence handle the state
   }, [sessionId, navigate])
 
-  // Load session history when user logs in
+  // Load session history and sync calendar when user logs in
   useEffect(() => {
     if (user) {
       getUserSessions().then(setSessionHistory).catch(console.error)
+
+      // Sync calendar with provider (smart backend decides strategy)
+      syncCalendar()
+        .then(result => {
+          if (result.skipped) {
+            console.log(`Calendar sync skipped: ${result.reason}`)
+          } else {
+            console.log(
+              `Calendar synced (${result.strategy}): ` +
+              `+${result.events_added} ~${result.events_updated} -${result.events_deleted} ` +
+              `(Total: ${result.total_events_in_db} events)`
+            )
+          }
+        })
+        .catch(error => {
+          // Silent fail - don't interrupt user experience if sync fails
+          console.error('Calendar sync failed:', error)
+        })
     }
   }, [user])
 

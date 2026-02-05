@@ -1193,3 +1193,103 @@ class Event:
         }).execute()
 
         return response.data
+
+    @staticmethod
+    def get_by_provider_event_id(
+        user_id: str,
+        provider: str,
+        provider_event_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get event by provider event ID.
+
+        Args:
+            user_id: User's UUID
+            provider: Provider name ('google', 'microsoft', etc.)
+            provider_event_id: Provider's event ID
+
+        Returns:
+            Event dict or None if not found
+        """
+        supabase = get_supabase()
+        response = supabase.table("events").select("*")\
+            .eq("user_id", user_id)\
+            .eq("provider", provider)\
+            .eq("provider_event_id", provider_event_id)\
+            .is_("deleted_at", None)\
+            .maybeSingle().execute()
+        return response.data
+
+    @staticmethod
+    def get_user_event_stats(
+        user_id: str,
+        provider: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get event statistics for sync decision making.
+
+        Args:
+            user_id: User's UUID
+            provider: Optional provider filter
+
+        Returns:
+            Dict with statistics:
+            {
+                'total': int,
+                'most_recent': str (ISO timestamp),
+                'oldest': str (ISO timestamp)
+            }
+        """
+        supabase = get_supabase()
+
+        query = supabase.table("events").select("start_time")\
+            .eq("user_id", user_id)\
+            .is_("deleted_at", None)
+
+        if provider:
+            query = query.eq("provider", provider)
+
+        response = query.not_.is_("start_time", None)\
+            .order("start_time", desc=True).execute()
+
+        events = response.data
+
+        if not events:
+            return {
+                'total': 0,
+                'most_recent': None,
+                'oldest': None
+            }
+
+        return {
+            'total': len(events),
+            'most_recent': events[0]['start_time'] if events else None,
+            'oldest': events[-1]['start_time'] if events else None
+        }
+
+    @staticmethod
+    def count_user_events(
+        user_id: str,
+        provider: Optional[str] = None
+    ) -> int:
+        """
+        Count total events for a user.
+
+        Args:
+            user_id: User's UUID
+            provider: Optional provider filter
+
+        Returns:
+            Total event count
+        """
+        supabase = get_supabase()
+
+        query = supabase.table("events").select("id", count="exact")\
+            .eq("user_id", user_id)\
+            .is_("deleted_at", None)
+
+        if provider:
+            query = query.eq("provider", provider)
+
+        response = query.execute()
+        return response.count if response.count else 0

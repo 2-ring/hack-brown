@@ -100,25 +100,6 @@ export function EventEditView({
     }
   }
 
-  const formatDateForDisplay = (dateTime: string) => {
-    const date = new Date(dateTime)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
-
-  const formatTimeForDisplay = (dateTime: string) => {
-    const date = new Date(dateTime)
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
   const handleCalendarSelect = (calendarId: string) => {
     handleChange('calendar', calendarId)
   }
@@ -307,7 +288,7 @@ export function EventEditView({
                       type="text"
                       className="date-text editable-input"
                       value="Eastern Standard Time"
-                      onChange={(e) => {
+                      onChange={() => {
                         // TODO: Implement timezone handling
                       }}
                       onBlur={handleEditBlur}
@@ -331,7 +312,7 @@ export function EventEditView({
                       type="text"
                       className="date-text editable-input"
                       value="Does not repeat"
-                      onChange={(e) => {
+                      onChange={() => {
                         // TODO: Implement repeat handling
                       }}
                       onBlur={handleEditBlur}

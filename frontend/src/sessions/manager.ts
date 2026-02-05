@@ -93,18 +93,6 @@ function generatePlaceholderTitle(type: InputType): string {
   }
 }
 
-// Generate a readable title from input (legacy - kept for backward compatibility)
-function generateSessionTitle(content: string, type: InputType): string {
-  // For image and document files, use the file name
-  if (type === 'image' || type === 'document') {
-    return content // File name
-  }
-
-  // For text/audio, use first 50 chars
-  const truncated = content.substring(0, 50).trim()
-  return truncated.length < content.length ? `${truncated}...` : truncated
-}
-
 // Update session with agent output
 export function addAgentOutput(
   session: Session,

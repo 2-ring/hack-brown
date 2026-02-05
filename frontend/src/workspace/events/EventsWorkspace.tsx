@@ -12,8 +12,7 @@ import wordmarkImage from '../../assets/Wordmark.png'
 import './EventsWorkspace.css'
 import {
   listContainerVariants,
-  eventItemVariants,
-  dateHeaderVariants
+  eventItemVariants
 } from './animations'
 
 interface GoogleCalendar {
@@ -288,42 +287,6 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
 
 
   // Detect date context for all events to determine optimal display format
-  // TODO: Extend this to handle different scenarios:
-  // - All events on same day: Show only time, no date headers
-  // - All events in same month (current implementation): Show day-of-week + date number
-  // - Events span multiple months: Show month abbreviation + date
-  // - Events span multiple years: Include year in display
-  const getDateContext = (events: CalendarEvent[]): {
-    sameDay: boolean
-    sameMonth: boolean
-    sameYear: boolean
-    currentYear: boolean
-  } => {
-    if (events.length === 0) {
-      return { sameDay: true, sameMonth: true, sameYear: true, currentYear: true }
-    }
-
-    const dates = events.map(e => new Date(e.start.dateTime))
-    const currentYear = new Date().getFullYear()
-
-    // Check if all events are on the same day
-    const firstDateStr = dates[0].toDateString()
-    const sameDay = dates.every(d => d.toDateString() === firstDateStr)
-
-    // Check if all events are in the same month
-    const firstMonth = dates[0].getMonth()
-    const firstYear = dates[0].getFullYear()
-    const sameMonth = dates.every(d => d.getMonth() === firstMonth && d.getFullYear() === firstYear)
-
-    // Check if all events are in the same year
-    const sameYear = dates.every(d => d.getFullYear() === firstYear)
-
-    // Check if all events are in the current year
-    const currentYearCheck = dates.every(d => d.getFullYear() === currentYear)
-
-    return { sameDay, sameMonth, sameYear, currentYear: currentYearCheck }
-  }
-
   // Group events by date
   const groupEventsByDate = (events: CalendarEvent[]): Map<string, CalendarEvent[]> => {
     const grouped = new Map<string, CalendarEvent[]>()

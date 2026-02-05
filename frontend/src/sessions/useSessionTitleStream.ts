@@ -95,7 +95,7 @@ export function useSessionTitleStream(
     })
 
     // Handle timeout
-    eventSource.addEventListener('timeout', (e) => {
+    eventSource.addEventListener('timeout', () => {
       console.log('⏱️  Stream timeout')
       setIsLoading(false)
       eventSource.close()
