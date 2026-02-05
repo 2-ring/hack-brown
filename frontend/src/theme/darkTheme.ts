@@ -1,4 +1,4 @@
-import { Theme } from './types';
+import type { Theme } from './types';
 
 export const darkTheme: Theme = {
   // Primary Brand Colors - slightly lighter for dark backgrounds

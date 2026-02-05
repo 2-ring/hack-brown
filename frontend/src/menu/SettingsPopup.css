@@ -29,10 +29,10 @@
   bottom: calc(var(--menu-button-height) + var(--account-margin-bottom) + var(--settings-popup-spacing));
   left: var(--settings-popup-spacing);
   width: calc(280px - var(--settings-popup-spacing) * 2);
-  background-color: white;
-  border: 1px solid #e5e5e5;
+  background-color: var(--background);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-medium);
   overflow: hidden;
   animation: slideUp 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: auto;
@@ -63,8 +63,8 @@
 /* Header with user info - compact */
 .settings-popup-header {
   padding: 12px;
-  border-bottom: 1px solid #e5e5e5;
-  background-color: #fafafa;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--background-secondary);
 }
 
 .settings-popup-header-content {
@@ -82,7 +82,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.15s ease;
   flex-shrink: 0;
@@ -90,11 +90,11 @@
 }
 
 .settings-popup-back-button:hover {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .settings-popup-back-button:active {
-  color: #1170C5;
+  color: var(--primary);
 }
 
 .settings-popup-user {
@@ -107,7 +107,7 @@
 
 .settings-popup-email {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   margin: 0;
   font-weight: 400;
   flex: 1;
@@ -126,7 +126,7 @@
   padding: 8px;
   background: transparent;
   border: none;
-  color: #333;
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
@@ -139,7 +139,7 @@
 .settings-popup-value {
   margin-left: auto;
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 400;
   min-width: 90px;
   text-align: right;
@@ -157,17 +157,17 @@
 }
 
 .settings-popup-item svg {
-  color: #666;
+  color: var(--text-secondary);
   transition: color 0.15s ease;
   flex-shrink: 0;
 }
 
 .settings-popup-item:hover:not(:disabled):not(.settings-integration-row):not(.settings-popup-logout) {
-  background-color: #e8e8e8;
+  background-color: var(--background-hover);
 }
 
 .settings-popup-item:hover:not(:disabled):not(.settings-integration-row):not(.settings-popup-logout) svg {
-  color: #333;
+  color: var(--text-primary);
 }
 
 /* Integration row styling */
@@ -195,21 +195,21 @@
 }
 
 .settings-integration-row button:hover svg {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .settings-popup-item:active:not(:disabled):not(.settings-integration-row) {
-  background-color: #e0e0e0;
+  background-color: var(--background-active);
 }
 
 .settings-popup-item:disabled {
   cursor: not-allowed;
   opacity: 0.4;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .settings-popup-item:disabled svg {
-  color: #aaa;
+  color: var(--text-disabled);
 }
 
 .settings-popup-item span:first-of-type {
@@ -218,13 +218,13 @@
 
 .settings-popup-shortcut {
   font-size: 11px;
-  color: #999;
+  color: var(--text-tertiary);
   margin-left: auto;
   font-weight: 400;
 }
 
 .settings-popup-arrow {
-  color: #aaa;
+  color: var(--text-disabled);
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -232,20 +232,20 @@
 /* Footer with logout */
 .settings-popup-footer {
   padding: 8px;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--border);
 }
 
 .settings-popup-logout {
-  color: #d32f2f;
+  color: var(--error);
   font-weight: 400;
 }
 
 .settings-popup-logout svg {
-  color: #d32f2f;
+  color: var(--error);
 }
 
 .settings-popup-logout:active {
-  background-color: #ffcdd2;
+  background-color: var(--error-background);
 }
 
 /* Apple icon styling */

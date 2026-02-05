@@ -20,14 +20,14 @@
   justify-content: center;
   gap: 10px;
   height: var(--menu-button-height);
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border);
   border-radius: 24px;
   font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-light);
   white-space: nowrap;
 }
 
@@ -39,8 +39,8 @@
 /* Action button variant (New events, View calendar) - intentionally smaller than account button */
 .menu-button-action {
   padding: 0 16px;
-  background-color: white;
-  color: #333;
+  background-color: var(--background);
+  color: var(--text-primary);
   width: calc(100% - 2rem);
   margin: 0 1rem 0.5rem 1rem;
   height: 44px; /* Override to keep action buttons smaller */
@@ -51,43 +51,43 @@
 }
 
 .menu-button-action:hover:not(:disabled) {
-  background-color: #fafafa;
-  border-color: #d5d5d5;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background-color: var(--background-hover);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-light);
 }
 
 .menu-button-action:hover:not(:disabled) .menu-button-icon {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .menu-button-action:active:not(:disabled) {
-  background-color: #f0f0f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background-color: var(--background-active);
+  box-shadow: var(--shadow-light);
 }
 
 /* Sign-in button variant - identical styling for all providers */
 .menu-button-signin {
   padding: 0 16px;
-  background: white;
-  color: #333;
+  background: var(--background);
+  color: var(--text-primary);
   width: 100%;
   gap: 12px;
-  /* Uses same border as action buttons: #e5e5e5 */
+  /* Uses same border as action buttons */
 }
 
 .menu-button-signin:hover:not(:disabled) {
-  background-color: #fafafa;
-  border-color: #d5d5d5;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background-color: var(--background-hover);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-light);
 }
 
 .menu-button-signin:hover:not(:disabled) .menu-button-icon {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .menu-button-signin:active:not(:disabled) {
-  background-color: #f0f0f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background-color: var(--background-active);
+  box-shadow: var(--shadow-light);
 }
 
 /* Icon styles */
@@ -96,7 +96,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: var(--text-secondary);
   transition: color 0.15s ease;
 }
 

@@ -61,8 +61,8 @@
   top: 0;
   left: 0;
   height: 100vh;
-  background-color: #fafafa;
-  border-right: 1px solid #e5e5e5;
+  background-color: var(--background-secondary);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
@@ -130,15 +130,15 @@
   height: 32px;
   border: none;
   background-color: transparent;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   border-radius: 50%;
   transition: all 0.15s ease;
 }
 
 .sidebar-toggle:hover {
-  background-color: #e8e8e8;
-  color: #333;
+  background-color: var(--background-hover);
+  color: var(--text-primary);
 }
 
 /* Hide sidebar icon on mobile */
@@ -170,10 +170,10 @@
   align-items: center;
   gap: 0.0625rem;
   padding: 0.1875rem;
-  background-color: white;
-  border: 1px solid #e5e5e5;
+  background-color: var(--background);
+  border: 1px solid var(--border);
   border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-light);
   z-index: 999;
 }
 
@@ -185,7 +185,7 @@
   justify-content: center;
   background-color: transparent;
   border: none;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   border-radius: 14px;
   transition: all 0.15s ease;
@@ -193,8 +193,8 @@
 }
 
 .dock-icon-button:hover {
-  background-color: #f5f5f5;
-  color: #333;
+  background-color: var(--background-hover);
+  color: var(--text-primary);
 }
 
 /* Button styles moved to MenuButton.css */
@@ -216,7 +216,7 @@
 .chat-group-label {
   font-size: 0.6875rem;
   font-weight: 500;
-  color: #888;
+  color: var(--text-tertiary);
   text-transform: capitalize;
   letter-spacing: 0.5px;
   margin-bottom: 0.075rem;
@@ -237,28 +237,28 @@
 
 .chat-entry-icon {
   flex-shrink: 0;
-  color: #666;
+  color: var(--text-secondary);
   transition: color 0.15s ease;
 }
 
 .chat-entry:hover {
-  background-color: #e8e8e8;
+  background-color: var(--background-hover);
 }
 
 .chat-entry:hover .chat-entry-icon {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .chat-entry.active {
-  background-color: #e8e8e8;
+  background-color: var(--background-hover);
 }
 
 .chat-entry.active .chat-entry-icon {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .chat-entry.active:hover {
-  background-color: #e0e0e0;
+  background-color: var(--background-active);
 }
 
 .chat-entry.error {
@@ -267,7 +267,7 @@
 
 .chat-entry-title {
   font-size: 0.875rem;
-  color: #333;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -282,8 +282,8 @@
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background-color: #1170C5;
-  color: white;
+  background-color: var(--primary);
+  color: var(--background);
   font-size: 0.6875rem;
   font-weight: 700;
   border-radius: 10px;
@@ -297,7 +297,7 @@
   justify-content: center;
   padding: 2rem 1rem;
   text-align: center;
-  color: #888;
+  color: var(--text-tertiary);
 }
 
 .empty-state p {
@@ -310,7 +310,7 @@
   margin-top: 0.25rem;
   font-size: 0.75rem;
   font-weight: 400;
-  color: #aaa;
+  color: var(--text-disabled);
 }
 
 /* Scrollbar styling */
@@ -323,12 +323,12 @@
 }
 
 .chat-history::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
+  background: var(--border-hover);
   border-radius: 3px;
 }
 
 .chat-history::-webkit-scrollbar-thumb:hover {
-  background: #b0b0b0;
+  background: var(--border-active);
 }
 
 /* Mobile responsiveness */

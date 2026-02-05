@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   gap: 0px;
-  color: #666;
+  color: var(--text-secondary);
   flex-shrink: 0;
   padding: 2px;
 }

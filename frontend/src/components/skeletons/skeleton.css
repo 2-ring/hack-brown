@@ -51,9 +51,9 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: #ffffff;
+  background: var(--skeleton-background);
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--skeleton-border);
 }
 
 .skeleton-card-header {
@@ -150,7 +150,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .skeleton-card {
-    background: #1a1a1a;
-    border-color: #2a2a2a;
+    background: var(--skeleton-background);
+    border-color: var(--skeleton-border);
   }
 }

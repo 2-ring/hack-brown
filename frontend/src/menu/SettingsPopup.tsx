@@ -28,6 +28,7 @@ import './SettingsPopup.css';
 import { useState, useEffect, useRef } from 'react';
 import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider } from '../api/backend-client';
 import { Tooltip } from '../components/Tooltip';
+import { useTheme } from '../theme';
 
 interface SettingsPopupProps {
   onClose: () => void;
@@ -53,13 +54,13 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
   const navigate = useNavigate();
   const { signOut, signIn } = useAuth();
   const popupRef = useRef<HTMLDivElement>(null);
+  const { themeMode, toggleTheme } = useTheme();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('main');
 
   // Settings state (will be persisted to backend/localStorage in future)
   const [useInternationalDate, setUseInternationalDate] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [logoutHovered, setLogoutHovered] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<string | null>(null);
   const [hoveredSignOut, setHoveredSignOut] = useState<string | null>(null);
@@ -320,23 +321,23 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
 
               <button
                 className="settings-popup-item"
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleTheme}
               >
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={darkMode ? 'dark' : 'light'}
+                    key={themeMode}
                     initial={{ y: 20, scale: 0.95, opacity: 0 }}
                     animate={{ y: 0, scale: 1, opacity: 1 }}
                     exit={{ y: -20, scale: 0.95, opacity: 0 }}
                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
                   >
-                    {darkMode ? (
+                    {themeMode === 'dark' ? (
                       <MoonStars size={20} weight="duotone" />
                     ) : (
                       <SunHorizon size={20} weight="duotone" />
                     )}
-                    <span>{darkMode ? 'Dark mode' : 'Light mode'}</span>
+                    <span>{themeMode === 'dark' ? 'Dark mode' : 'Light mode'}</span>
                   </motion.div>
                 </AnimatePresence>
               </button>

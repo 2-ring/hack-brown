@@ -79,7 +79,7 @@
 }
 
 .header-left svg {
-  color: #666;
+  color: var(--text-secondary);
   width: 20px;
   height: 20px;
 }
@@ -123,13 +123,13 @@
 }
 
 .calendar-selector-provider {
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
   letter-spacing: 0.01em;
 }
 
 .calendar-selector-chevron {
-  color: #999;
+  color: var(--text-tertiary);
   transition: transform 0.2s ease;
   flex-shrink: 0;
   width: 10px !important;
@@ -178,16 +178,16 @@
   transition: all 0.15s ease;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .calendar-selector-option:hover {
-  background-color: rgba(17, 112, 197, 0.08);
+  background-color: var(--primary-light);
 }
 
 .calendar-selector-option.active {
-  background-color: rgba(17, 112, 197, 0.12);
-  color: #1170C5;
+  background-color: var(--primary-light);
+  color: var(--primary);
 }
 
 .calendar-selector-option .calendar-selector-icon {
@@ -216,7 +216,7 @@
   justify-content: flex-end;
   flex: 1;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 /* Scrollable Content Area */
@@ -253,7 +253,7 @@
 .event-section-header-text {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: flex;
@@ -297,7 +297,7 @@
 .event-date-day-label {
   font-size: 0.75rem;
   font-weight: 800;
-  color: #666;
+  color: var(--text-secondary);
   letter-spacing: 0.05em;
   text-align: center;
   width: 100%;
@@ -321,7 +321,7 @@
 .event-date-number {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -331,17 +331,17 @@
 }
 
 .event-date-header-timing.today .event-date-day-label {
-  color: #1170C5;
+  color: var(--primary);
 }
 
 .event-date-header-timing.today .event-date-circle {
-  background-color: #1170C5;
-  border: 2px solid #1170C5;
+  background-color: var(--primary);
+  border: 2px solid var(--primary);
   margin-top: 0;
 }
 
 .event-date-header-timing.today .event-date-number {
-  color: #ffffff;
+  color: var(--background);
 }
 
 /* Single Event Container - Right Side */
@@ -356,10 +356,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  background-color: #ffffff;
+  background-color: var(--background);
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--border-light);
 }
 
 .event-card-clickable {
@@ -367,7 +367,7 @@
 }
 
 .event-card-clickable:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-medium);
   transform: translateY(-2px);
 }
 
@@ -389,7 +389,7 @@
 .calendar-badge-text {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 /* Skeleton card styling */
@@ -410,7 +410,7 @@
 }
 
 .event-confirmation-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-medium);
   transform: translateY(-2px);
 }
 
@@ -435,18 +435,18 @@
 }
 
 .editable-content-wrapper:hover {
-  background-color: rgba(124, 143, 255, 0.06);
+  background-color: var(--interactive-light);
 }
 
 .editable-content-wrapper:hover .edit-icon {
   opacity: 1;
-  color: #7C8FFF;
+  color: var(--interactive);
 }
 
 .event-confirmation-card-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   line-height: 1.4;
   flex: 1;
   min-width: 0;
@@ -455,13 +455,13 @@
 .event-confirmation-card-time-inline {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin-left: 0.5rem;
 }
 
 .event-confirmation-card-date {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 400;
   flex: 1;
   min-width: 0;
@@ -469,7 +469,7 @@
 
 .event-confirmation-card-time {
   font-size: 0.9375rem;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-weight: 500;
   flex: 1;
   min-width: 0;
@@ -480,7 +480,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   font-size: 0.9375rem;
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.6;
   flex: 1;
   min-width: 0;
@@ -496,7 +496,7 @@
   align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
   flex: 1;
   min-width: 0;
@@ -510,18 +510,18 @@
 .description-icon {
   flex-shrink: 0;
   margin-top: 0.125rem;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .meta-icon {
   flex-shrink: 0;
   margin-top: 0.0625rem;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .edit-icon {
   flex-shrink: 0;
-  color: #999;
+  color: var(--text-tertiary);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s ease, color 0.2s ease;
@@ -530,7 +530,7 @@
 
 .edit-icon:hover {
   opacity: 1;
-  color: #7C8FFF;
+  color: var(--interactive);
 }
 
 /* Editable input fields */
@@ -549,31 +549,31 @@
 .editable-input.event-confirmation-card-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   line-height: 1.4;
 }
 
 .editable-input.event-confirmation-card-date {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 400;
 }
 
 .editable-input.event-confirmation-card-time {
   font-size: 0.9375rem;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .editable-input.description-input {
   font-size: 0.9375rem;
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.6;
 }
 
 .editable-input.meta-input {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -583,7 +583,7 @@
 }
 
 .skeleton-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-light);
   transform: none;
 }
 
@@ -623,7 +623,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .loading-progress-text {
@@ -636,13 +636,13 @@
 .loading-progress-message {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
   font-family: inherit;
 }
 
 .loading-progress-submessage {
   font-size: 0.8125rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .loading-progress-count {
@@ -712,12 +712,12 @@
   height: var(--dock-height);
   padding: 0 1.25rem;
   flex: 1;
-  background-color: rgba(255, 255, 255, 0.98);
+  background-color: var(--background-elevated);
   backdrop-filter: blur(20px);
   border-radius: var(--dock-border-radius);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #666;
+  box-shadow: var(--shadow-medium);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
   font-size: 0.9375rem;
   font-weight: 500;
   font-family: inherit;
@@ -726,11 +726,11 @@
 }
 
 .event-confirmation-request-button:hover {
-  background-color: #f5f5f5;
-  color: #333;
-  border-color: rgba(0, 0, 0, 0.15);
+  background-color: var(--background-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 6px 28px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-request-button:active {
@@ -771,7 +771,7 @@
   padding: 0.75rem 0.5rem;
   font-size: 1rem;
   font-family: inherit;
-  color: #333;
+  color: var(--text-primary);
   background-color: transparent;
   border: none;
   outline: none;
@@ -779,7 +779,7 @@
 }
 
 .event-confirmation-chat-input::placeholder {
-  color: #aaa;
+  color: var(--text-disabled);
 }
 
 .event-confirmation-chat-input:focus {
@@ -793,7 +793,7 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  background-color: #1170C5;
+  background-color: var(--primary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -802,9 +802,9 @@
 }
 
 .event-confirmation-chat-send:hover:not(:disabled) {
-  background-color: #0D5A9E;
+  background-color: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(17, 112, 197, 0.3);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-chat-send:active:not(:disabled) {
@@ -812,13 +812,13 @@
 }
 
 .event-confirmation-chat-send:disabled {
-  background-color: #ddd;
+  background-color: var(--text-disabled);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .event-confirmation-chat-send svg {
-  color: #ffffff;
+  color: var(--background);
 }
 
 .event-confirmation-icon-button {
@@ -836,61 +836,61 @@
 }
 
 .event-confirmation-icon-button.cancel {
-  background-color: rgba(255, 255, 255, 0.98);
-  color: #666;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
+  background-color: var(--background-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.cancel:hover {
-  background-color: #f5f5f5;
-  color: #333;
-  border-color: rgba(0, 0, 0, 0.15);
+  background-color: var(--background-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 6px 28px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.cancel:active {
   transform: translateY(0);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.confirm {
-  background-color: #1170C5;
-  color: #ffffff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
+  background-color: var(--primary);
+  color: var(--background);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.confirm:hover {
-  background-color: #0e5a9d;
+  background-color: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 6px 28px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.confirm:active {
   transform: translateY(0);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.send {
-  background-color: #1170C5;
-  color: #ffffff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
+  background-color: var(--primary);
+  color: var(--background);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.send:hover:not(:disabled) {
-  background-color: #0e5a9d;
+  background-color: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 6px 28px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.send:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-medium);
 }
 
 .event-confirmation-icon-button.send:disabled {
-  background-color: #ddd;
+  background-color: var(--text-disabled);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -904,11 +904,11 @@
   height: var(--dock-height);
   padding: 0 1.25rem;
   flex: 1;
-  background-color: #1170C5;
+  background-color: var(--primary);
   border-radius: var(--dock-border-radius);
-  box-shadow: 0 2px 12px rgba(17, 112, 197, 0.25), 0 4px 24px rgba(17, 112, 197, 0.15);
+  box-shadow: var(--shadow-medium);
   border: none;
-  color: #ffffff;
+  color: var(--background);
   font-size: 0.9375rem;
   font-weight: 600;
   font-family: inherit;
@@ -917,14 +917,14 @@
 }
 
 .event-confirmation-save-button:hover {
-  background-color: #0e5a9d;
+  background-color: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(17, 112, 197, 0.3), 0 6px 28px rgba(17, 112, 197, 0.2);
+  box-shadow: var(--shadow-heavy);
 }
 
 .event-confirmation-save-button:active {
   transform: translateY(0);
-  box-shadow: 0 2px 12px rgba(17, 112, 197, 0.25);
+  box-shadow: var(--shadow-medium);
 }
 
 /* Responsive Design */

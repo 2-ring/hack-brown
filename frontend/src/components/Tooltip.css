@@ -10,14 +10,14 @@
  */
 
 .tooltip-content {
-  background-color: #1a1a1a;
-  color: #ffffff;
+  background-color: var(--tooltip-background);
+  color: var(--tooltip-text);
   padding: 0.5rem 0.75rem;
   border-radius: 12px;
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.4;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-medium);
   user-select: none;
   z-index: 9999;
   max-width: 300px;

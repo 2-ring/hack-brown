@@ -26,7 +26,7 @@ import Skeleton from 'react-loading-skeleton'
 import { Clock as ClockIcon, MapPin as LocationIcon, TextAlignLeft as DescriptionIcon, Globe as GlobeIcon, ArrowsClockwise as RepeatIcon } from '@phosphor-icons/react'
 import type { CalendarEvent } from './types'
 import { editViewVariants, editSectionVariants } from './animations'
-import { TimeInput } from './inputs'
+import { TimeInput, DateInput } from './inputs'
 import './EventEditView.css'
 
 interface GoogleCalendar {
@@ -212,23 +212,23 @@ export function EventEditView({
                     </label>
                   </div>
                   <div className="row-main">
-                    <div className="editable-content-wrapper" onClick={(e) => handleEditClick('startDate', e)}>
-                      {editingField === 'startDate' ? (
-                        <input
-                          ref={inputRef as React.RefObject<HTMLInputElement>}
-                          type="text"
-                          className="date-text editable-input"
-                          value={formatDateForDisplay(editedEvent.start.dateTime)}
-                          onChange={(e) => {
-                            // For now, just keep the display value
-                            // TODO: Implement date parsing
-                          }}
-                          onBlur={handleEditBlur}
-                          onKeyDown={handleEditKeyDown}
-                        />
-                      ) : (
-                        <span className="date-text">{formatDateForDisplay(editedEvent.start.dateTime)}</span>
-                      )}
+                    <div className="editable-content-wrapper">
+                      <DateInput
+                        value={editedEvent.start.dateTime}
+                        onChange={(newDate) => {
+                          setEditedEvent(prev => ({
+                            ...prev,
+                            start: {
+                              ...prev.start,
+                              dateTime: newDate
+                            }
+                          }))
+                        }}
+                        onFocus={() => setEditingField('startDate')}
+                        onBlur={handleEditBlur}
+                        isEditing={editingField === 'startDate'}
+                        className="date-text"
+                      />
                     </div>
                     {!isAllDay && (
                       <div className="editable-content-wrapper">
@@ -252,23 +252,23 @@ export function EventEditView({
                     )}
                   </div>
                   <div className="row-main">
-                    <div className="editable-content-wrapper" onClick={(e) => handleEditClick('endDate', e)}>
-                      {editingField === 'endDate' ? (
-                        <input
-                          ref={inputRef as React.RefObject<HTMLInputElement>}
-                          type="text"
-                          className="date-text editable-input"
-                          value={formatDateForDisplay(editedEvent.end.dateTime)}
-                          onChange={(e) => {
-                            // For now, just keep the display value
-                            // TODO: Implement date parsing
-                          }}
-                          onBlur={handleEditBlur}
-                          onKeyDown={handleEditKeyDown}
-                        />
-                      ) : (
-                        <span className="date-text">{formatDateForDisplay(editedEvent.end.dateTime)}</span>
-                      )}
+                    <div className="editable-content-wrapper">
+                      <DateInput
+                        value={editedEvent.end.dateTime}
+                        onChange={(newDate) => {
+                          setEditedEvent(prev => ({
+                            ...prev,
+                            end: {
+                              ...prev.end,
+                              dateTime: newDate
+                            }
+                          }))
+                        }}
+                        onFocus={() => setEditingField('endDate')}
+                        onBlur={handleEditBlur}
+                        isEditing={editingField === 'endDate'}
+                        className="date-text"
+                      />
                     </div>
                     {!isAllDay && (
                       <div className="editable-content-wrapper">
@@ -286,6 +286,7 @@ export function EventEditView({
                           onFocus={() => setEditingField('endTime')}
                           onBlur={handleEditBlur}
                           isEditing={editingField === 'endTime'}
+                          startTime={editedEvent.start.dateTime}
                           className="date-text"
                         />
                       </div>

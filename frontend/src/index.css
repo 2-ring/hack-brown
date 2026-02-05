@@ -26,6 +26,6 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--white);
-  color: #333;
+  background-color: var(--background);
+  color: var(--text-primary);
 }
