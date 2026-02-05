@@ -3,7 +3,9 @@
  * Handles synchronization with calendar providers (Google, Microsoft, Apple).
  */
 
-import { backendClient } from './backend-client';
+import { getAccessToken } from '../auth/supabase';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export interface SyncResult {
   success: boolean;
@@ -39,8 +41,26 @@ export interface SyncResult {
  * @returns Sync results with statistics
  */
 export const syncCalendar = async (): Promise<SyncResult> => {
-  const response = await backendClient.post('/api/calendar/sync');
-  return response.data;
+  const token = await getAccessToken();
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}/api/calendar/sync`, {
+    method: 'POST',
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Sync failed: ${response.statusText}`);
+  }
+
+  return response.json();
 };
 
 /**
