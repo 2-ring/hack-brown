@@ -5,10 +5,10 @@ import { validateFile } from './workspace/input/validation'
 import { Workspace } from './workspace/Workspace'
 import { Menu } from './menu/Menu'
 import { Plans } from './payment/Plans'
+import { Welcome } from './welcome/Welcome'
 import { useAuth } from './auth/AuthContext'
 import { GuestSessionManager } from './auth/GuestSessionManager'
 import { AuthModal } from './auth/AuthModal'
-import { GuestModeToast } from './workspace/GuestModeToast'
 import type { CalendarEvent, LoadingStateConfig } from './workspace/events/types'
 import { LOADING_MESSAGES } from './workspace/events/types'
 import type { Session as BackendSession } from './api/types'
@@ -68,17 +68,11 @@ function AppContent() {
   const [isGuestMode, setIsGuestMode] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authModalReason, setAuthModalReason] = useState<'calendar' | 'session_limit' | 'view_session'>('calendar')
-  const [showGuestToast, setShowGuestToast] = useState(false)
 
   // Check guest mode on mount
   useEffect(() => {
     if (!user) {
       setIsGuestMode(true)
-
-      // Show guest toast if not dismissed
-      if (!GuestSessionManager.isToastDismissed()) {
-        setShowGuestToast(true)
-      }
     } else {
       setIsGuestMode(false)
     }
@@ -516,9 +510,6 @@ function AppContent() {
         }}
       />
       <div className={`content ${sidebarOpen ? 'with-sidebar' : ''} ${appState === 'loading' || appState === 'review' ? 'events-view' : ''}`}>
-        {isGuestMode && showGuestToast && (
-          <GuestModeToast onDismiss={() => setShowGuestToast(false)} />
-        )}
         <Workspace
           appState={appState}
           uploadedFile={null}
@@ -526,6 +517,7 @@ function AppContent() {
           loadingConfig={[loadingConfig]}
           feedbackMessage={feedbackMessage}
           greetingImage={greetingImagePaths[currentGreetingIndex]}
+          isGuestMode={isGuestMode}
           calendarEvents={calendarEvents}
           expectedEventCount={calendarEvents.length}
           onFileUpload={handleFileUpload}
@@ -549,6 +541,7 @@ function App() {
       <Route path="/" element={<AppContent />} />
       <Route path="/s/:sessionId" element={<AppContent />} />
       <Route path="/plans" element={<Plans />} />
+      <Route path="/welcome" element={<Welcome />} />
     </Routes>
   )
 }

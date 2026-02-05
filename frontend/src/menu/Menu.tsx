@@ -208,12 +208,6 @@ export function Menu({
             </MenuButton>
           </Tooltip>
 
-          {!user && (
-            <div className="guest-session-counter">
-              {GuestSessionManager.getRemainingCount()} free sessions left
-            </div>
-          )}
-
           <MenuButton
             onClick={() => window.open(getCalendarUrl(), '_blank')?.focus()}
             icon={getCalendarIcon()}

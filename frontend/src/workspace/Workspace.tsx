@@ -17,6 +17,7 @@ interface WorkspaceProps {
   loadingConfig?: LoadingStateConfig | LoadingStateConfig[]
   feedbackMessage?: string
   greetingImage?: string
+  isGuestMode?: boolean
 
   // Events state props
   calendarEvents: (CalendarEvent | null)[]
@@ -40,6 +41,7 @@ export function Workspace({
   loadingConfig,
   feedbackMessage,
   greetingImage,
+  isGuestMode,
   calendarEvents,
   expectedEventCount,
   onFileUpload,
@@ -87,11 +89,12 @@ export function Workspace({
           uploadedFile={uploadedFile}
           isProcessing={isProcessing}
           feedbackMessage={feedbackMessage}
+          isGuestMode={isGuestMode}
           onFileUpload={onFileUpload}
           onAudioSubmit={onAudioSubmit}
           onTextSubmit={onTextSubmit}
           onClearFile={onClearFile}
-          onClearFeedback={onClearFeedback}
+          onClearFeedback={() => {}} // Handled by notification system
         />
       )}
 

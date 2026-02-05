@@ -3,28 +3,23 @@ import { motion } from 'framer-motion'
 import { ButtonMenu } from './content/ButtonMenu'
 import { Audio } from './content/Audio'
 import { Text } from './content/Text'
-import { Feedback } from './content/Feedback'
 
 interface DropAreaProps {
   uploadedFile: File | null
   isProcessing: boolean
-  feedbackMessage?: string
   onFileUpload: (file: File) => void
   onAudioSubmit: (audioBlob: Blob) => void
   onTextSubmit: (text: string) => void
   onClearFile: () => void
-  onClearFeedback?: () => void
 }
 
 export function DropArea({
   uploadedFile,
   isProcessing,
-  feedbackMessage,
   onFileUpload,
   onAudioSubmit,
   onTextSubmit,
   onClearFile,
-  onClearFeedback
 }: DropAreaProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
@@ -169,11 +164,6 @@ export function DropArea({
         <Text
           onClose={() => setIsTextInput(false)}
           onSubmit={handleTextSubmit}
-        />
-      ) : feedbackMessage ? (
-        <Feedback
-          message={feedbackMessage}
-          onClose={() => onClearFeedback?.()}
         />
       ) : uploadedFile ? (
         <div className="file-info">
