@@ -8,7 +8,7 @@ import { TopBar, BottomBar } from './Bar'
 import { Event } from './Event'
 import { DateHeader, MonthHeader } from './DateHeader'
 import { EventEditView } from './EventEditView'
-import wordmarkImage from '../../assets/Wordmark.png'
+import wordmarkImage from '../../assets/brand/optimized/wordmark-optimized.png'
 import './EventsWorkspace.css'
 import {
   listContainerVariants,

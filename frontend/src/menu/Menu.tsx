@@ -8,8 +8,8 @@ import { SkeletonSessionGroup } from '../components/skeletons'
 import { getCalendarProviders } from '../api/backend-client'
 import { Tooltip } from '../components/Tooltip'
 import './Menu.css'
-import markImage from '../assets/Mark.png'
-import wordImage from '../assets/Word.png'
+import markImage from '../assets/brand/optimized/mark-optimized.png'
+import wordImage from '../assets/brand/optimized/word-optimized.png'
 
 interface MenuProps {
   isOpen: boolean

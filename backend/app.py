@@ -3,12 +3,19 @@ from flask_cors import CORS
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 import os
+import sys
 import threading
 from werkzeug.utils import secure_filename
 from typing import Optional
 import logging
 import traceback
 from pydantic import ValidationError
+from pathlib import Path
+
+# Add backend directory to Python path if running from project root
+current_dir = Path(__file__).parent.resolve()
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
 
 from processors.factory import InputProcessorFactory, InputType
 from processors.audio import AudioProcessor
