@@ -24,7 +24,11 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: OAUTH_REDIRECT_URI
+        sync: false
       - key: ENCRYPTION_KEY
+        sync: false
+      - key: FIRECRAWL_API_KEY
         sync: false
 
   # React Frontend (Static Site)

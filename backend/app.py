@@ -1145,7 +1145,9 @@ def scrape_url():
             url = 'https://' + url
 
         # Call Firecrawl API
-        firecrawl_api_key = os.getenv('FIRECRAWL_API_KEY', 'fc-bf15347ce52c4e92831a4e73a4d47906')
+        firecrawl_api_key = os.getenv('FIRECRAWL_API_KEY')
+        if not firecrawl_api_key:
+            return jsonify({'error': 'FIRECRAWL_API_KEY not configured'}), 500
 
         response = requests.post(
             'https://api.firecrawl.dev/v1/scrape',

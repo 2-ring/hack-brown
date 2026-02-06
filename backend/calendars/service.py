@@ -20,7 +20,8 @@ class CalendarService:
     SCOPES = ['https://www.googleapis.com/auth/calendar']
 
     # OAuth redirect URI - must match what's configured in Google Cloud Console
-    REDIRECT_URI = 'http://localhost:5000/api/oauth/callback'
+    # Use environment variable in production, fallback to localhost for development
+    REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:5000/api/oauth/callback')
 
     def __init__(self, credentials_file: str = 'credentials.json', token_file: str = 'token.json'):
         """
