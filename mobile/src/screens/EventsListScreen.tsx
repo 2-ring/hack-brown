@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -678,8 +678,8 @@ const styles = StyleSheet.create({
   // Events List Styles
   eventsList: {
     position: 'absolute',
-    top: 60,
-    bottom: 100,
+    top: 56,
+    bottom: 56,
     left: 0,
     right: 0,
   },
@@ -718,14 +718,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    minHeight: 80,
-    maxHeight: 100,
-    padding: 16,
+    height: 56,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 8,
+    justifyContent: 'center',
   },
   bottomBarRow: {
     flexDirection: 'row',
@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
   },
   requestChangesText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 
   // Confirm Button
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   // Gradient Fade
   gradientFade: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 56,
     left: 0,
     right: 0,
     height: 40,

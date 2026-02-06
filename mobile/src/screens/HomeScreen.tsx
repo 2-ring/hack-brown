@@ -21,6 +21,7 @@ import {
 import { useTheme } from '../theme';
 import { pickImage, pickDocument, pickAudio, createFormData } from '../utils/fileUpload';
 import * as backendClient from '../api/backend-client';
+import { getGreeting } from '../utils/greetings';
 
 // Navigation type (will be properly typed when navigation structure is finalized)
 type NavigationProp = any;
@@ -48,15 +49,8 @@ export function HomeScreen() {
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
 
-  /**
-   * Get greeting message based on time of day
-   */
-  const getGreeting = (): string => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
+  // Get randomized greeting (can be personalized with user name in the future)
+  const greeting = getGreeting();
 
   /**
    * Handle text submission
@@ -325,7 +319,7 @@ export function HomeScreen() {
         <View style={styles.header}>
           <Logo size={48} />
           <Text style={[styles.greeting, { color: theme.colors.textPrimary }]}>
-            {getGreeting()}
+            {greeting}
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             Drop anything in. Get calendar events out.
