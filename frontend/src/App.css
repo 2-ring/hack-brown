@@ -199,6 +199,7 @@
   justify-content: center;
   gap: var(--droparea-gap);
   pointer-events: none;
+  position: relative;
 }
 
 .icon-circle {
@@ -665,13 +666,13 @@
 @media (max-width: 768px) {
   /* Override sizing variables for mobile */
   :root {
-    --droparea-btn-small: 40px;
-    --droparea-btn-medium: 44px;
-    --droparea-btn-large: 52px;
-    --droparea-icon-small: 20px;
-    --droparea-icon-medium: 22px;
-    --droparea-icon-large: 26px;
-    --droparea-gap: 0.85rem;
+    --droparea-btn-small: 48px;
+    --droparea-btn-medium: 52px;
+    --droparea-btn-large: 62px;
+    --droparea-icon-small: 24px;
+    --droparea-icon-medium: 26px;
+    --droparea-icon-large: 32px;
+    --droparea-gap: 1rem;
     --droparea-dock-padding: 0.5rem 1rem;
     --droparea-text-size: 1rem;
   }
@@ -762,20 +763,22 @@
   }
 
   .drop-area {
-    min-height: 150px;
+    min-height: auto;
     max-width: 94%;
-    border-radius: 48px;
-    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='48' ry='48' stroke='%231170C5FF' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+    padding: 1.25rem;
+    border-radius: 56px;
+    aspect-ratio: 1 / 1;
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='56' ry='56' stroke='%231170C5FF' stroke-width='7' stroke-dasharray='24 18' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
   }
 
   .drop-area:hover {
     background-color: rgba(17, 112, 197, 0.12);
-    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='48' ry='48' stroke='%231170C5' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='56' ry='56' stroke='%231170C5' stroke-width='7' stroke-dasharray='24 18' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
   }
 
   .drop-area.dragging {
     background-color: rgba(17, 112, 197, 0.18);
-    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='48' ry='48' stroke='%231170C5FF' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='56' ry='56' stroke='%231170C5FF' stroke-width='7' stroke-dasharray='24 18' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
   }
 
   .events-container {
@@ -805,5 +808,66 @@
   /* Mobile: events view also has no padding */
   .content.events-view {
     padding: 0;
+  }
+
+  /* Mobile: Rearrange button menu into semicircular columns */
+  .icon-row {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    grid-template-rows: repeat(3, auto);
+    gap: 0.9rem 1.5rem;
+    align-items: center;
+    justify-items: center;
+    padding: 0 0.5rem;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  /* Center button - spans all rows in the middle column */
+  .icon-row .icon-circle.center {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: center;
+    justify-self: center;
+  }
+
+  /* Left column buttons - semicircular positioning */
+  .icon-row .btn-left-1 {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .icon-row .btn-left-2 {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: end;
+    transform: translateX(-14px);
+  }
+
+  .icon-row .btn-left-3 {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: end;
+  }
+
+  /* Right column buttons - semicircular positioning */
+  .icon-row .btn-right-1 {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .icon-row .btn-right-2 {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: start;
+    transform: translateX(14px);
+  }
+
+  .icon-row .btn-right-3 {
+    grid-column: 3;
+    grid-row: 3;
+    justify-self: start;
   }
 }

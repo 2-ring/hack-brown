@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Images as ImagesIcon,
@@ -28,16 +29,30 @@ export function ButtonMenu({
   onLinkClick,
   onEmailClick
 }: ButtonMenuProps) {
+  // Track window width for responsive animations
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth <= 768
+  )
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   return (
     <div className="icon-row">
       <AnimatePresence>
         {!isDragging && (
           <motion.div
             key="link-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: 40, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 40, scale: 0.8 }}
+            className="icon-circle small clickable btn-left-1"
+            initial={isMobile ? { opacity: 0, y: -20, scale: 0.8 } : { opacity: 0, x: 40, scale: 0.8 }}
+            animate={isMobile ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={isMobile ? { opacity: 0, y: -20, scale: 0.8 } : { opacity: 0, x: 40, scale: 0.8 }}
             transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
             onClick={onLinkClick}
             title="Link Input"
@@ -50,10 +65,10 @@ export function ButtonMenu({
         {!isDragging && (
           <motion.div
             key="image-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: 20, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 20, scale: 0.8 }}
+            className="icon-circle small clickable btn-left-2"
+            initial={isMobile ? { opacity: 0, x: -28, scale: 0.8 } : { opacity: 0, x: 20, scale: 0.8 }}
+            animate={isMobile ? { opacity: 1, x: -14, scale: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={isMobile ? { opacity: 0, x: -28, scale: 0.8 } : { opacity: 0, x: 20, scale: 0.8 }}
             transition={{ duration: 0.2, ease: "easeOut", delay: 0.08 }}
             onClick={onImageClick}
             title="Upload Image"
@@ -66,10 +81,10 @@ export function ButtonMenu({
         {!isDragging && (
           <motion.div
             key="document-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: 10, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 10, scale: 0.8 }}
+            className="icon-circle small clickable btn-left-3"
+            initial={isMobile ? { opacity: 0, y: 20, scale: 0.8 } : { opacity: 0, x: 10, scale: 0.8 }}
+            animate={isMobile ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={isMobile ? { opacity: 0, y: 20, scale: 0.8 } : { opacity: 0, x: 10, scale: 0.8 }}
             transition={{ duration: 0.2, ease: "easeOut", delay: 0.1 }}
             onClick={onDocumentClick}
             title="Upload Document"
@@ -94,10 +109,10 @@ export function ButtonMenu({
         {!isDragging && (
           <motion.div
             key="audio-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: -10, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -10, scale: 0.8 }}
+            className="icon-circle small clickable btn-right-1"
+            initial={isMobile ? { opacity: 0, y: -20, scale: 0.8 } : { opacity: 0, x: -10, scale: 0.8 }}
+            animate={isMobile ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={isMobile ? { opacity: 0, y: -20, scale: 0.8 } : { opacity: 0, x: -10, scale: 0.8 }}
             transition={{ duration: 0.2, ease: "easeOut", delay: 0.1 }}
             onClick={onAudioClick}
             title="Record Audio"
@@ -110,10 +125,10 @@ export function ButtonMenu({
         {!isDragging && (
           <motion.div
             key="text-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: -20, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -20, scale: 0.8 }}
+            className="icon-circle small clickable btn-right-2"
+            initial={isMobile ? { opacity: 0, x: 28, scale: 0.8 } : { opacity: 0, x: -20, scale: 0.8 }}
+            animate={isMobile ? { opacity: 1, x: 14, scale: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={isMobile ? { opacity: 0, x: 28, scale: 0.8 } : { opacity: 0, x: -20, scale: 0.8 }}
             transition={{ duration: 0.2, ease: "easeOut", delay: 0.08 }}
             onClick={onTextClick}
             title="Text Input"
@@ -126,10 +141,10 @@ export function ButtonMenu({
         {!isDragging && (
           <motion.div
             key="email-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: -30, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -30, scale: 0.8 }}
+            className="icon-circle small clickable btn-right-3"
+            initial={isMobile ? { opacity: 0, y: 20, scale: 0.8 } : { opacity: 0, x: -30, scale: 0.8 }}
+            animate={isMobile ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1, x: 0, scale: 1 }}
+            exit={isMobile ? { opacity: 0, y: 20, scale: 0.8 } : { opacity: 0, x: -30, scale: 0.8 }}
             transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
             onClick={onEmailClick}
             title="Email Input"

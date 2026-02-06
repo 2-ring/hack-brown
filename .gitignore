@@ -9,6 +9,8 @@ backend/env/
 backend/ENV/
 *.egg-info/
 .env
+.env.local
+.env*.local
 
 # Node
 frontend/node_modules/
