@@ -437,6 +437,19 @@
   color: var(--text-tertiary);
 }
 
+/* Link Input Field */
+.link-input {
+  position: relative;
+}
+
+.link-input.valid {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: var(--primary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
 /* Plus Button External */
 .plus-button-external {
   flex-shrink: 0;
@@ -522,6 +535,58 @@
 .dock-button.submit:disabled:hover {
   transform: none;
   box-shadow: var(--shadow-light);
+}
+
+/* Email Input Dock */
+.email-input-dock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  padding: var(--droparea-dock-padding);
+  background-color: var(--background);
+  border-radius: 100px;
+  box-shadow: var(--shadow-light);
+}
+
+.email-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background-color: var(--primary-faint);
+  border: 2px solid var(--primary);
+  border-radius: 100px;
+  color: var(--primary);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.email-pill:hover {
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow-light);
+}
+
+.email-pill:active {
+  transform: translateY(0);
+}
+
+.email-icon {
+  flex-shrink: 0;
+}
+
+.email-text {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Feedback Pill */

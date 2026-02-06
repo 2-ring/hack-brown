@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { ButtonMenu } from './content/ButtonMenu'
 import { Audio } from './content/Audio'
 import { Text } from './content/Text'
+import { Link } from './content/Link'
+import { Email } from './content/Email'
 
 interface DropAreaProps {
   uploadedFile: File | null
@@ -24,6 +26,8 @@ export function DropArea({
   const [isDragging, setIsDragging] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isTextInput, setIsTextInput] = useState(false)
+  const [isLinkInput, setIsLinkInput] = useState(false)
+  const [isEmailInput, setIsEmailInput] = useState(false)
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -122,6 +126,21 @@ export function DropArea({
     setIsTextInput(false)
   }, [onTextSubmit])
 
+  const handleLinkClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsLinkInput(true)
+  }, [])
+
+  const handleLinkSubmit = useCallback((content: string) => {
+    onTextSubmit(content)
+    setIsLinkInput(false)
+  }, [onTextSubmit])
+
+  const handleEmailClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsEmailInput(true)
+  }, [])
+
   const handleDropAreaClick = useCallback((e: React.MouseEvent) => {
     if (isProcessing) return
 
@@ -165,6 +184,15 @@ export function DropArea({
           onClose={() => setIsTextInput(false)}
           onSubmit={handleTextSubmit}
         />
+      ) : isLinkInput ? (
+        <Link
+          onClose={() => setIsLinkInput(false)}
+          onSubmit={handleLinkSubmit}
+        />
+      ) : isEmailInput ? (
+        <Email
+          onClose={() => setIsEmailInput(false)}
+        />
       ) : uploadedFile ? (
         <div className="file-info">
           <p className="file-name">{uploadedFile.name}</p>
@@ -185,6 +213,8 @@ export function DropArea({
           onDocumentClick={handleDocumentClick}
           onAudioClick={handleAudioClick}
           onTextClick={handleTextClick}
+          onLinkClick={handleLinkClick}
+          onEmailClick={handleEmailClick}
         />
       )}
     </motion.div>

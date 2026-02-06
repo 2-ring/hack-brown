@@ -4,6 +4,8 @@ import {
   Files as FileIcon,
   Microphone as MicrophoneIcon,
   Pen as TextIcon,
+  Link as LinkIcon,
+  Envelope as EnvelopeIcon,
   ArrowFatUp as ArrowFatUpIcon
 } from '@phosphor-icons/react'
 
@@ -13,6 +15,8 @@ interface ButtonMenuProps {
   onDocumentClick: (e: React.MouseEvent) => void
   onAudioClick: (e: React.MouseEvent) => void
   onTextClick: (e: React.MouseEvent) => void
+  onLinkClick: (e: React.MouseEvent) => void
+  onEmailClick: (e: React.MouseEvent) => void
 }
 
 export function ButtonMenu({
@@ -20,7 +24,9 @@ export function ButtonMenu({
   onImageClick,
   onDocumentClick,
   onAudioClick,
-  onTextClick
+  onTextClick,
+  onLinkClick,
+  onEmailClick
 }: ButtonMenuProps) {
   return (
     <div className="icon-row">
@@ -97,6 +103,38 @@ export function ButtonMenu({
             title="Text Input"
           >
             <TextIcon size={24} weight="duotone" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {!isDragging && (
+          <motion.div
+            key="link-button"
+            className="icon-circle small clickable"
+            initial={{ opacity: 0, x: -30, scale: 0.8 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -30, scale: 0.8 }}
+            transition={{ duration: 0.2, ease: "easeOut", delay: 0.08 }}
+            onClick={onLinkClick}
+            title="Link Input"
+          >
+            <LinkIcon size={24} weight="duotone" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {!isDragging && (
+          <motion.div
+            key="email-button"
+            className="icon-circle small clickable"
+            initial={{ opacity: 0, x: -40, scale: 0.8 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -40, scale: 0.8 }}
+            transition={{ duration: 0.2, ease: "easeOut", delay: 0.12 }}
+            onClick={onEmailClick}
+            title="Email Input"
+          >
+            <EnvelopeIcon size={24} weight="duotone" />
           </motion.div>
         )}
       </AnimatePresence>

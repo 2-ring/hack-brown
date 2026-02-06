@@ -110,7 +110,7 @@ llm = ChatOpenAI(
 
 logger.info("LLM Configuration:")
 logger.info("  - ALL agents (1-5): Grok 3")
-logger.info("  - Audio transcription: OpenAI Whisper")
+logger.info("  - Audio transcription: Deepgram")
 logger.info("  - Testing phase: Full Grok stack")
 
 # ============================================================================
@@ -137,8 +137,8 @@ agent_5_preferences = PreferenceApplicationAgent(llm)
 # Initialize input processor factory and register all processors
 input_processor_factory = InputProcessorFactory()
 
-# Register audio processor
-audio_processor = AudioProcessor(api_key=os.getenv('OPENAI_API_KEY'))
+# Register audio processor (Deepgram)
+audio_processor = AudioProcessor(api_key=os.getenv('DEEPGRAM_API_KEY'))
 input_processor_factory.register_processor(InputType.AUDIO, audio_processor)
 
 # Register image processor
@@ -1106,6 +1106,92 @@ def get_guest_session(session_id):
     except Exception as e:
         logger.error(f"Failed to get guest session: {e}")
         return jsonify({'error': f'Failed to get session: {str(e)}'}), 500
+
+
+# ============================================================================
+# Firecrawl Link Scraping Endpoint
+# ============================================================================
+
+@app.route('/api/scrape-url', methods=['POST'])
+@limiter.limit("20 per hour")
+def scrape_url():
+    """
+    Scrape a URL using Firecrawl API.
+
+    Rate limited to 20 requests per hour per IP address.
+
+    Expects JSON body:
+    {
+        "url": "https://example.com"
+    }
+
+    Returns the scraped content as markdown.
+    """
+    try:
+        import requests
+
+        data = request.get_json()
+        url = data.get('url')
+
+        if not url:
+            return jsonify({'error': 'No URL provided'}), 400
+
+        # Add https:// if not present
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'https://' + url
+
+        # Call Firecrawl API
+        firecrawl_api_key = os.getenv('FIRECRAWL_API_KEY', 'fc-bf15347ce52c4e92831a4e73a4d47906')
+
+        response = requests.post(
+            'https://api.firecrawl.dev/v1/scrape',
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {firecrawl_api_key}'
+            },
+            json={
+                'url': url,
+                'formats': ['markdown']
+            },
+            timeout=30
+        )
+
+        if not response.ok:
+            logger.error(f"Firecrawl API error: {response.status_code} - {response.text}")
+            return jsonify({
+                'error': 'Failed to fetch URL content',
+                'details': response.text
+            }), response.status_code
+
+        data = response.json()
+        content = data.get('data', {}).get('markdown') or data.get('data', {}).get('content') or ''
+
+        if not content:
+            return jsonify({
+                'error': 'No content found at URL',
+                'message': 'The URL did not return any extractable content'
+            }), 400
+
+        return jsonify({
+            'success': True,
+            'content': content,
+            'url': url
+        })
+
+    except requests.exceptions.Timeout:
+        return jsonify({
+            'error': 'Request timeout',
+            'message': 'The URL took too long to respond'
+        }), 408
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error: {e}")
+        return jsonify({
+            'error': 'Failed to fetch URL',
+            'message': str(e)
+        }), 500
+    except Exception as e:
+        logger.error(f"Error scraping URL: {e}")
+        return jsonify({'error': f'URL scraping failed: {str(e)}'}), 500
 
 
 if __name__ == '__main__':

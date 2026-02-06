@@ -1,12 +1,12 @@
 """
 Audio/Voice Input Processor
-Converts audio files to text using OpenAI Whisper API
+Converts audio files to text using Deepgram API
 """
 
 import os
 from pathlib import Path
 from typing import Set, Optional
-from openai import OpenAI
+from deepgram import DeepgramClient, PrerecordedOptions, FileSource
 
 from .factory import BaseInputProcessor, ProcessingResult, InputType
 
@@ -14,13 +14,13 @@ from .factory import BaseInputProcessor, ProcessingResult, InputType
 class AudioProcessor(BaseInputProcessor):
     """
     Processes audio files (voice notes, recordings, etc.) into text
-    using OpenAI Whisper API.
+    using Deepgram API.
     """
 
-    # Supported audio formats by Whisper API
+    # Supported audio formats by Deepgram
     SUPPORTED_FORMATS: Set[str] = {
         '.mp3', '.mp4', '.mpeg', '.mpga',
-        '.m4a', '.wav', '.webm'
+        '.m4a', '.wav', '.webm', '.ogg', '.flac'
     }
 
     def __init__(self, api_key: Optional[str] = None):
@@ -28,9 +28,9 @@ class AudioProcessor(BaseInputProcessor):
         Initialize the audio processor.
 
         Args:
-            api_key: OpenAI API key. If None, uses OPENAI_API_KEY env variable
+            api_key: Deepgram API key. If None, uses DEEPGRAM_API_KEY env variable
         """
-        self.client = OpenAI(api_key=api_key)
+        self.client = DeepgramClient(api_key=api_key or os.getenv('DEEPGRAM_API_KEY'))
 
     def supports_file(self, file_path: str) -> bool:
         """Check if file is a supported audio format"""
@@ -39,15 +39,14 @@ class AudioProcessor(BaseInputProcessor):
 
     def process(self, file_path: str, **kwargs) -> ProcessingResult:
         """
-        Transcribe audio file to text using Whisper API.
+        Transcribe audio file to text using Deepgram API.
 
         Args:
             file_path: Path to audio file
             **kwargs: Optional parameters:
                 - language: Language code (e.g., 'en', 'es'). Auto-detected if not provided.
-                - prompt: Optional text to guide the model's style
-                - temperature: Sampling temperature (0-1)
-                - response_format: 'text', 'json', 'verbose_json' (default: 'verbose_json')
+                - model: Deepgram model (default: 'nova-2')
+                - smart_format: Enable smart formatting (default: True)
 
         Returns:
             ProcessingResult with transcribed text and metadata
@@ -68,63 +67,65 @@ class AudioProcessor(BaseInputProcessor):
                 error=f"File not found: {file_path}"
             )
 
-        # Check file size (Whisper API has 25MB limit)
-        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-        if file_size_mb > 25:
+        try:
+            # Get optional parameters
+            language = kwargs.get('language', 'en')
+            model = kwargs.get('model', 'nova-2')
+            smart_format = kwargs.get('smart_format', True)
+
+            # Read audio file
+            with open(file_path, 'rb') as audio_file:
+                buffer_data = audio_file.read()
+
+            payload: FileSource = {
+                "buffer": buffer_data,
+            }
+
+            # Configure transcription options
+            options = PrerecordedOptions(
+                model=model,
+                language=language,
+                smart_format=smart_format,
+                punctuate=True,
+                paragraphs=True,
+                utterances=True
+            )
+
+            # Transcribe
+            response = self.client.listen.prerecorded.v("1").transcribe_file(payload, options)
+
+            # Extract transcript from response
+            if response.results and response.results.channels:
+                channel = response.results.channels[0]
+                if channel.alternatives:
+                    text = channel.alternatives[0].transcript
+
+                    # Extract metadata
+                    metadata = {
+                        'language': language,
+                        'model': model,
+                        'confidence': channel.alternatives[0].confidence if hasattr(channel.alternatives[0], 'confidence') else None,
+                        'file_name': Path(file_path).name,
+                        'file_size_mb': round(os.path.getsize(file_path) / (1024 * 1024), 2)
+                    }
+
+                    # Add duration if available
+                    if hasattr(response.metadata, 'duration'):
+                        metadata['duration'] = response.metadata.duration
+
+                    return ProcessingResult(
+                        text=text,
+                        input_type=InputType.AUDIO,
+                        metadata=metadata,
+                        success=True
+                    )
+
+            # No transcription results
             return ProcessingResult(
                 text="",
                 input_type=InputType.AUDIO,
                 success=False,
-                error=f"File too large: {file_size_mb:.2f}MB (max 25MB)"
-            )
-
-        try:
-            # Get optional parameters
-            language = kwargs.get('language')
-            prompt = kwargs.get('prompt')
-            temperature = kwargs.get('temperature', 0)
-            response_format = kwargs.get('response_format', 'verbose_json')
-
-            # Open and transcribe the audio file
-            with open(file_path, 'rb') as audio_file:
-                transcription_params = {
-                    'model': 'whisper-1',
-                    'file': audio_file,
-                    'response_format': response_format,
-                    'temperature': temperature
-                }
-
-                # Add optional parameters if provided
-                if language:
-                    transcription_params['language'] = language
-                if prompt:
-                    transcription_params['prompt'] = prompt
-
-                response = self.client.audio.transcriptions.create(**transcription_params)
-
-            # Extract text and metadata based on response format
-            if response_format == 'verbose_json':
-                text = response.text
-                metadata = {
-                    'language': response.language if hasattr(response, 'language') else None,
-                    'duration': response.duration if hasattr(response, 'duration') else None,
-                    'segments': len(response.segments) if hasattr(response, 'segments') else None,
-                    'file_name': Path(file_path).name,
-                    'file_size_mb': round(os.path.getsize(file_path) / (1024 * 1024), 2)
-                }
-            else:
-                # Simple text response
-                text = str(response) if response_format == 'text' else response.text
-                metadata = {
-                    'file_name': Path(file_path).name,
-                    'file_size_mb': round(os.path.getsize(file_path) / (1024 * 1024), 2)
-                }
-
-            return ProcessingResult(
-                text=text,
-                input_type=InputType.AUDIO,
-                metadata=metadata,
-                success=True
+                error="No transcription results returned"
             )
 
         except Exception as e:
@@ -137,7 +138,7 @@ class AudioProcessor(BaseInputProcessor):
 
     def process_with_timestamps(self, file_path: str, **kwargs) -> ProcessingResult:
         """
-        Transcribe audio with timestamp information for each segment.
+        Transcribe audio with timestamp information for each word/utterance.
 
         Args:
             file_path: Path to audio file
@@ -162,66 +163,92 @@ class AudioProcessor(BaseInputProcessor):
                 error=f"File not found: {file_path}"
             )
 
-        # Check file size (Whisper API has 25MB limit)
-        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-        if file_size_mb > 25:
+        try:
+            # Get optional parameters
+            language = kwargs.get('language', 'en')
+            model = kwargs.get('model', 'nova-2')
+            smart_format = kwargs.get('smart_format', True)
+
+            # Read audio file
+            with open(file_path, 'rb') as audio_file:
+                buffer_data = audio_file.read()
+
+            payload: FileSource = {
+                "buffer": buffer_data,
+            }
+
+            # Configure transcription options with word-level timestamps
+            options = PrerecordedOptions(
+                model=model,
+                language=language,
+                smart_format=smart_format,
+                punctuate=True,
+                paragraphs=True,
+                utterances=True,
+                words=True  # Enable word-level timestamps
+            )
+
+            # Transcribe
+            response = self.client.listen.prerecorded.v("1").transcribe_file(payload, options)
+
+            # Extract transcript and timestamps
+            if response.results and response.results.channels:
+                channel = response.results.channels[0]
+                if channel.alternatives:
+                    text = channel.alternatives[0].transcript
+
+                    # Extract metadata
+                    metadata = {
+                        'language': language,
+                        'model': model,
+                        'confidence': channel.alternatives[0].confidence if hasattr(channel.alternatives[0], 'confidence') else None,
+                        'file_name': Path(file_path).name,
+                        'file_size_mb': round(os.path.getsize(file_path) / (1024 * 1024), 2)
+                    }
+
+                    # Add duration if available
+                    if hasattr(response.metadata, 'duration'):
+                        metadata['duration'] = response.metadata.duration
+
+                    # Add word-level timestamps if available
+                    if hasattr(channel.alternatives[0], 'words') and channel.alternatives[0].words:
+                        metadata['words_detail'] = [
+                            {
+                                'word': word.word,
+                                'start': word.start,
+                                'end': word.end,
+                                'confidence': word.confidence if hasattr(word, 'confidence') else None
+                            }
+                            for word in channel.alternatives[0].words
+                        ]
+                        metadata['word_count'] = len(channel.alternatives[0].words)
+
+                    # Add utterance-level timestamps if available
+                    if hasattr(response.results, 'utterances') and response.results.utterances:
+                        metadata['utterances_detail'] = [
+                            {
+                                'start': utt.start,
+                                'end': utt.end,
+                                'text': utt.transcript,
+                                'confidence': utt.confidence if hasattr(utt, 'confidence') else None
+                            }
+                            for utt in response.results.utterances
+                        ]
+                        metadata['utterances'] = len(response.results.utterances)
+
+                    return ProcessingResult(
+                        text=text,
+                        input_type=InputType.AUDIO,
+                        metadata=metadata,
+                        success=True
+                    )
+
+            # No transcription results
             return ProcessingResult(
                 text="",
                 input_type=InputType.AUDIO,
                 success=False,
-                error=f"File too large: {file_size_mb:.2f}MB (max 25MB)"
-            )
-
-        try:
-            # Get optional parameters
-            language = kwargs.get('language')
-            prompt = kwargs.get('prompt')
-            temperature = kwargs.get('temperature', 0)
-
-            # Single API call with timestamp granularity
-            with open(file_path, 'rb') as audio_file:
-                transcription_params = {
-                    'model': 'whisper-1',
-                    'file': audio_file,
-                    'response_format': 'verbose_json',
-                    'temperature': temperature,
-                    'timestamp_granularities': ['segment']
-                }
-
-                # Add optional parameters if provided
-                if language:
-                    transcription_params['language'] = language
-                if prompt:
-                    transcription_params['prompt'] = prompt
-
-                response = self.client.audio.transcriptions.create(**transcription_params)
-
-            # Extract text and full metadata including timestamps
-            text = response.text
-            metadata = {
-                'language': response.language if hasattr(response, 'language') else None,
-                'duration': response.duration if hasattr(response, 'duration') else None,
-                'file_name': Path(file_path).name,
-                'file_size_mb': round(os.path.getsize(file_path) / (1024 * 1024), 2)
-            }
-
-            # Add detailed segment information with timestamps
-            if hasattr(response, 'segments'):
-                metadata['segments_detail'] = [
-                    {
-                        'start': seg.start,
-                        'end': seg.end,
-                        'text': seg.text
-                    }
-                    for seg in response.segments
-                ]
-                metadata['segments'] = len(response.segments)
-
-            return ProcessingResult(
-                text=text,
-                input_type=InputType.AUDIO,
-                metadata=metadata,
-                success=True
+                error="No transcription results with timestamps returned"
             )
 
         except Exception as e:
