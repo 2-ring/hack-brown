@@ -72,26 +72,23 @@ def stream_session_updates(session_id: str):
 
             # Title updated!
             if current_title and current_title != last_title:
-                yield f"event: title\ndata: {json.dumps({
-                    'title': current_title,
-                    'timestamp': time.time()
-                })}\n\n"
+                data = json.dumps({'title': current_title, 'timestamp': time.time()})
+                yield f"event: title\ndata: {data}\n\n"
                 last_title = current_title
 
             # Status changed
             if current_status != last_status:
-                yield f"event: status\ndata: {json.dumps({
-                    'status': current_status,
-                    'timestamp': time.time()
-                })}\n\n"
+                data = json.dumps({'status': current_status, 'timestamp': time.time()})
+                yield f"event: status\ndata: {data}\n\n"
                 last_status = current_status
 
                 # If processed or error, end stream
                 if current_status in ['processed', 'error']:
-                    yield f"event: complete\ndata: {json.dumps({
+                    data = json.dumps({
                         'status': current_status,
                         'has_events': len(session.get('processed_events', [])) > 0
-                    })}\n\n"
+                    })
+                    yield f"event: complete\ndata: {data}\n\n"
                     break
 
         # Timeout reached
