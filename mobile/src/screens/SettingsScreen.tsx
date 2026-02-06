@@ -9,7 +9,7 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { Icon } from '../components';
+import { Icon, PhosphorIconName } from '../components';
 import { useTheme } from '../theme';
 
 interface SettingsScreenProps {
@@ -68,7 +68,7 @@ export function SettingsScreen({
    * Render settings item with toggle
    */
   const renderToggleItem = (
-    icon: string,
+    icon: PhosphorIconName,
     label: string,
     value: boolean,
     onValueChange: (value: boolean) => void,
@@ -103,7 +103,7 @@ export function SettingsScreen({
    * Render settings item with navigation
    */
   const renderNavigationItem = (
-    icon: string,
+    icon: PhosphorIconName,
     label: string,
     value: string,
     onPress: () => void

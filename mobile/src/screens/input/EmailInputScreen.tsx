@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable, Text, Linking, Alert } from 'react-native';
+import { View, StyleSheet, Pressable, Text, Linking, Alert, Animated } from 'react-native';
 import { Icon } from '../../components/Icon';
 import { useTheme } from '../../theme';
 
@@ -11,8 +11,8 @@ export interface EmailInputScreenProps {
 }
 
 /**
- * Email Input Screen
- * Displays the DropCal email address and opens email client
+ * Email Input Screen - Dock Layout (1:1 Web Conversion)
+ * 100px border-radius pill with horizontal layout
  */
 export function EmailInputScreen({ onClose, userEmail }: EmailInputScreenProps) {
   const { theme } = useTheme();
@@ -50,62 +50,63 @@ export function EmailInputScreen({ onClose, userEmail }: EmailInputScreenProps) 
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.content}>
-        {/* Close Button */}
-        <Pressable
-          style={[styles.iconButton, { backgroundColor: theme.colors.surface }]}
-          onPress={onClose}
-        >
-          <Icon name="X" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
+    <View style={[styles.container, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+      {/* Backdrop overlay */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onClose}
+      />
 
-        {/* Main Content */}
-        <View style={styles.emailArea}>
-          <View style={styles.instructionContainer}>
-            <Icon
-              name="Envelope"
-              size={48}
-              color={theme.colors.primary}
-              style={styles.envelopeIcon}
-            />
-            <Text style={[styles.instructionText, { color: theme.colors.textPrimary }]}>
-              Forward emails to your personal DropCal address
-            </Text>
-          </View>
-
-          {/* Email Display Pill */}
+      {/* Input Container - Centered */}
+      <View style={styles.inputContainer}>
+        {/* Close Button - Outside dock (left of dock) */}
+        <Animated.View style={styles.externalButtonWrapper}>
           <Pressable
-            style={({ pressed }) => [
-              styles.emailPill,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.primary,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
+            style={[styles.closeButton, {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+            }]}
+            onPress={onClose}
+          >
+            <Icon
+              name="FirstAid"
+              size={24}
+              color={theme.colors.textSecondary}
+              weight="duotone"
+              style={{ transform: [{ rotate: '45deg' }] }}
+            />
+          </Pressable>
+        </Animated.View>
+
+        {/* Dock - 100px border-radius pill */}
+        <Animated.View
+          style={[
+            styles.dock,
+            {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          {/* Email Display */}
+          <Pressable
+            style={styles.emailDisplay}
             onPress={handleEmailClick}
           >
             <Icon
               name="Envelope"
               size={20}
               color={theme.colors.primary}
-              style={styles.emailIcon}
+              weight="duotone"
             />
             <Text
-              style={[styles.emailText, { color: theme.colors.primary }]}
+              style={[styles.emailText, { color: theme.colors.textPrimary }]}
               numberOfLines={1}
             >
               {dropCalEmail}
             </Text>
           </Pressable>
-
-          <Text
-            style={[styles.helperText, { color: theme.colors.textSecondary }]}
-          >
-            Tap to open your email client
-          </Text>
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -114,68 +115,68 @@ export function EmailInputScreen({ onClose, userEmail }: EmailInputScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  content: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    width: '100%',
+    maxWidth: 600,
+    paddingHorizontal: 20,
+  },
+  externalButtonWrapper: {
+    // Animation wrapper
+  },
+
+  // Dock - 100px border-radius pill
+  dock: {
     flex: 1,
+    height: 64,
+    borderRadius: 100,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  iconButton: {
+
+  // Email Display
+  emailDisplay: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 40,
+    paddingHorizontal: 8,
+  },
+
+  emailText: {
+    fontSize: 15,
+    fontWeight: '400',
+    fontFamily: 'Inter',
+    textAlign: 'center',
+  },
+
+  closeButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
-    marginBottom: 20,
-  },
-  emailArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  instructionContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  envelopeIcon: {
-    marginBottom: 16,
-  },
-  instructionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-  emailPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 30,
-    borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 12,
-  },
-  emailIcon: {
-    marginRight: 12,
-  },
-  emailText: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  helperText: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
 });

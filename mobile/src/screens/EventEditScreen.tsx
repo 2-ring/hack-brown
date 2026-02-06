@@ -368,28 +368,28 @@ export function EventEditScreen({
         <DatePicker
           value={new Date(editedEvent.start.dateTime)}
           onChange={handleStartDateChange}
-          onClose={() => setShowStartDatePicker(false)}
+          onBlur={() => setShowStartDatePicker(false)}
         />
       )}
       {showStartTimePicker && (
         <TimePicker
           value={new Date(editedEvent.start.dateTime)}
           onChange={handleStartTimeChange}
-          onClose={() => setShowStartTimePicker(false)}
+          onBlur={() => setShowStartTimePicker(false)}
         />
       )}
       {showEndDatePicker && (
         <DatePicker
           value={new Date(editedEvent.end.dateTime)}
           onChange={handleEndDateChange}
-          onClose={() => setShowEndDatePicker(false)}
+          onBlur={() => setShowEndDatePicker(false)}
         />
       )}
       {showEndTimePicker && (
         <TimePicker
           value={new Date(editedEvent.end.dateTime)}
           onChange={handleEndTimeChange}
-          onClose={() => setShowEndTimePicker(false)}
+          onBlur={() => setShowEndTimePicker(false)}
           startTime={new Date(editedEvent.start.dateTime)}
         />
       )}

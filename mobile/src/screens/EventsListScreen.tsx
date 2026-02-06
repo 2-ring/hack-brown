@@ -437,108 +437,131 @@ export function EventsListScreen({
     // DEFAULT or EDITING state
     if (bottomBarState === 'default' || bottomBarState === 'editing') {
       return (
-        <View style={[styles.bottomBar, {
-          backgroundColor: theme.colors.background,
-          borderTopColor: theme.colors.border,
-        }]}>
-          <View style={styles.bottomBarRow}>
-            {/* Cancel button (only in editing mode) */}
-            {bottomBarState === 'editing' && (
-              <Pressable
-                onPress={handleCancelEditing}
-                style={styles.cancelButton}
-              >
-                <Icon name="X" size={20} color={theme.colors.textSecondary} />
-              </Pressable>
-            )}
+        <>
+          {/* Gradient Fade */}
+          <LinearGradient
+            colors={['transparent', theme.colors.background]}
+            style={styles.gradientFade}
+            pointerEvents="none"
+          />
 
-            {/* Request Changes Button */}
-            <Pressable
-              onPress={handleOpenChat}
-              style={[styles.requestChangesButton, {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              }]}
-            >
-              <Icon name="ChatCircleDots" size={18} color={theme.colors.textPrimary} weight="bold" />
-              <Text style={[styles.requestChangesText, { color: theme.colors.textPrimary }]}>
-                Request changes
+          <View style={[styles.bottomBar, {
+            backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.border,
+          }]}>
+            <View style={styles.bottomBarRow}>
+              {/* Event count (left side) */}
+              <Text style={[styles.eventCountText, { color: theme.colors.textSecondary }]}>
+                {localEvents.length} event{localEvents.length === 1 ? '' : 's'}
               </Text>
-            </Pressable>
 
-            {/* Confirm/Save Button */}
-            {onConfirm && (
+              {/* Cancel button (only in editing mode) */}
+              {bottomBarState === 'editing' && (
+                <Pressable
+                  onPress={handleCancelEditing}
+                  style={styles.cancelButton}
+                >
+                  <Icon name="X" size={20} color={theme.colors.textSecondary} />
+                </Pressable>
+              )}
+
+              {/* Request Changes Button */}
               <Pressable
-                onPress={bottomBarState === 'editing' ? handleCancelEditing : handleConfirm}
-                style={[styles.confirmButton, {
-                  backgroundColor: theme.colors.primary,
-                  shadowColor: theme.colors.primary,
+                onPress={handleOpenChat}
+                style={[styles.requestChangesButton, {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
                 }]}
               >
-                <Icon
-                  name={bottomBarState === 'editing' ? 'Check' : 'CalendarStar'}
-                  size={24}
-                  color="#ffffff"
-                  weight="duotone"
-                />
+                <Icon name="ChatCircleDots" size={18} color={theme.colors.textPrimary} weight="bold" />
+                <Text style={[styles.requestChangesText, { color: theme.colors.textPrimary }]}>
+                  Request changes
+                </Text>
               </Pressable>
-            )}
+
+              {/* Confirm/Save Button */}
+              {onConfirm && (
+                <Pressable
+                  onPress={bottomBarState === 'editing' ? handleCancelEditing : handleConfirm}
+                  style={[styles.confirmButton, {
+                    backgroundColor: theme.colors.primary,
+                    shadowColor: theme.colors.primary,
+                  }]}
+                >
+                  <Icon
+                    name={bottomBarState === 'editing' ? 'Check' : 'CalendarStar'}
+                    size={24}
+                    color="#ffffff"
+                    weight="duotone"
+                  />
+                </Pressable>
+              )}
+            </View>
           </View>
-        </View>
+        </>
       );
     }
 
     // CHAT or EDITING-CHAT state
     return (
-      <View style={[styles.bottomBar, {
-        backgroundColor: theme.colors.background,
-        borderTopColor: theme.colors.border,
-      }]}>
-        <View style={styles.bottomBarRow}>
-          {/* Cancel Button */}
-          <Pressable
-            onPress={handleCloseChat}
-            style={styles.cancelButton}
-          >
-            <Icon name="X" size={20} color={theme.colors.textSecondary} />
-          </Pressable>
+      <>
+        {/* Gradient Fade */}
+        <LinearGradient
+          colors={['transparent', theme.colors.background]}
+          style={styles.gradientFade}
+          pointerEvents="none"
+        />
 
-          {/* Chat Input */}
-          <TextInput
-            value={chatInput}
-            onChangeText={setChatInput}
-            placeholder="Request changes..."
-            placeholderTextColor={theme.colors.textSecondary}
-            style={[styles.chatInput, {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              color: theme.colors.textPrimary,
-            }]}
-            autoFocus
-            returnKeyType="send"
-            onSubmitEditing={handleSendEditRequest}
-            editable={!isProcessingEdit}
-          />
+        <View style={[styles.bottomBar, {
+          backgroundColor: theme.colors.background,
+          borderTopColor: theme.colors.border,
+        }]}>
+          <View style={styles.bottomBarRow}>
+            {/* Cancel Button */}
+            <Pressable
+              onPress={handleCloseChat}
+              style={styles.cancelButton}
+            >
+              <Icon name="X" size={20} color={theme.colors.textSecondary} />
+            </Pressable>
 
-          {/* Send Button */}
-          <Pressable
-            onPress={handleSendEditRequest}
-            disabled={!chatInput.trim() || isProcessingEdit}
-            style={[styles.sendButton, {
-              backgroundColor: (!chatInput.trim() || isProcessingEdit)
-                ? theme.colors.disabled
-                : theme.colors.primary,
-            }]}
-          >
-            <Icon
-              name="PaperPlaneTilt"
-              size={22}
-              color="#ffffff"
-              weight="fill"
+            {/* Chat Input */}
+            <TextInput
+              value={chatInput}
+              onChangeText={setChatInput}
+              placeholder="Request changes..."
+              placeholderTextColor={theme.colors.textSecondary}
+              style={[styles.chatInput, {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                color: theme.colors.textPrimary,
+              }]}
+              autoFocus
+              returnKeyType="send"
+              onSubmitEditing={handleSendEditRequest}
+              editable={!isProcessingEdit}
             />
-          </Pressable>
+
+            {/* Send Button */}
+            <Pressable
+              onPress={handleSendEditRequest}
+              disabled={!chatInput.trim() || isProcessingEdit}
+              style={[styles.sendButton, {
+                backgroundColor: (!chatInput.trim() || isProcessingEdit)
+                  ? theme.colors.disabled
+                  : theme.colors.primary,
+              }]}
+            >
+              <Icon
+                name="PaperPlaneTilt"
+                size={22}
+                color="#ffffff"
+                weight="fill"
+              />
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </>
     );
   };
 
@@ -804,5 +827,47 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 16,
+  },
+
+  // Gradient Fade
+  gradientFade: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    height: 40,
+    zIndex: 5,
+  },
+
+  // Loading Dots
+  loadingDotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  // Bottom Bar Content
+  bottomBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  // Event Count
+  eventCountText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 'auto',
+  },
+
+  // Processing Text
+  processingText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

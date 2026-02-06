@@ -8,7 +8,7 @@ import {
   RefreshControl,
   SafeAreaView,
 } from 'react-native';
-import { Icon, Skeleton } from '../components';
+import { Icon, Skeleton, PhosphorIconName } from '../components';
 import { useTheme } from '../theme';
 
 type InputType = 'image' | 'document' | 'audio' | 'text' | 'link' | 'email';
