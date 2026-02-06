@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "scheme": "dropcal",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash-icon-minimal.png",
       "resizeMode": "contain",
       "backgroundColor": "#1170C5"
     },
@@ -29,6 +29,10 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1170C5"
+      },
+      "notification": {
+        "icon": "./assets/notification-icon.png",
+        "color": "#1170C5"
       },
       "package": "com.dropcal.app",
       "permissions": [
@@ -68,7 +72,9 @@
     "extra": {
       "eas": {
         "projectId": "dropcal-mobile"
-      }
+      },
+      "supabaseUrl": "https://bdpiluwfhfmitvrcdrlr.supabase.co",
+      "supabaseAnonKey": "sb_publishable_2q3pA3-ZS2hI4uKKQGV2RQ_u8Lu-z4D"
     }
   }
 }
