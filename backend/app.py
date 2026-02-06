@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import os
 import sys
@@ -97,7 +98,22 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25MB max file size
 
-llm = ChatAnthropic(model="claude-sonnet-4-5-20250929", api_key=os.getenv("ANTHROPIC_API_KEY"))
+# ============================================================================
+# LLM Configuration - Grok 3 for ALL agents (testing phase)
+# ============================================================================
+
+llm = ChatOpenAI(
+    model="grok-3",
+    api_key=os.getenv("XAI_API_KEY"),
+    base_url="https://api.x.ai/v1"
+)
+
+logger.info("LLM Configuration:")
+logger.info("  - ALL agents (1-5): Grok 3")
+logger.info("  - Audio transcription: OpenAI Whisper")
+logger.info("  - Testing phase: Full Grok stack")
+
+# ============================================================================
 
 # Initialize Google Calendar service
 calendar_service = CalendarService()
@@ -111,7 +127,7 @@ pattern_discovery_service = PatternDiscoveryService(llm)
 # Initialize Data Collection service
 data_collection_service = DataCollectionService(calendar_service)
 
-# Initialize Agents
+# Initialize Agents - All using Grok 3
 agent_1_identification = EventIdentificationAgent(llm)
 agent_2_extraction = FactExtractionAgent(llm)
 agent_3_formatting = CalendarFormattingAgent(llm)

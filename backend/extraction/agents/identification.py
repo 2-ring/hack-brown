@@ -3,9 +3,10 @@ Event Identification Agent (Agent 1)
 Identifies distinct calendar events in the input.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from pathlib import Path
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 from core.base_agent import BaseAgent
@@ -16,17 +17,23 @@ class EventIdentificationAgent(BaseAgent):
     """
     Identifies distinct calendar events in the input.
     Second agent in the pipeline.
+    Supports both Claude (Anthropic) and Grok/OpenAI vision APIs.
     """
 
-    def __init__(self, llm: ChatAnthropic):
+    def __init__(self, llm: Union[ChatAnthropic, ChatOpenAI]):
         """
         Initialize Event Identification Agent.
 
         Args:
-            llm: Language model instance
+            llm: Language model instance (Claude or Grok/OpenAI)
         """
         super().__init__("Agent1_EventIdentification")
         self.llm = llm.with_structured_output(IdentificationResult)
+        self.base_llm = llm  # Keep reference to detect type
+
+        # Detect LLM type for vision API formatting
+        self.is_anthropic = isinstance(llm, ChatAnthropic)
+        self.is_openai = isinstance(llm, ChatOpenAI)
 
         # Load prompt from extraction/prompts directory
         prompt_path = Path(__file__).parent.parent / "prompts" / "identification.txt"
@@ -75,7 +82,19 @@ class EventIdentificationAgent(BaseAgent):
         return result
 
     def _execute_vision(self, metadata: Dict[str, Any], system_prompt: str) -> IdentificationResult:
-        """Execute vision processing for images/PDFs"""
+        """
+        Execute vision processing for images/PDFs.
+        Automatically formats for Claude (Anthropic) or Grok/OpenAI based on LLM type.
+        """
+        if self.is_anthropic:
+            return self._execute_vision_anthropic(metadata, system_prompt)
+        elif self.is_openai:
+            return self._execute_vision_openai(metadata, system_prompt)
+        else:
+            raise ValueError(f"Unsupported LLM type: {type(self.base_llm)}")
+
+    def _execute_vision_anthropic(self, metadata: Dict[str, Any], system_prompt: str) -> IdentificationResult:
+        """Execute vision processing using Claude's (Anthropic) format"""
         content = []
 
         # Handle single image
@@ -107,13 +126,51 @@ class EventIdentificationAgent(BaseAgent):
             "text": "Identify all calendar events in this image/document following the instructions above. Extract complete text chunks for each event."
         })
 
-        # Create messages for vision API
+        # Create messages for Claude API
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": content}
         ]
 
-        # Use structured output with vision
         result = self.llm.invoke(messages)
+        return result
 
+    def _execute_vision_openai(self, metadata: Dict[str, Any], system_prompt: str) -> IdentificationResult:
+        """Execute vision processing using OpenAI/Grok format"""
+        content = []
+
+        # Handle single image
+        if 'image_data' in metadata:
+            media_type = metadata.get('media_type', 'image/jpeg')
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{media_type};base64,{metadata['image_data']}"
+                }
+            })
+
+        # Handle multiple pages (from PDF)
+        elif 'pages' in metadata:
+            for page in metadata['pages']:
+                media_type = page.get('media_type', 'image/jpeg')
+                content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{media_type};base64,{page['image_data']}"
+                    }
+                })
+
+        # Add identification instruction
+        content.append({
+            "type": "text",
+            "text": "Identify all calendar events in this image/document following the instructions above. Extract complete text chunks for each event."
+        })
+
+        # Create messages for OpenAI/Grok API
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content}
+        ]
+
+        result = self.llm.invoke(messages)
         return result
