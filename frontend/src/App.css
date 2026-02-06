@@ -576,6 +576,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  height: 40px;
   padding: 0 0.5rem;
   color: var(--text-primary);
   font-family: Inter, system-ui, sans-serif;
