@@ -1,0 +1,38 @@
+/* Desktop Input Workspace Styles */
+
+/* Drop Area */
+.drop-area {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  min-height: 180px;
+  border-radius: 64px;
+  background-color: var(--primary-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='64' ry='64' stroke='%231170C5FF' stroke-width='9' stroke-dasharray='28 22' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+}
+
+.drop-area:hover {
+  background-color: rgba(17, 112, 197, 0.12);
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='64' ry='64' stroke='%231170C5' stroke-width='9' stroke-dasharray='28 22' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+}
+
+.drop-area.dragging {
+  background-color: rgba(17, 112, 197, 0.18);
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='64' ry='64' stroke='%231170C5FF' stroke-width='9' stroke-dasharray='28 22' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
+  transform: scale(1.02);
+}
+
+/* Icon Row - Desktop horizontal layout */
+.icon-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--droparea-gap);
+  pointer-events: none;
+  position: relative;
+}

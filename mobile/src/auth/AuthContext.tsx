@@ -13,7 +13,6 @@ import {
   onAuthStateChange,
 } from './supabase';
 import { syncUserProfile } from '../api/backend-client';
-import { GuestSessionManager } from './GuestSessionManager';
 import { toast } from '../components/Toast';
 
 interface AuthContextType {
@@ -72,9 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Sync user profile to backend (creates account if first time)
         try {
-          // Get any guest session IDs to migrate
-          const guestSessionIds = await GuestSessionManager.getAllSessionIds();
-
           const result = await syncUserProfile();
 
           if (result.is_new_user) {
@@ -87,13 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               description: `Signed in as ${result.user.email}`,
               duration: 3000,
             });
-          }
-
-          // Migrate guest sessions if any exist
-          if (guestSessionIds.length > 0) {
-            console.log(`Migrating ${guestSessionIds.length} guest sessions...`);
-            // Migration happens automatically via syncUserProfile with guest_session_ids
-            await GuestSessionManager.clearAllSessions();
           }
 
           console.log('User profile synced:', result.user);
@@ -110,9 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setLoading(false);
     });
-
-    // Cleanup old guest sessions periodically
-    GuestSessionManager.cleanupOldSessions();
 
     return () => {
       unsubscribe();

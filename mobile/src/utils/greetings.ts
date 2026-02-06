@@ -10,13 +10,42 @@ interface Greeting {
 const GREETINGS: Greeting[] = [
   // Authenticated greetings (require user name)
   { text: "Let's plan, {name}", types: ['authenticated'] },
+  { text: "Welcome back, {name}", types: ['authenticated'] },
+  { text: "Ready to drop it in, {name}?", types: ['authenticated'] },
+  { text: "What's on the agenda, {name}?", types: ['authenticated'] },
 
   // General greetings (no name needed)
   { text: "Time to organize", types: ['general'] },
+  { text: "Drop it in", types: ['general'] },
+  { text: "Let's get scheduling", types: ['general'] },
+  { text: "Your calendar awaits", types: ['general'] },
+  { text: "Ready to plan?", types: ['general'] },
 
-  // Time-based greetings
+  // Morning greetings
   { text: "Rise and shine", types: ['morning'] },
-  { text: "Late night scheduling?", types: ['lateNight'] },
+  { text: "Morning planning", types: ['morning'] },
+  { text: "Coffee & calendars", types: ['morning'] },
+  { text: "Fresh schedule", types: ['morning'] },
+  { text: "Morning agenda", types: ['morning'] },
+
+  // Afternoon greetings
+  { text: "Schedule check", types: ['afternoon'] },
+  { text: "Midday planning", types: ['afternoon'] },
+  { text: "Afternoon sync", types: ['afternoon'] },
+  { text: "What's next?", types: ['afternoon'] },
+
+  // Evening greetings
+  { text: "Evening plans", types: ['evening'] },
+  { text: "Planning tomorrow?", types: ['evening'] },
+  { text: "Evening agenda", types: ['evening'] },
+  { text: "Wrapping up", types: ['evening'] },
+
+  // Late night greetings
+  { text: "Late night plans?", types: ['lateNight'] },
+  { text: "Midnight planning?", types: ['lateNight'] },
+  { text: "Night scheduling", types: ['lateNight'] },
+  { text: "Planning instead?", types: ['lateNight'] },
+  { text: "Late night hustle", types: ['lateNight'] },
 ]
 
 // Get current time period

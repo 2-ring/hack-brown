@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -86,6 +87,33 @@ export function HomeScreen({
   // Get randomized greeting (can be personalized with user name in the future)
   // TODO: Pass user name when auth is implemented (matches web Workspace.tsx)
   const greeting = getGreeting();
+
+  // Animation for greeting flip
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const prevGreeting = useRef(greeting);
+
+  useEffect(() => {
+    // Trigger flip animation when greeting changes
+    if (prevGreeting.current !== greeting) {
+      rotateAnim.setValue(0);
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+      prevGreeting.current = greeting;
+    }
+  }, [greeting, rotateAnim]);
+
+  const rotateX = rotateAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: ['90deg', '0deg', '0deg'],
+  });
+
+  const opacity = rotateAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 1, 1],
+  });
 
   /**
    * Handle text submission - uses handler from AppContainer
@@ -330,9 +358,21 @@ export function HomeScreen({
         <View style={styles.header}>
           <View style={styles.greetingRow}>
             <Logo size={48} color={theme.colors.textPrimary} />
-            <Text style={[styles.greetingText, { color: theme.colors.primary }]}>
+            <Animated.Text
+              style={[
+                styles.greetingText,
+                { color: theme.colors.primary },
+                {
+                  opacity,
+                  transform: [
+                    { perspective: 1000 },
+                    { rotateX },
+                  ],
+                }
+              ]}
+            >
               {greeting}
-            </Text>
+            </Animated.Text>
           </View>
         </View>
 

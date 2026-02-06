@@ -91,6 +91,7 @@
   gap: 12px;
   margin: 0;
   padding: 0;
+  perspective: 1000px;
 }
 
 .greeting-logo {
@@ -106,6 +107,8 @@
   color: var(--primary);
   margin: 0;
   letter-spacing: -0.02em;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 .greeting-hero-text {
@@ -666,12 +669,12 @@
 @media (max-width: 768px) {
   /* Override sizing variables for mobile */
   :root {
-    --droparea-btn-small: 48px;
-    --droparea-btn-medium: 52px;
-    --droparea-btn-large: 62px;
-    --droparea-icon-small: 24px;
-    --droparea-icon-medium: 26px;
-    --droparea-icon-large: 32px;
+    --droparea-btn-small: 56px;
+    --droparea-btn-medium: 58px;
+    --droparea-btn-large: 72px;
+    --droparea-icon-small: 28px;
+    --droparea-icon-medium: 30px;
+    --droparea-icon-large: 36px;
     --droparea-gap: 1rem;
     --droparea-dock-padding: 0.5rem 1rem;
     --droparea-text-size: 1rem;

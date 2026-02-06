@@ -1,8 +1,12 @@
 import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { HandWaving, Warning } from '@phosphor-icons/react'
-import { DropArea } from './droparea'
+import { DesktopInputWorkspace } from './desktop/DesktopInputWorkspace'
+import { MobileInputWorkspace } from './mobile/MobileInputWorkspace'
 import { NotificationBar, useNotifications } from './notifications'
+import { useViewport } from './shared/hooks'
+import './desktop/styles/desktop.css'
+import './mobile/styles/mobile.css'
 
 interface InputWorkspaceProps {
   uploadedFile: File | null
@@ -27,6 +31,7 @@ export function InputWorkspace({
   onClearFile,
   onClearFeedback
 }: InputWorkspaceProps) {
+  const { isMobile } = useViewport()
   const {
     currentNotification,
     addNotification,
@@ -70,16 +75,22 @@ export function InputWorkspace({
     }
   }
 
+  const inputProps = {
+    uploadedFile,
+    isProcessing,
+    onFileUpload,
+    onAudioSubmit,
+    onTextSubmit,
+    onClearFile
+  }
+
   return (
     <>
-      <DropArea
-        uploadedFile={uploadedFile}
-        isProcessing={isProcessing}
-        onFileUpload={onFileUpload}
-        onAudioSubmit={onAudioSubmit}
-        onTextSubmit={onTextSubmit}
-        onClearFile={onClearFile}
-      />
+      {isMobile ? (
+        <MobileInputWorkspace {...inputProps} />
+      ) : (
+        <DesktopInputWorkspace {...inputProps} />
+      )}
       <AnimatePresence mode="wait">
         {currentNotification && (
           <NotificationBar

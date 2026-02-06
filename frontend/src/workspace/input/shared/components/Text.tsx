@@ -6,7 +6,7 @@ import {
   ClipboardText as ClipboardIcon
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { IconButton } from '../IconButton'
+import { IconButton } from './IconButton'
 
 interface TextProps {
   onClose: () => void

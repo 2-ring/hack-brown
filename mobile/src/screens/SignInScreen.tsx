@@ -1,6 +1,6 @@
 /**
  * SignInScreen - Authentication screen
- * Shows Google sign-in button for users to authenticate
+ * Clean, minimal sign-in with Google, Microsoft, and Apple options
  */
 
 import React from 'react';
@@ -10,87 +10,76 @@ import {
   StyleSheet,
   Pressable,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { useTheme } from '../theme';
-import { Logo, Icon } from '../components';
+import { Logo } from '../components';
 import { useAuth } from '../auth';
 
 export function SignInScreen() {
   const { theme } = useTheme();
   const { signIn, loading } = useAuth();
 
-  const handleSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     try {
       await signIn();
     } catch (error) {
-      console.error('Sign in failed:', error);
+      console.error('Google sign in failed:', error);
     }
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    // TODO: Implement Microsoft sign-in
+    console.log('Microsoft sign-in not yet implemented');
+  };
+
+  const handleAppleSignIn = async () => {
+    // TODO: Implement Apple sign-in
+    console.log('Apple sign-in not yet implemented');
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
-        {/* Logo and branding */}
-        <View style={styles.header}>
-          <Logo size={80} />
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
-            Welcome to DropCal
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            Drop anything in. Get calendar events out.
-          </Text>
+        {/* Logo at top center */}
+        <View style={styles.logoContainer}>
+          <Logo size={60} />
         </View>
 
-        {/* Sign in button */}
-        <Pressable
-          style={[
-            styles.signInButton,
-            { backgroundColor: theme.colors.primary },
-            loading && styles.signInButtonDisabled,
-          ]}
-          onPress={handleSignIn}
-          disabled={loading}
-        >
-          <Icon name="SignIn" size={24} color="#ffffff" />
-          <Text style={styles.signInButtonText}>
-            {loading ? 'Signing in...' : 'Sign in with Google'}
-          </Text>
-        </Pressable>
+        {/* Display text - matching web welcome page */}
+        <Text style={[styles.heroText, { color: theme.colors.primary }]}>
+          Drop anything in.{'\n'}Get events out.
+        </Text>
 
-        {/* Features list */}
-        <View style={styles.features}>
-          <View style={styles.feature}>
-            <Icon name="CheckCircle" size={20} color={theme.colors.primary} />
-            <Text style={[styles.featureText, { color: theme.colors.textSecondary }]}>
-              Extract events from any text or image
-            </Text>
-          </View>
-          <View style={styles.feature}>
-            <Icon name="CheckCircle" size={20} color={theme.colors.primary} />
-            <Text style={[styles.featureText, { color: theme.colors.textSecondary }]}>
-              Automatic conflict detection
-            </Text>
-          </View>
-          <View style={styles.feature}>
-            <Icon name="CheckCircle" size={20} color={theme.colors.primary} />
-            <Text style={[styles.featureText, { color: theme.colors.textSecondary }]}>
-              One-click calendar integration
-            </Text>
-          </View>
+        {/* Sign-in buttons */}
+        <View style={styles.buttonContainer}>
+          <Pressable
+            style={styles.signInButton}
+            onPress={handleGoogleSignIn}
+            disabled={loading}
+          >
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={styles.buttonText}>Sign in with Google</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.signInButton}
+            onPress={handleMicrosoftSignIn}
+            disabled={loading}
+          >
+            <Text style={styles.microsoftIcon}>⊞</Text>
+            <Text style={styles.buttonText}>Sign in with Microsoft</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.signInButton}
+            onPress={handleAppleSignIn}
+            disabled={loading}
+          >
+            <Text style={styles.appleIcon}></Text>
+            <Text style={styles.buttonText}>Sign in with Apple</Text>
+          </Pressable>
         </View>
-
-        {/* Guest mode link */}
-        <Pressable
-          style={styles.guestLink}
-          onPress={() => {
-            // TODO: Navigate to guest mode
-            console.log('Guest mode not yet implemented');
-          }}
-        >
-          <Text style={[styles.guestLinkText, { color: theme.colors.textSecondary }]}>
-            Try without signing in (3 free sessions)
-          </Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -102,69 +91,59 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 32,
-    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 60,
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  header: {
+  logoContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 20,
   },
-  title: {
-    fontSize: 32,
+  heroText: {
+    fontFamily: 'Chillax-Bold',
+    fontSize: 50,
     fontWeight: '700',
-    marginTop: 24,
-    marginBottom: 8,
+    lineHeight: 50,
     textAlign: 'center',
+    letterSpacing: -1,
+    marginBottom: 60,
+    textShadowColor: 'rgba(17, 112, 197, 0.15)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
-  subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    marginTop: 8,
+  buttonContainer: {
+    width: '100%',
+    maxWidth: 320,
+    gap: 16,
   },
   signInButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#2b2b2b',
     paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    gap: 12,
-    minWidth: 280,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  signInButtonDisabled: {
-    opacity: 0.6,
-  },
-  signInButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  features: {
-    marginTop: 48,
+    paddingHorizontal: 20,
+    borderRadius: 32,
     gap: 16,
-    alignSelf: 'stretch',
   },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '500',
   },
-  featureText: {
-    fontSize: 16,
-    flex: 1,
+  googleIcon: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#ffffff',
   },
-  guestLink: {
-    marginTop: 32,
-    paddingVertical: 12,
+  microsoftIcon: {
+    fontSize: 24,
+    fontWeight: '400',
+    color: '#ffffff',
   },
-  guestLinkText: {
-    fontSize: 16,
-    textDecorationLine: 'underline',
+  appleIcon: {
+    fontSize: 24,
+    fontWeight: '400',
+    color: '#ffffff',
   },
 });

@@ -213,8 +213,7 @@ export function AppContainer({
             setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS);
           }
         },
-        2000,
-        false // isGuest parameter
+        2000
       );
 
       // Check if events were found
@@ -284,8 +283,7 @@ export function AppContainer({
             setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS);
           }
         },
-        2000,
-        false // isGuest parameter
+        2000
       );
 
       // Check if events were found

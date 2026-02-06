@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Sidebar, CalendarStar } from '@phosphor-icons/react'
 import { InputWorkspace } from './input'
 import { EventsWorkspace } from './events/EventsWorkspace'
@@ -82,7 +82,19 @@ export function Workspace({
               size={48}
               className="greeting-logo"
             />
-            <h1 className="greeting-text">{greeting}</h1>
+            <AnimatePresence mode="wait">
+              <motion.h1
+                key={greeting}
+                className="greeting-text"
+                initial={{ rotateX: 90, opacity: 0 }}
+                animate={{ rotateX: 0, opacity: 1 }}
+                exit={{ rotateX: -90, opacity: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ transformPerspective: 1000 }}
+              >
+                {greeting}
+              </motion.h1>
+            </AnimatePresence>
           </div>
 
           <InputWorkspace

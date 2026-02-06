@@ -1,0 +1,35 @@
+/* Mobile Input Workspace Styles */
+
+/* Active button state - keep button highlighted when input is open */
+.icon-circle.clickable.active {
+  box-shadow: 0 8px 20px var(--shadow-medium),
+              0 4px 12px var(--shadow-heavy);
+  background-color: var(--background);
+  color: var(--primary);
+}
+
+/* Input Components - Absolute bottom of screen */
+.mobile-input-absolute-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure input components fill full width */
+.mobile-input-absolute-bottom .sound-input-container,
+.mobile-input-absolute-bottom .email-input-dock {
+  width: 100%;
+  max-width: none;
+}
+
+/* Hide close buttons on mobile - users can switch via button menu */
+.mobile-input-absolute-bottom .dock-button.close,
+.mobile-input-absolute-bottom .close-button {
+  display: none;
+}

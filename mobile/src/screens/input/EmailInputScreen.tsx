@@ -18,10 +18,10 @@ export function EmailInputScreen({ onClose, userEmail }: EmailInputScreenProps) 
   const { theme } = useTheme();
 
   // Extract username from email (part before @)
-  // Fallback to a random guest identifier if no user
+  // Fallback to a random identifier if email not available
   const username =
     userEmail?.split('@')[0] ||
-    `guest${Math.random().toString(36).substring(2, 8)}`;
+    `user${Math.random().toString(36).substring(2, 8)}`;
   const dropCalEmail = `${username}@events.dropcal.ai`;
 
   const handleEmailClick = async () => {

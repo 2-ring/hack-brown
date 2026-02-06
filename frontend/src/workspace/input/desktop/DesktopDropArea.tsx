@@ -1,33 +1,27 @@
 import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ButtonMenu } from './content/ButtonMenu'
-import { Audio } from './content/Audio'
-import { Text } from './content/Text'
-import { Link } from './content/Link'
-import { Email } from './content/Email'
+import { DesktopButtonMenu } from './DesktopButtonMenu'
+import { useInputHandlers } from '../shared/hooks'
+import { Audio, Text, Link, Email } from '../shared/components'
+import type { BaseInputWorkspaceProps } from '../shared/types'
 
-interface DropAreaProps {
-  uploadedFile: File | null
-  isProcessing: boolean
-  onFileUpload: (file: File) => void
-  onAudioSubmit: (audioBlob: Blob) => void
-  onTextSubmit: (text: string) => void
-  onClearFile: () => void
-}
-
-export function DropArea({
+export function DesktopDropArea({
   uploadedFile,
   isProcessing,
   onFileUpload,
   onAudioSubmit,
   onTextSubmit,
   onClearFile,
-}: DropAreaProps) {
+}: BaseInputWorkspaceProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isTextInput, setIsTextInput] = useState(false)
   const [isLinkInput, setIsLinkInput] = useState(false)
   const [isEmailInput, setIsEmailInput] = useState(false)
+
+  const { handleImageClick, handleDocumentClick, handleAudioFileUpload } = useInputHandlers({
+    onFileUpload
+  })
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -64,52 +58,10 @@ export function DropArea({
     }
   }, [onFileUpload, isProcessing])
 
-  const handleImageClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files
-      if (files && files.length > 0) {
-        onFileUpload(files[0])
-      }
-    }
-    input.click()
-  }, [onFileUpload])
-
-  const handleDocumentClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.txt,.pdf,.doc,.docx,.eml'
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files
-      if (files && files.length > 0) {
-        onFileUpload(files[0])
-      }
-    }
-    input.click()
-  }, [onFileUpload])
-
   const handleAudioClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     setIsRecording(true)
   }, [])
-
-  const handleAudioFileUpload = useCallback(() => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'audio/*,.mp3,.wav,.m4a'
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files
-      if (files && files.length > 0) {
-        onFileUpload(files[0])
-        setIsRecording(false)
-      }
-    }
-    input.click()
-  }, [onFileUpload])
 
   const handleAudioSubmit = useCallback((audioBlob: Blob) => {
     onAudioSubmit(audioBlob)
@@ -207,7 +159,7 @@ export function DropArea({
           </button>
         </div>
       ) : (
-        <ButtonMenu
+        <DesktopButtonMenu
           isDragging={isDragging}
           onImageClick={handleImageClick}
           onDocumentClick={handleDocumentClick}

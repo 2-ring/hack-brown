@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { CaretLeft, CalendarBlank, Sparkle, Check } from '@phosphor-icons/react'
+import { CaretLeft, RocketLaunch, Lightning, Check } from '@phosphor-icons/react'
 import './Plans.css'
 
 interface PlanFeature {
@@ -30,7 +30,7 @@ export function Plans() {
       priceSubtext: 'forever',
       ctaText: 'Get started',
       ctaVariant: 'secondary',
-      icon: <CalendarBlank size={28} weight="duotone" />,
+      icon: <RocketLaunch size={40} weight="duotone" />,
       features: [
         { text: 'Up to 10 events per month', included: true },
         { text: 'Text and image input', included: true },
@@ -48,7 +48,7 @@ export function Plans() {
       priceSubtext: '/month billed annually',
       ctaText: 'Get Pro plan',
       ctaVariant: 'primary',
-      icon: <Sparkle size={28} weight="duotone" />,
+      icon: <Lightning size={40} weight="duotone" />,
       popular: true,
       features: [
         { text: 'Everything in Free, plus:', included: true },
