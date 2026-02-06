@@ -36,12 +36,14 @@
       },
       "package": "com.dropcal.app",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "RECORD_AUDIO",
-        "READ_CALENDAR",
-        "WRITE_CALENDAR"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -71,10 +73,11 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "dropcal-mobile"
+        "projectId": "a4617bd4-96e3-4094-8eaf-33f1a21e1072"
       },
       "supabaseUrl": "https://bdpiluwfhfmitvrcdrlr.supabase.co",
       "supabaseAnonKey": "sb_publishable_2q3pA3-ZS2hI4uKKQGV2RQ_u8Lu-z4D"
-    }
+    },
+    "owner": "dropcal"
   }
 }
