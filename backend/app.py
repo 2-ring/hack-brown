@@ -3,7 +3,6 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from langchain_anthropic import ChatAnthropic
-from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import os
 import sys
@@ -99,19 +98,24 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25MB max file size
 
 # ============================================================================
-# LLM Configuration - Grok 3 for ALL agents (testing phase)
+# CENTRALIZED MODEL CONFIGURATION
 # ============================================================================
 
-llm = ChatOpenAI(
-    model="grok-3",
-    api_key=os.getenv("XAI_API_KEY"),
-    base_url="https://api.x.ai/v1"
-)
+from config.text import create_text_model, print_text_config
+from config.audio import print_audio_config
 
-logger.info("LLM Configuration:")
-logger.info("  - ALL agents (1-5): Grok 3")
-logger.info("  - Audio transcription: Deepgram")
-logger.info("  - Testing phase: Full Grok stack")
+# Create LLM instances for each component based on config
+llm_agent_1 = create_text_model('agent_1_identification')
+llm_agent_2 = create_text_model('agent_2_extraction')
+llm_agent_3 = create_text_model('agent_3_formatting')
+llm_agent_4 = create_text_model('agent_4_modification')
+llm_agent_5 = create_text_model('agent_5_preferences')
+llm_pattern_discovery = create_text_model('pattern_discovery')
+llm_session_processor = create_text_model('session_processor')
+
+# Print configuration on startup
+print_text_config()
+print_audio_config()
 
 # ============================================================================
 
@@ -122,23 +126,23 @@ calendar_service = CalendarService()
 personalization_service = PersonalizationService()
 
 # Initialize Pattern Discovery service
-pattern_discovery_service = PatternDiscoveryService(llm)
+pattern_discovery_service = PatternDiscoveryService(llm_pattern_discovery)
 
 # Initialize Data Collection service
 data_collection_service = DataCollectionService(calendar_service)
 
-# Initialize Agents - All using Grok 3
-agent_1_identification = EventIdentificationAgent(llm)
-agent_2_extraction = FactExtractionAgent(llm)
-agent_3_formatting = CalendarFormattingAgent(llm)
-agent_4_modification = EventModificationAgent(llm)
-agent_5_preferences = PreferenceApplicationAgent(llm)
+# Initialize Agents with their configured models
+agent_1_identification = EventIdentificationAgent(llm_agent_1)
+agent_2_extraction = FactExtractionAgent(llm_agent_2)
+agent_3_formatting = CalendarFormattingAgent(llm_agent_3)
+agent_4_modification = EventModificationAgent(llm_agent_4)
+agent_5_preferences = PreferenceApplicationAgent(llm_agent_5)
 
 # Initialize input processor factory and register all processors
 input_processor_factory = InputProcessorFactory()
 
-# Register audio processor (Deepgram)
-audio_processor = AudioProcessor(api_key=os.getenv('DEEPGRAM_API_KEY'))
+# Register audio processor (uses config/audio_config.py to determine provider)
+audio_processor = AudioProcessor()
 input_processor_factory.register_processor(InputType.AUDIO, audio_processor)
 
 # Register image processor
@@ -154,7 +158,7 @@ pdf_processor = PDFProcessor()
 input_processor_factory.register_processor(InputType.PDF, pdf_processor)
 
 # Initialize session processor
-session_processor = SessionProcessor(llm, input_processor_factory)
+session_processor = SessionProcessor(llm_session_processor, input_processor_factory)
 
 
 # ============================================================================

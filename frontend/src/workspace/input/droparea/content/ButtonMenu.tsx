@@ -33,12 +33,28 @@ export function ButtonMenu({
       <AnimatePresence>
         {!isDragging && (
           <motion.div
+            key="link-button"
+            className="icon-circle small clickable"
+            initial={{ opacity: 0, x: 40, scale: 0.8 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 40, scale: 0.8 }}
+            transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
+            onClick={onLinkClick}
+            title="Link Input"
+          >
+            <LinkIcon size={24} weight="duotone" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {!isDragging && (
+          <motion.div
             key="image-button"
             className="icon-circle small clickable"
             initial={{ opacity: 0, x: 20, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 20, scale: 0.8 }}
-            transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
+            transition={{ duration: 0.2, ease: "easeOut", delay: 0.08 }}
             onClick={onImageClick}
             title="Upload Image"
           >
@@ -98,7 +114,7 @@ export function ButtonMenu({
             initial={{ opacity: 0, x: -20, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -20, scale: 0.8 }}
-            transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
+            transition={{ duration: 0.2, ease: "easeOut", delay: 0.08 }}
             onClick={onTextClick}
             title="Text Input"
           >
@@ -109,28 +125,12 @@ export function ButtonMenu({
       <AnimatePresence>
         {!isDragging && (
           <motion.div
-            key="link-button"
+            key="email-button"
             className="icon-circle small clickable"
             initial={{ opacity: 0, x: -30, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -30, scale: 0.8 }}
-            transition={{ duration: 0.2, ease: "easeOut", delay: 0.08 }}
-            onClick={onLinkClick}
-            title="Link Input"
-          >
-            <LinkIcon size={24} weight="duotone" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {!isDragging && (
-          <motion.div
-            key="email-button"
-            className="icon-circle small clickable"
-            initial={{ opacity: 0, x: -40, scale: 0.8 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -40, scale: 0.8 }}
-            transition={{ duration: 0.2, ease: "easeOut", delay: 0.12 }}
+            transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
             onClick={onEmailClick}
             title="Email Input"
           >

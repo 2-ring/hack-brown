@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import {
-  X as XIcon,
+  FirstAid as FirstAidIcon,
   Envelope as EnvelopeIcon
 } from '@phosphor-icons/react'
 import { useAuth } from '../../../../auth/AuthContext'
@@ -24,6 +24,19 @@ export function Email({ onClose }: EmailProps) {
 
   return (
     <div className="sound-input-container">
+      {/* Close Button - Outside dock */}
+      <motion.button
+        className="dock-button close external-button"
+        onClick={onClose}
+        title="Close"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+      >
+        <FirstAidIcon size={24} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
+      </motion.button>
+
       <motion.div
         className="email-input-dock"
         initial={{ opacity: 0, scale: 0.9 }}
@@ -31,24 +44,15 @@ export function Email({ onClose }: EmailProps) {
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.3 }}
       >
-        {/* Close Button */}
-        <button
-          className="dock-button close"
-          onClick={onClose}
-          title="Close"
-        >
-          <XIcon size={24} weight="duotone" />
-        </button>
-
-        {/* Email Pill */}
-        <button
-          className="email-pill"
+        {/* Email Display */}
+        <div
+          className="email-display"
           onClick={handlePillClick}
           title="Click to send email"
         >
           <EnvelopeIcon size={20} weight="duotone" className="email-icon" />
           <span className="email-text">{dropCalEmail}</span>
-        </button>
+        </div>
       </motion.div>
     </div>
   )

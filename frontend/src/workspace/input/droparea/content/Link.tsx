@@ -1,18 +1,16 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  X as XIcon,
+  FirstAid as FirstAidIcon,
   ArrowFatUp as ArrowFatUpIcon
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import isURL from 'validator/lib/isURL'
 
 interface LinkProps {
   onClose: () => void
   onSubmit: (url: string) => void
 }
-
-// URL validation regex
-const URL_REGEX = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)(:\d+)?(\/[^\s]*)?$/i
 
 export function Link({ onClose, onSubmit }: LinkProps) {
   const [url, setUrl] = useState('')
@@ -24,7 +22,13 @@ export function Link({ onClose, onSubmit }: LinkProps) {
       setIsValid(false)
       return
     }
-    setIsValid(URL_REGEX.test(trimmed))
+    // Use validator library for URL validation
+    setIsValid(isURL(trimmed, {
+      require_protocol: false,
+      require_valid_protocol: true,
+      protocols: ['http', 'https'],
+      allow_protocol_relative_urls: false
+    }))
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +88,19 @@ export function Link({ onClose, onSubmit }: LinkProps) {
 
   return (
     <div className="sound-input-container">
+      {/* Close Button - Outside dock */}
+      <motion.button
+        className="dock-button close external-button"
+        onClick={onClose}
+        title="Cancel"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+      >
+        <FirstAidIcon size={24} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
+      </motion.button>
+
       <motion.div
         className="sound-input-dock"
         initial={{ opacity: 0, scale: 0.9 }}
@@ -91,15 +108,6 @@ export function Link({ onClose, onSubmit }: LinkProps) {
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.3 }}
       >
-        {/* Close Button */}
-        <button
-          className="dock-button close"
-          onClick={onClose}
-          title="Cancel"
-        >
-          <XIcon size={24} weight="duotone" />
-        </button>
-
         {/* Link Input */}
         <input
           type="text"
@@ -110,17 +118,21 @@ export function Link({ onClose, onSubmit }: LinkProps) {
           placeholder="Paste URL here..."
           autoFocus
         />
-
-        {/* Submit Button */}
-        <button
-          className="dock-button submit"
-          onClick={handleSubmit}
-          title="Submit Link"
-          disabled={!isValid}
-        >
-          <ArrowFatUpIcon size={28} weight="bold" />
-        </button>
       </motion.div>
+
+      {/* Submit Button - Outside dock */}
+      <motion.button
+        className="dock-button submit external-button"
+        onClick={handleSubmit}
+        title="Submit Link"
+        disabled={!isValid}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+      >
+        <ArrowFatUpIcon size={28} weight="bold" />
+      </motion.button>
     </div>
   )
 }

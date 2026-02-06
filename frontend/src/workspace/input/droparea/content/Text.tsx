@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  X as XIcon,
+  FirstAid as FirstAidIcon,
   ArrowFatUp as ArrowFatUpIcon,
   ClipboardText as ClipboardIcon
 } from '@phosphor-icons/react'
@@ -48,14 +48,28 @@ export function Text({ onClose, onSubmit }: TextProps) {
       {/* Paste Button - Outside dock */}
       <IconButton
         icon={ClipboardIcon}
+        iconWeight="duotone"
         onClick={handlePaste}
         title="Paste from Clipboard"
-        className="plus-button-external"
+        className="external-button"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.3 }}
       />
+
+      {/* Close Button - Outside dock */}
+      <motion.button
+        className="dock-button close external-button"
+        onClick={onClose}
+        title="Cancel"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+      >
+        <FirstAidIcon size={24} weight="duotone" style={{ transform: 'rotate(45deg)' }} />
+      </motion.button>
 
       <motion.div
         className="sound-input-dock"
@@ -64,15 +78,6 @@ export function Text({ onClose, onSubmit }: TextProps) {
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.3 }}
       >
-        {/* Close Button */}
-        <button
-          className="dock-button close"
-          onClick={onClose}
-          title="Cancel"
-        >
-          <XIcon size={24} weight="duotone" />
-        </button>
-
         {/* Text Input */}
         <input
           type="text"
@@ -83,17 +88,21 @@ export function Text({ onClose, onSubmit }: TextProps) {
           placeholder="Paste or type event details here..."
           autoFocus
         />
-
-        {/* Submit Button */}
-        <button
-          className="dock-button submit"
-          onClick={handleSubmit}
-          title="Submit Text"
-          disabled={!text.trim()}
-        >
-          <ArrowFatUpIcon size={28} weight="bold" />
-        </button>
       </motion.div>
+
+      {/* Submit Button - Outside dock */}
+      <motion.button
+        className="dock-button submit external-button"
+        onClick={handleSubmit}
+        title="Submit Text"
+        disabled={!text.trim()}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+      >
+        <ArrowFatUpIcon size={28} weight="bold" />
+      </motion.button>
     </div>
   )
 }
