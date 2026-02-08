@@ -33,14 +33,17 @@ export function WordMark({ size = 32, className = '' }: WordMarkProps) {
   return (
     <div
       className={`wordmark ${className}`}
-      style={{ gap: `${gap}px` }}
+      style={{
+        '--wm-mark': `${size}px`,
+        '--wm-word': `${wordHeight}px`,
+        '--wm-gap': `${gap}px`,
+      } as React.CSSProperties}
     >
       <Logo size={size} />
       <img
         src={wordImage}
         alt="DropCal"
         className="wordmark-word"
-        style={{ height: `${wordHeight}px` }}
       />
     </div>
   )

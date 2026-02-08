@@ -481,6 +481,10 @@ function AppContent() {
 
   // Handle new session
   const handleNewSession = useCallback(() => {
+    setAppState('input')
+    setCurrentSession(null)
+    setCalendarEvents([])
+    setIsProcessing(false)
     navigate('/')
     setSidebarOpen(false)
   }, [navigate])

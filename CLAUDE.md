@@ -97,6 +97,24 @@ supabase migration new <name>                  # Create migration
 - **New calendar providers**: Add `auth.py`, `fetch.py`, `create.py` in `backend/calendars/<provider>/`, register in `factory.py`.
 - **New input processors**: Inherit `BaseInputProcessor`, register in `app.py` via `input_processor_factory.register_processor()`.
 
+## Analytics & LLM Observability (PostHog)
+
+PostHog tracks LLM costs, latency, token usage, and product analytics. Project ID: 308768. Dashboard: https://us.posthog.com/project/308768
+
+**How it works:** `config/posthog.py` initializes a PostHog client at startup. Before each agent pipeline run, `set_tracking_context(distinct_id, trace_id)` sets the user/trace for the current thread. Every `chain.invoke()` call passes `config=get_invoke_config()` which attaches a PostHog LangChain `CallbackHandler` that automatically captures model, tokens, cost, and latency.
+
+**Key files:**
+- `backend/config/posthog.py` — client init, thread-local tracking context, `get_invoke_config()` helper
+- Callbacks attached in: `identification.py`, `facts.py`, `modification/agent.py`, `preferences/agent.py`, `pattern_discovery_service.py`
+
+**Env vars:** `POSTHOG_API_KEY` (project key, `phc_` prefix), `POSTHOG_HOST`, `POSTHOG_PERSONAL_API_KEY` (API access, `phx_` prefix), `POSTHOG_PROJECT_ID`
+
+**PostHog API:** Use the personal API key for querying analytics programmatically:
+```bash
+curl -H "Authorization: Bearer $POSTHOG_PERSONAL_API_KEY" \
+  "https://us.posthog.com/api/projects/$POSTHOG_PROJECT_ID/insights/"
+```
+
 ## Gotchas
 
 - `app.py` initializes ALL agents and services at module import time — heavy startup, but needed for Gunicorn preloading.

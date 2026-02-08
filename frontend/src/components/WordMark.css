@@ -1,9 +1,17 @@
 .wordmark {
   display: flex;
   align-items: center;
+  gap: var(--wm-gap, 8px);
+}
+
+.wordmark svg {
+  width: var(--wm-mark, 32px);
+  height: var(--wm-mark, 32px);
+  flex-shrink: 0;
 }
 
 .wordmark-word {
+  height: var(--wm-word, 32px);
   width: auto;
   object-fit: contain;
 }

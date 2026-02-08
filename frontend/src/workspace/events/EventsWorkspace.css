@@ -949,6 +949,12 @@
     font-size: 0.8125rem;
   }
 
+  .header-center .wordmark {
+    --wm-mark: clamp(16px, 5vw, 28px);
+    --wm-word: clamp(16px, 5vw, 28px);
+    --wm-gap: clamp(4px, 1.25vw, 7px);
+  }
+
   .event-confirmation-content {
     padding-top: calc(var(--dock-height) + var(--page-padding-x));
     padding-bottom: calc(var(--dock-height) + var(--page-padding-x));
