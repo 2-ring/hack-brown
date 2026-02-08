@@ -15,6 +15,8 @@ export function MobileInputWorkspace({
 }: BaseInputWorkspaceProps) {
   // Single source of truth — drives button highlighting AND which input is shown
   const [activeInput, setActiveInput] = useState<ActiveInput>(null)
+  const activeInputRef = useRef<ActiveInput>(null)
+  activeInputRef.current = activeInput
   // Each input component registers its submit here; center button calls it
   const submitRef = useRef<(() => void) | null>(null)
 
@@ -44,7 +46,9 @@ export function MobileInputWorkspace({
   }, [])
 
   // After a successful submit, clear the active input
+  // Guard: only submit if audio is still active (prevents stale blob during exit animation)
   const handleAudioSubmit = useCallback((audioBlob: Blob) => {
+    if (activeInputRef.current !== 'audio') return
     onAudioSubmit(audioBlob)
     setActiveInput(null)
   }, [onAudioSubmit])
@@ -96,14 +100,14 @@ export function MobileInputWorkspace({
         {activeInput === 'audio' && (
           <motion.div
             key="audio-input"
-            className="mobile-input-absolute-bottom"
+            className="mobile-input-absolute-bottom mobile-audio-input"
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <Audio
-              onClose={handleCloseInput}
+              onClose={() => setActiveInput('text')}
               onSubmit={handleAudioSubmit}
               onUploadFile={handleAudioFileUpload}
               submitRef={submitRef}
@@ -131,7 +135,7 @@ export function MobileInputWorkspace({
         {activeInput === 'link' && (
           <motion.div
             key="link-input"
-            className="mobile-input-absolute-bottom"
+            className="mobile-input-absolute-bottom mobile-link-input"
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
@@ -148,7 +152,7 @@ export function MobileInputWorkspace({
         {activeInput === 'email' && (
           <motion.div
             key="email-input"
-            className="mobile-input-absolute-bottom"
+            className="mobile-input-absolute-bottom mobile-email-input"
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}

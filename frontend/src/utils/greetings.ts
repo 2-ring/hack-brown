@@ -35,7 +35,7 @@ const GREETINGS: Greeting[] = [
   { text: "What's next?", types: ['afternoon'] },
 
   // Evening greetings
-  { text: "Evening plans", types: ['evening'] },
+  { text: "Evening plans?", types: ['evening'] },
   { text: "Planning tomorrow?", types: ['evening'] },
   { text: "Evening agenda", types: ['evening'] },
   { text: "Wrapping up", types: ['evening'] },

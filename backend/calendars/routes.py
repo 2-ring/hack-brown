@@ -10,6 +10,7 @@ from .service import CalendarService
 from calendars import factory
 from calendars.google import auth as google_auth  # Still needed for legacy token storage endpoint
 from auth.middleware import require_auth
+from database.models import User
 
 # Create blueprint
 calendar_bp = Blueprint('calendar', __name__)

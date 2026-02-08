@@ -1,5 +1,14 @@
 /* Mobile Input Workspace Styles */
 
+/* Enhance button shadows on mobile so they're visible against the page background */
+.icon-circle {
+  box-shadow: 0 2px 12px var(--shadow-medium), 0 0 0 1px var(--shadow-light);
+}
+
+.icon-circle.center {
+  box-shadow: 0 4px 16px var(--shadow-heavy), 0 0 0 1px var(--shadow-medium);
+}
+
 /* Active button state - keep button highlighted when input is open */
 .icon-circle.clickable.active {
   box-shadow: 0 8px 20px var(--shadow-medium),
@@ -32,6 +41,7 @@
 .mobile-input-absolute-bottom .email-input-dock {
   min-width: 0;
   flex: 1;
+  box-shadow: 0 2px 12px var(--shadow-medium), 0 0 0 1px var(--shadow-light);
 }
 
 .mobile-input-absolute-bottom .text-input-field {
@@ -51,4 +61,22 @@
 .mobile-input-absolute-bottom .dock-button.submit,
 .mobile-input-absolute-bottom .close-button {
   display: none;
+}
+
+/* Show close button for audio, link, and email inputs */
+.mobile-audio-input .dock-button.close,
+.mobile-link-input .dock-button.close,
+.mobile-email-input .dock-button.close {
+  display: flex;
+  order: 1;
+}
+
+/* Center the link input text field */
+.mobile-link-input .text-input-field {
+  text-align: center;
+}
+
+/* Enhance dock-button shadows on mobile so they're visible against the page background */
+.mobile-input-absolute-bottom .dock-button {
+  box-shadow: 0 2px 12px var(--shadow-medium), 0 0 0 1px var(--shadow-light);
 }

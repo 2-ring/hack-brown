@@ -57,6 +57,10 @@ from auth.middleware import require_auth
 # Import session processor
 from processing.session_processor import SessionProcessor
 
+# Import processing config and parallel helper
+from config.processing import ProcessingConfig
+from processing.parallel import process_events_parallel, EventProcessingResult
+
 # Import rate limit configuration
 from config.rate_limit import RateLimitConfig
 
@@ -266,6 +270,12 @@ def process_input():
         if not raw_input:
             return jsonify({'error': 'No text provided'}), 400
 
+        if len(raw_input) > ProcessingConfig.MAX_TEXT_INPUT_LENGTH:
+            return jsonify({
+                'error': ProcessingConfig.get_text_limit_error_message(len(raw_input)),
+                'error_type': 'input_too_large'
+            }), 413
+
         metadata = {'source': 'direct_text'}
         requires_vision = False
 
@@ -357,11 +367,9 @@ def process_input():
                 'message': 'No calendar events found in input'
             })
 
-        # Step 4: Extract and format each event with per-event error handling
-        formatted_events = []
-        validation_warnings = []
-
-        for idx, event in enumerate(identification_result.events):
+        # Step 4: Extract and format events in parallel with per-event error handling
+        def process_single_event_api(idx, event):
+            """Process one event through Agent 2 + Agent 3 for /api/process."""
             try:
                 # Agent 2: Fact Extraction
                 try:
@@ -371,39 +379,52 @@ def process_input():
                     )
 
                     # Log soft warning for long titles (>8 words)
+                    warning = None
                     if len(facts.title.split()) > 8:
                         warning = f"Event {idx+1}: Title is long ({len(facts.title.split())} words). Consider shortening."
-                        validation_warnings.append(warning)
                         logger.warning(warning)
 
                 except ValidationError as e:
                     logger.error(f"Validation error in Agent 2 (Extraction) for event {idx+1}: {e}")
-                    validation_warnings.append(
-                        f"Event {idx+1} ('{event.description[:50]}...'): Failed validation - {get_validation_summary(e)}"
+                    return EventProcessingResult(
+                        index=idx, success=False,
+                        warning=f"Event {idx+1} ('{event.description[:50]}...'): Failed validation - {get_validation_summary(e)}"
                     )
-                    continue
 
                 # Agent 3: Calendar Formatting
                 try:
                     calendar_event = agent_3_formatting.execute(facts, user_preferences)
-                    formatted_events.append(calendar_event.model_dump())
+                    return EventProcessingResult(
+                        index=idx, success=True,
+                        calendar_event=calendar_event.model_dump(),
+                        facts=facts,
+                        warning=warning,
+                    )
 
                 except ValidationError as e:
                     logger.error(f"Validation error in Agent 3 (Formatting) for event {idx+1}: {e}")
-                    validation_warnings.append(
-                        f"Event {idx+1} ('{facts.title}'): Calendar formatting failed - {get_validation_summary(e)}"
+                    return EventProcessingResult(
+                        index=idx, success=False,
+                        warning=f"Event {idx+1} ('{facts.title}'): Calendar formatting failed - {get_validation_summary(e)}"
                     )
-                    continue
 
             except Exception as e:
-                # Catch any other unexpected errors for this event
                 logger.error(f"Unexpected error processing event {idx+1}: {e}\n{traceback.format_exc()}")
-                validation_warnings.append(
-                    f"Event {idx+1}: Unexpected error - {str(e)}"
+                return EventProcessingResult(
+                    index=idx, success=False,
+                    warning=f"Event {idx+1}: Unexpected error - {str(e)}",
+                    error=e,
                 )
-                continue
 
-        # Return results with warnings if any events failed
+        batch_result = process_events_parallel(
+            events=identification_result.events,
+            process_single_event=process_single_event_api,
+        )
+
+        formatted_events = [r.calendar_event for r in batch_result.successful_results]
+        validation_warnings = batch_result.warnings
+
+        # Return results with warnings if any events failed or were truncated
         response = {
             'success': True,
             'num_events': len(formatted_events),
@@ -412,7 +433,7 @@ def process_input():
 
         if validation_warnings:
             response['warnings'] = validation_warnings
-            response['message'] = f"Successfully processed {len(formatted_events)} of {len(identification_result.events)} events"
+            response['message'] = f"Successfully processed {len(formatted_events)} of {batch_result.original_count} events"
 
         return jsonify(response)
 
@@ -798,6 +819,12 @@ def create_text_session():
         if not input_text:
             return jsonify({'error': 'No text provided'}), 400
 
+        if len(input_text) > ProcessingConfig.MAX_TEXT_INPUT_LENGTH:
+            return jsonify({
+                'error': ProcessingConfig.get_text_limit_error_message(len(input_text)),
+                'error_type': 'input_too_large'
+            }), 413
+
         # Create session in database
         session = DBSession.create(
             user_id=user_id,
@@ -979,6 +1006,12 @@ def create_guest_text_session():
 
         if not input_content:
             return jsonify({'error': 'No input content provided'}), 400
+
+        if input_type == 'text' and len(input_content) > ProcessingConfig.MAX_TEXT_INPUT_LENGTH:
+            return jsonify({
+                'error': ProcessingConfig.get_text_limit_error_message(len(input_content)),
+                'error_type': 'input_too_large'
+            }), 413
 
         # Generate anonymous guest ID
         guest_id = f"guest_{uuid.uuid4()}"

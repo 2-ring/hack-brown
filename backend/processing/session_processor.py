@@ -5,7 +5,9 @@ Connects the existing LangChain agents to the session workflow.
 
 from typing import Optional
 import os
+import logging
 import threading
+import traceback
 from database.models import Session as DBSession, Event
 from processors.factory import InputProcessorFactory, InputType
 from extraction.agents.identification import EventIdentificationAgent
@@ -14,6 +16,9 @@ from extraction.agents.formatting import CalendarFormattingAgent
 from extraction.agents.standard_formatting import StandardFormattingAgent
 from extraction.title_generator import get_title_generator
 from events.service import EventService
+from processing.parallel import process_events_parallel, EventProcessingResult
+
+logger = logging.getLogger(__name__)
 
 
 class SessionProcessor:
@@ -96,6 +101,85 @@ class SessionProcessor:
             # Don't fail the entire session if title generation fails
             # Just leave it without a title
 
+    def _process_events_for_session(
+        self,
+        session_id: str,
+        user_id: str,
+        events: list,
+        formatting_agent,
+    ) -> None:
+        """
+        Process identified events in parallel and write to DB.
+
+        Shared by process_text_session and process_file_session.
+
+        Args:
+            session_id: Session ID for DB writes
+            user_id: User ID for event ownership
+            events: List of IdentifiedEvent objects from Agent 1
+            formatting_agent: The Agent 3 instance to use
+        """
+        # Lock for thread-safe DB writes (Session.add_event does read-modify-write)
+        db_lock = threading.Lock()
+
+        def process_single_event(idx, event):
+            try:
+                # Agent 2: Fact Extraction
+                facts = self.agent_2_extraction.execute(
+                    event.raw_text,
+                    event.description
+                )
+
+                # Agent 3: Calendar Formatting
+                calendar_event = formatting_agent.execute(facts)
+
+                # DB write with lock to avoid race condition on event_ids
+                with db_lock:
+                    EventService.create_dropcal_event(
+                        user_id=user_id,
+                        session_id=session_id,
+                        summary=calendar_event.summary,
+                        start_time=calendar_event.start.get('dateTime') if calendar_event.start else None,
+                        end_time=calendar_event.end.get('dateTime') if calendar_event.end else None,
+                        start_date=calendar_event.start.get('date') if calendar_event.start else None,
+                        end_date=calendar_event.end.get('date') if calendar_event.end else None,
+                        is_all_day=calendar_event.start.get('date') is not None if calendar_event.start else False,
+                        description=calendar_event.description,
+                        location=calendar_event.location,
+                        calendar_name=calendar_event.calendar,
+                        color_id=calendar_event.colorId,
+                        original_input=event.raw_text,
+                        extracted_facts=facts.model_dump(),
+                        system_suggestion=calendar_event.model_dump()
+                    )
+
+                return EventProcessingResult(
+                    index=idx, success=True,
+                    calendar_event=calendar_event, facts=facts
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Error processing event {idx+1} in session {session_id}: "
+                    f"{e}\n{traceback.format_exc()}"
+                )
+                return EventProcessingResult(
+                    index=idx, success=False,
+                    warning=f"Event {idx+1}: {str(e)}",
+                    error=e,
+                )
+
+        batch_result = process_events_parallel(
+            events=events,
+            process_single_event=process_single_event,
+        )
+
+        if batch_result.warnings:
+            logger.warning(
+                f"Session {session_id}: {len(batch_result.warnings)} event(s) "
+                f"had issues: {batch_result.warnings}"
+            )
+
     def process_text_session(self, session_id: str, text: str) -> None:
         """
         Process a text session through the full AI pipeline.
@@ -139,12 +223,10 @@ class SessionProcessor:
             ]
             DBSession.update_extracted_events(session_id, extracted_events)
 
-            # Step 3: Process each event (Fact Extraction + Formatting)
-            # Get session to access user_id and determine formatting agent
+            # Step 3: Process events in parallel (Fact Extraction + Formatting)
             session = DBSession.get_by_id(session_id)
             user_id = session['user_id']
 
-            # Determine which formatting agent to use
             use_standard_formatting = self._should_use_standard_formatting(session)
             formatting_agent = (
                 self.agent_3_standard_formatting if use_standard_formatting
@@ -154,34 +236,12 @@ class SessionProcessor:
             agent_type = "standard" if use_standard_formatting else "personalized"
             print(f"Using {agent_type} formatting agent for session {session_id}")
 
-            for event in identification_result.events:
-                # Agent 2: Fact Extraction
-                facts = self.agent_2_extraction.execute(
-                    event.raw_text,
-                    event.description
-                )
-
-                # Agent 3: Calendar Formatting (standard or personalized)
-                calendar_event = formatting_agent.execute(facts)
-
-                # Create event in unified events table
-                EventService.create_dropcal_event(
-                    user_id=user_id,
-                    session_id=session_id,
-                    summary=calendar_event.summary,
-                    start_time=calendar_event.start.get('dateTime') if calendar_event.start else None,
-                    end_time=calendar_event.end.get('dateTime') if calendar_event.end else None,
-                    start_date=calendar_event.start.get('date') if calendar_event.start else None,
-                    end_date=calendar_event.end.get('date') if calendar_event.end else None,
-                    is_all_day=calendar_event.start.get('date') is not None if calendar_event.start else False,
-                    description=calendar_event.description,
-                    location=calendar_event.location,
-                    calendar_name=calendar_event.calendar,
-                    color_id=calendar_event.colorId,
-                    original_input=event.raw_text,
-                    extracted_facts=facts.model_dump(),
-                    system_suggestion=calendar_event.model_dump()
-                )
+            self._process_events_for_session(
+                session_id=session_id,
+                user_id=user_id,
+                events=identification_result.events,
+                formatting_agent=formatting_agent,
+            )
 
             # Mark session as complete
             DBSession.update_status(session_id, 'processed')
@@ -264,12 +324,10 @@ class SessionProcessor:
             ]
             DBSession.update_extracted_events(session_id, extracted_events)
 
-            # Step 3: Process each event
-            # Get session to access user_id and determine formatting agent
+            # Step 3: Process events in parallel
             session = DBSession.get_by_id(session_id)
             user_id = session['user_id']
 
-            # Determine which formatting agent to use
             use_standard_formatting = self._should_use_standard_formatting(session)
             formatting_agent = (
                 self.agent_3_standard_formatting if use_standard_formatting
@@ -279,34 +337,12 @@ class SessionProcessor:
             agent_type = "standard" if use_standard_formatting else "personalized"
             print(f"Using {agent_type} formatting agent for session {session_id}")
 
-            for event in identification_result.events:
-                # Agent 2: Fact Extraction
-                facts = self.agent_2_extraction.execute(
-                    event.raw_text,
-                    event.description
-                )
-
-                # Agent 3: Calendar Formatting (standard or personalized)
-                calendar_event = formatting_agent.execute(facts)
-
-                # Create event in unified events table
-                EventService.create_dropcal_event(
-                    user_id=user_id,
-                    session_id=session_id,
-                    summary=calendar_event.summary,
-                    start_time=calendar_event.start.get('dateTime') if calendar_event.start else None,
-                    end_time=calendar_event.end.get('dateTime') if calendar_event.end else None,
-                    start_date=calendar_event.start.get('date') if calendar_event.start else None,
-                    end_date=calendar_event.end.get('date') if calendar_event.end else None,
-                    is_all_day=calendar_event.start.get('date') is not None if calendar_event.start else False,
-                    description=calendar_event.description,
-                    location=calendar_event.location,
-                    calendar_name=calendar_event.calendar,
-                    color_id=calendar_event.colorId,
-                    original_input=event.raw_text,
-                    extracted_facts=facts.model_dump(),
-                    system_suggestion=calendar_event.model_dump()
-                )
+            self._process_events_for_session(
+                session_id=session_id,
+                user_id=user_id,
+                events=identification_result.events,
+                formatting_agent=formatting_agent,
+            )
 
             # Mark session as complete
             DBSession.update_status(session_id, 'processed')

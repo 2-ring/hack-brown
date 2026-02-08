@@ -28,6 +28,8 @@ from .audio import (
     AudioProvider
 )
 
+from .processing import ProcessingConfig
+
 __all__ = [
     # Text/LLM
     'create_text_model',
@@ -40,5 +42,8 @@ __all__ = [
     'get_api_key',
     'get_model',
     'print_audio_config',
-    'AudioProvider'
+    'AudioProvider',
+
+    # Processing limits
+    'ProcessingConfig',
 ]

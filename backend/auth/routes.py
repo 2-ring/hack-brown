@@ -58,7 +58,7 @@ def sync_user_profile():
 
         # Get full user data from Supabase Auth
         supabase = get_supabase()
-        auth_response = supabase.auth.admin.get_user(user_id)
+        auth_response = supabase.auth.admin.get_user_by_id(user_id)
 
         if not auth_response or not auth_response.user:
             return jsonify({'error': 'Failed to get user data from Supabase'}), 500
@@ -78,7 +78,7 @@ def sync_user_profile():
         is_new_user = existing_user is None
 
         if is_new_user:
-            # Create new user
+            # Create new user (upsert to handle race conditions)
             supabase = get_supabase()
             user_data = {
                 "id": user_id,
@@ -93,10 +93,10 @@ def sync_user_profile():
                     "display_name": profile['display_name'],
                     "photo_url": profile['photo_url'],
                     "usage": ["auth"],
-                    "linked_at": supabase.table("users").select("created_at").execute().data[0]['created_at'] if False else "now"
+                    "linked_at": "now"
                 }]
             }
-            response = supabase.table("users").insert(user_data).execute()
+            response = supabase.table("users").upsert(user_data).execute()
             user = response.data[0]
         else:
             # Add provider connection if not already present
