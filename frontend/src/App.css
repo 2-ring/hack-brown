@@ -99,15 +99,19 @@
   color: var(--text-primary);
 }
 
-.greeting-text {
+/* Reusable display text base — Chillax bold, primary color */
+.display-text {
   font-family: var(--display-font), sans-serif;
-  font-size: clamp(24px, 8vw, 44px);
   font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.greeting-text {
+  font-size: clamp(24px, 8vw, 44px);
   line-height: 1;
   text-align: center;
-  color: var(--primary);
-  margin: 0;
-  letter-spacing: -0.02em;
   transform-style: preserve-3d;
   backface-visibility: hidden;
   white-space: nowrap;
@@ -116,14 +120,9 @@
 }
 
 .greeting-hero-text {
-  font-family: var(--display-font), sans-serif;
   font-size: 50px;
-  font-weight: 700;
   line-height: 1.0;
   text-align: center;
-  color: var(--primary);
-  margin: 0;
-  letter-spacing: -0.02em;
   text-shadow: 0 2px 8px rgba(17, 112, 197, 0.15);
 }
 

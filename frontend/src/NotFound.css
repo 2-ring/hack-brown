@@ -15,14 +15,9 @@
 }
 
 .not-found-title {
-  font-family: var(--display-font), sans-serif;
   font-size: 200px;
-  font-weight: 700;
   line-height: 1.0;
   text-align: center;
-  color: var(--primary);
-  margin: 0;
-  letter-spacing: -0.02em;
 }
 
 .not-found-button {

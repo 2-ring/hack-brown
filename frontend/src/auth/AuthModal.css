@@ -21,7 +21,7 @@
   max-width: 440px;
   background-color: var(--background);
   border-radius: 16px;
-  padding: 2.5rem 2rem 2rem;
+  padding: 2rem;
   box-shadow: var(--shadow-heavy);
   border: 1px solid var(--border-light);
   display: flex;
@@ -65,14 +65,16 @@
   color: var(--text-primary);
 }
 
+/* Equal spacers push the heading to the exact vertical center */
+.auth-modal-spacer {
+  flex: 1;
+}
+
 /* Heading */
 .auth-modal-heading {
-  font-family: var(--display-font), sans-serif;
-  font-size: 1.5rem;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-size: 2rem;
   text-align: center;
-  margin: 0;
+  padding: 0 2.5rem;
 }
 
 /* Buttons container */
@@ -109,6 +111,6 @@
   }
 
   .auth-modal-heading {
-    font-size: 1.25rem;
+    font-size: 1.875rem;
   }
 }

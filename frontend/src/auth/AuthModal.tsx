@@ -13,6 +13,7 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose?: () => void;
   showCloseButton?: boolean;
+  heading?: string;
 }
 
 const GoogleIcon = (
@@ -44,6 +45,7 @@ export function AuthModal({
   isOpen,
   onClose,
   showCloseButton = false,
+  heading = "Let's get you signed in.",
 }: AuthModalProps) {
   const { signIn } = useAuth();
 
@@ -64,9 +66,11 @@ export function AuthModal({
           </button>
         )}
 
-        <WordMark size={32} />
+        <WordMark size={24} />
 
-        <h2 className="auth-modal-heading">Let's get you signed in.</h2>
+        <div className="auth-modal-spacer" />
+        <h2 className="display-text auth-modal-heading">{heading}</h2>
+        <div className="auth-modal-spacer" />
 
         <div className="auth-modal-buttons">
           <MenuButton onClick={signIn} icon={GoogleIcon} variant="signin">

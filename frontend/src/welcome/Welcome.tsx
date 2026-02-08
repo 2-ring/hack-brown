@@ -13,7 +13,7 @@ export function Welcome() {
 
       <main className="welcome-main">
         <div className="welcome-content">
-          <h1 className="welcome-hero">
+          <h1 className="display-text welcome-hero">
             Drop anything in.
             <br />
             Get events out.

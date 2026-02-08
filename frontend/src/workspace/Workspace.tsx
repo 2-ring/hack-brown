@@ -89,7 +89,7 @@ export function Workspace({
             <AnimatePresence mode="wait">
               <motion.h1
                 key={greeting}
-                className="greeting-text"
+                className="display-text greeting-text"
                 initial={{ rotateX: 90, opacity: 0 }}
                 animate={{ rotateX: 0, opacity: 1 }}
                 exit={{ rotateX: -90, opacity: 0 }}

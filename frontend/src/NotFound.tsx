@@ -10,7 +10,7 @@ export function NotFound() {
     <div className="not-found">
       <div className="not-found-content">
         <WordMark size={48} />
-        <h1 className="not-found-title">404</h1>
+        <h1 className="display-text not-found-title">404</h1>
         <button onClick={() => navigate('/')} className="not-found-button">
           <Lifebuoy size={22} weight="duotone" />
           Back to safety
