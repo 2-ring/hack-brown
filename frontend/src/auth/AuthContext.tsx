@@ -80,7 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (newSession) {
         const currentUser = await getCurrentUser();
-        setUser(currentUser);
 
         // Only sync profile and store tokens on actual sign-in (not session restore or token refresh)
         if (event === 'SIGNED_IN') {
@@ -111,6 +110,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error('Failed to store Google Calendar tokens:', error);
             }
           }
+
+          // Set user AFTER profile sync and token storage complete
+          // so App.tsx syncCalendar() doesn't fire before tokens exist
+          setUser(currentUser);
+        } else {
+          setUser(currentUser);
         }
       } else {
         setUser(null);

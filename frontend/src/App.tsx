@@ -514,6 +514,8 @@ function AppContent() {
           isGuestMode={isGuestMode}
           calendarEvents={calendarEvents}
           expectedEventCount={calendarEvents.length}
+          inputType={currentSession?.input_type}
+          inputContent={currentSession?.input_content}
           onFileUpload={handleFileUpload}
           onAudioSubmit={handleAudioSubmit}
           onTextSubmit={handleTextSubmit}

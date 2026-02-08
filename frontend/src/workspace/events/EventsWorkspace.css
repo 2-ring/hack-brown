@@ -76,12 +76,21 @@
   gap: 0.5rem;
   flex: 1;
   position: relative;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
-.header-left svg {
-  color: var(--text-secondary);
-  width: 20px;
-  height: 20px;
+/* Input Display - inherits font-size/color from .header-left to match .header-right */
+.input-display {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.input-display svg {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
 }
 
 /* Calendar Selector Button */
@@ -935,13 +944,9 @@
     gap: 0.5rem;
   }
 
+  .header-left,
   .header-right {
     font-size: 0.8125rem;
-  }
-
-  .header-left svg {
-    width: 18px;
-    height: 18px;
   }
 
   .event-confirmation-content {

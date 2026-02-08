@@ -24,6 +24,8 @@ interface WorkspaceProps {
   // Events state props
   calendarEvents: (CalendarEvent | null)[]
   expectedEventCount?: number
+  inputType?: 'text' | 'image' | 'audio' | 'document' | 'email'
+  inputContent?: string
 
   // Handlers
   onFileUpload: (file: File) => void
@@ -44,6 +46,8 @@ export function Workspace({
   isGuestMode,
   calendarEvents,
   expectedEventCount,
+  inputType,
+  inputContent,
   onFileUpload,
   onAudioSubmit,
   onTextSubmit,
@@ -118,6 +122,8 @@ export function Workspace({
           isLoading={appState === 'loading'}
           loadingConfig={Array.isArray(loadingConfig) ? loadingConfig : loadingConfig ? [loadingConfig] : []}
           expectedEventCount={expectedEventCount}
+          inputType={inputType}
+          inputContent={inputContent}
           onConfirm={onConfirm}
         />
       )}

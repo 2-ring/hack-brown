@@ -31,9 +31,11 @@ interface EventsWorkspaceProps {
   isLoading?: boolean
   loadingConfig?: LoadingStateConfig[]
   expectedEventCount?: number
+  inputType?: 'text' | 'image' | 'audio' | 'document' | 'email'
+  inputContent?: string
 }
 
-export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount }: EventsWorkspaceProps) {
+export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent }: EventsWorkspaceProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
@@ -311,9 +313,9 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
         eventCount={events.filter(e => e !== null).length}
         isLoading={isLoading}
         expectedEventCount={expectedEventCount}
-        isLoadingCalendars={isLoadingCalendars}
-        isEditingEvent={editingEventIndex !== null}
         isScrollable={isScrollable}
+        inputType={inputType}
+        inputContent={inputContent}
       />
 
       <div

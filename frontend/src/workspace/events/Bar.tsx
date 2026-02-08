@@ -1,10 +1,59 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon } from '@phosphor-icons/react'
+import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon, Images, Files, Microphone, Pen } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import type { LoadingStateConfig } from './types'
-import { CalendarSelector } from './CalendarSelector'
 import { Tooltip } from '../../components/Tooltip'
 import { WordMark } from '../../components/WordMark'
+
+// ============================================================================
+// INPUT DISPLAY
+// ============================================================================
+
+type InputType = 'text' | 'image' | 'audio' | 'document' | 'email'
+
+interface InputInfo {
+  type: InputType
+  content: string // raw text or file name
+}
+
+function getInputIcon(inputType: InputType) {
+  switch (inputType) {
+    case 'image':
+      return Images
+    case 'document':
+      return Files
+    case 'audio':
+      return Microphone
+    case 'text':
+    case 'email':
+    default:
+      return Pen
+  }
+}
+
+function getInputSummary(input: InputInfo): string {
+  switch (input.type) {
+    case 'image': {
+      return '1 Image'
+    }
+    case 'audio': {
+      return 'Audio'
+    }
+    case 'document': {
+      return '1 File'
+    }
+    case 'text':
+    case 'email':
+    default: {
+      const len = input.content?.length || 0
+      if (len >= 1000) {
+        const k = Math.round(len / 1000)
+        return `${k}k Characters`
+      }
+      return `${len} Characters`
+    }
+  }
+}
 
 // ============================================================================
 // TOP BAR
@@ -14,24 +63,37 @@ interface TopBarProps {
   eventCount: number
   isLoading: boolean
   expectedEventCount?: number
-  isLoadingCalendars?: boolean
-  isEditingEvent?: boolean
   isScrollable?: boolean
+  inputType?: InputType
+  inputContent?: string
 }
 
 export function TopBar({
   eventCount,
   isLoading,
   expectedEventCount,
-  isLoadingCalendars = false,
-  isEditingEvent = false,
-  isScrollable = true
+  isScrollable = true,
+  inputType,
+  inputContent
 }: TopBarProps) {
+  const input: InputInfo | null = inputType
+    ? { type: inputType, content: inputContent || '' }
+    : null
+
+  const InputIcon = input ? getInputIcon(input.type) : null
+
   return (
     <div className={`event-confirmation-header ${!isScrollable ? 'no-scroll' : ''}`}>
       <div className="event-confirmation-header-content">
         <div className="header-left">
-          <CalendarSelector isLoading={isLoadingCalendars} isMinimized={isEditingEvent} />
+          {input && InputIcon ? (
+            <div className="input-display">
+              <InputIcon size={16} weight="regular" />
+              <span className="input-display-text">{getInputSummary(input)}</span>
+            </div>
+          ) : (
+            <Skeleton width={100} height={20} />
+          )}
         </div>
         <div className="header-center">
           <WordMark size={28} />

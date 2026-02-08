@@ -7,7 +7,6 @@ import {
   Calendar,
   CrownSimple,
   SignOut,
-  SignIn,
   MoonStars,
   SunHorizon,
   GlobeSimple,
@@ -26,8 +25,7 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import './SettingsPopup.css';
 import { useState, useEffect, useRef } from 'react';
-import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider, getUserPreferences, sendAppleCredentials, updateUserPreferences } from '../api/backend-client';
-import { Tooltip } from '../components/Tooltip';
+import { getCalendarProviders, setPrimaryCalendarProvider, getUserPreferences, sendAppleCredentials, updateUserPreferences } from '../api/backend-client';
 import { useTheme } from '../theme';
 
 interface SettingsPopupProps {
@@ -67,8 +65,6 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
     preferences.timezone || null
   );
   const [logoutHovered, setLogoutHovered] = useState(false);
-  const [hoveredStar, setHoveredStar] = useState<string | null>(null);
-  const [hoveredSignOut, setHoveredSignOut] = useState<string | null>(null);
 
   // Calendar integrations data from backend
   const [calendars, setCalendars] = useState<CalendarIntegration[]>([]);
@@ -161,24 +157,6 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
       );
     } catch (error) {
       console.error('Failed to set primary provider:', error);
-      // Refresh to get correct state
-      fetchCalendarProviders();
-    }
-  };
-
-  const handleDisconnect = async (provider: string) => {
-    try {
-      await disconnectCalendarProvider(provider);
-      // Optimistically update UI
-      setCalendars((prev) =>
-        prev.map((cal) =>
-          cal.provider === provider
-            ? { ...cal, isConnected: false, email: '', isDefault: false }
-            : cal
-        )
-      );
-    } catch (error) {
-      console.error('Failed to disconnect provider:', error);
       // Refresh to get correct state
       fetchCalendarProviders();
     }
@@ -467,20 +445,18 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                         <span style={{ lineHeight: '1.2' }}>{getProviderName(provider)}</span>
                         <span style={{ fontSize: '11px', color: '#999', lineHeight: '1.2' }}>Connect</span>
                       </div>
-                      <div className="settings-integration-actions">
-                        <Tooltip content={`Connect ${getProviderName(provider)}`}>
-                          <div style={{ display: 'flex' }}>
-                            <SignIn size={20} weight="regular" />
-                          </div>
-                        </Tooltip>
-                      </div>
                     </button>
                   );
                 }
 
-                // Connected: show status and actions
+                // Connected: click row to set as primary
                 return (
-                  <div key={provider} className="settings-popup-item settings-integration-row" style={{ cursor: 'default' }}>
+                  <button
+                    key={provider}
+                    className="settings-popup-item settings-integration-row"
+                    onClick={() => !isDefault && handleSetDefault(provider)}
+                    style={{ cursor: isDefault ? 'default' : 'pointer' }}
+                  >
                     {provider === 'google' && <GoogleLogo size={20} weight="duotone" />}
                     {provider === 'microsoft' && <MicrosoftOutlookLogo size={20} weight="duotone" />}
                     {provider === 'apple' && <AppleLogo size={20} weight="duotone" />}
@@ -488,33 +464,12 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                       <span style={{ lineHeight: '1.2' }}>{getProviderName(provider)}</span>
                       <span style={{ fontSize: '11px', color: '#999', lineHeight: '1.2' }}>{calendar?.email || userEmail}</span>
                     </div>
-                    <div className="settings-integration-actions">
-                      <Tooltip content={isDefault ? 'Primary calendar' : 'Set as primary'}>
-                        <button
-                          style={{ background: 'none', border: 'none', padding: 0, cursor: isDefault ? 'default' : 'pointer', display: 'flex' }}
-                          onClick={() => !isDefault && handleSetDefault(provider)}
-                          onMouseEnter={() => setHoveredStar(provider)}
-                          onMouseLeave={() => setHoveredStar(null)}
-                          disabled={isDefault}
-                        >
-                          <Star size={20} weight={isDefault || hoveredStar === provider ? 'duotone' : 'regular'} style={{ color: '#666' }} />
-                        </button>
-                      </Tooltip>
-                      {/* Only show disconnect for non-Google providers (Google is the auth provider) */}
-                      {!isGoogleAuth && (
-                        <Tooltip content="Disconnect">
-                          <button
-                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
-                            onClick={() => handleDisconnect(provider)}
-                            onMouseEnter={() => setHoveredSignOut(provider)}
-                            onMouseLeave={() => setHoveredSignOut(null)}
-                          >
-                            <SignOut size={20} weight={hoveredSignOut === provider ? 'bold' : 'regular'} style={{ color: '#d32f2f' }} />
-                          </button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </div>
+                    {isDefault && (
+                      <div className="settings-integration-actions">
+                        <Star size={20} weight="duotone" style={{ color: '#666' }} />
+                      </div>
+                    )}
+                  </button>
                 );
               })}
             </>
