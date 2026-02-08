@@ -60,11 +60,15 @@ from processing.session_processor import SessionProcessor
 # Import processing config and parallel helper
 from config.processing import ProcessingConfig
 from processing.parallel import process_events_parallel, EventProcessingResult
+from config.posthog import init_posthog, set_tracking_context
 
 # Import rate limit configuration
 from config.rate_limit import RateLimitConfig
 
 load_dotenv()
+
+# Initialize PostHog analytics
+init_posthog()
 
 app = Flask(__name__)
 
@@ -337,6 +341,12 @@ def process_input():
     except Exception as e:
         print(f"Note: Could not load user timezone: {e}")
 
+    # Set PostHog tracking context for this request
+    set_tracking_context(
+        distinct_id=locals().get('user_id', 'guest'),
+        trace_id=f"process-{uuid.uuid4().hex[:8]}"
+    )
+
     # Step 3: Run full agent pipeline with validation error handling
     try:
         # Agent 1: Event Identification
@@ -464,6 +474,9 @@ def edit_event():
         return jsonify({'error': 'No edit instruction provided'}), 400
 
     try:
+        # Set PostHog tracking context
+        set_tracking_context(distinct_id='anonymous', trace_id=f"edit-{uuid.uuid4().hex[:8]}")
+
         # Use the Event Modification Agent
         result = agent_4_modification.execute(original_event, edit_instruction)
 
@@ -579,6 +592,9 @@ def apply_preferences_endpoint():
 
         # Convert dict to ExtractedFacts model
         facts = ExtractedFacts(**facts_dict)
+
+        # Set PostHog tracking context
+        set_tracking_context(distinct_id=user_id, trace_id=f"prefs-{uuid.uuid4().hex[:8]}")
 
         # Try to load new patterns first (preferred)
         patterns = personalization_service.load_patterns(user_id)
@@ -739,6 +755,9 @@ def discover_patterns():
         print(f"\n{'='*60}")
         print(f"PATTERN DISCOVERY for user {user_id}")
         print(f"{'='*60}")
+
+        # Set PostHog tracking context
+        set_tracking_context(distinct_id=user_id, trace_id=f"discover-{uuid.uuid4().hex[:8]}")
 
         comprehensive_data = data_collection_service.collect_comprehensive_data(
             user_id=user_id,

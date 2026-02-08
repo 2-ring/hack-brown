@@ -10,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from core.base_agent import BaseAgent
 from extraction.models import CalendarEvent
+from config.posthog import get_invoke_config
 
 
 class EventModificationAgent(BaseAgent):
@@ -70,6 +71,6 @@ class EventModificationAgent(BaseAgent):
         result = chain.invoke({
             "original_event": str(original_event),
             "edit_instruction": edit_instruction
-        })
+        }, config=get_invoke_config())
 
         return result

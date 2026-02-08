@@ -15,6 +15,7 @@ from extraction.agents.facts import EventExtractionAgent
 from extraction.title_generator import get_title_generator
 from events.service import EventService
 from processing.parallel import process_events_parallel, EventProcessingResult
+from config.posthog import set_tracking_context
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,13 @@ class SessionProcessor:
             # Update status to processing
             DBSession.update_status(session_id, 'processing')
 
+            # Set PostHog tracking for this background thread
+            session = DBSession.get_by_id(session_id)
+            set_tracking_context(
+                distinct_id=session.get('user_id', 'anonymous') if session else 'anonymous',
+                trace_id=session_id
+            )
+
             # Launch title generation in background (runs in parallel with pipeline)
             title_thread = threading.Thread(
                 target=self._generate_and_update_title,
@@ -232,6 +240,13 @@ class SessionProcessor:
         try:
             # Update status to processing
             DBSession.update_status(session_id, 'processing')
+
+            # Set PostHog tracking for this background thread
+            session_data = DBSession.get_by_id(session_id)
+            set_tracking_context(
+                distinct_id=session_data.get('user_id', 'anonymous') if session_data else 'anonymous',
+                trace_id=session_id
+            )
 
             # Determine if vision is needed
             requires_vision = file_type in ['image', 'pdf']

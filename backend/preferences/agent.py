@@ -14,6 +14,7 @@ from core.base_agent import BaseAgent
 from extraction.models import ExtractedFacts
 from preferences.models import UserPreferences
 from preferences.similarity import ProductionSimilaritySearch
+from config.posthog import get_invoke_config
 
 
 class PreferenceApplicationAgent(BaseAgent):
@@ -124,7 +125,7 @@ Return the enhanced ExtractedFacts with calendar, colorId, and formatted title."
 
         # Run preference application (single LLM call)
         chain = preference_prompt | self.llm
-        result = chain.invoke({})
+        result = chain.invoke({}, config=get_invoke_config())
 
         return result
 

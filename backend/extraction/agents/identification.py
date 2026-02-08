@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from core.base_agent import BaseAgent
 from extraction.models import IdentificationResult
+from config.posthog import get_invoke_config
 
 
 class EventIdentificationAgent(BaseAgent):
@@ -77,7 +78,7 @@ class EventIdentificationAgent(BaseAgent):
         ])
 
         chain = identification_prompt | self.llm
-        result = chain.invoke({"input": raw_input})
+        result = chain.invoke({"input": raw_input}, config=get_invoke_config())
 
         return result
 
@@ -132,7 +133,7 @@ class EventIdentificationAgent(BaseAgent):
             {"role": "user", "content": content}
         ]
 
-        result = self.llm.invoke(messages)
+        result = self.llm.invoke(messages, config=get_invoke_config())
         return result
 
     def _execute_vision_openai(self, metadata: Dict[str, Any], system_prompt: str) -> IdentificationResult:
@@ -172,5 +173,5 @@ class EventIdentificationAgent(BaseAgent):
             {"role": "user", "content": content}
         ]
 
-        result = self.llm.invoke(messages)
+        result = self.llm.invoke(messages, config=get_invoke_config())
         return result

@@ -17,6 +17,7 @@ from collections import defaultdict, Counter
 import json
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
+from config.posthog import get_invoke_config
 
 
 class PatternDiscoveryService:
@@ -319,7 +320,7 @@ Return structured JSON."""
             examples: List[str]
             never_contains: List[str]
 
-        result = self.llm.with_structured_output(CategorySummary).invoke(prompt)
+        result = self.llm.with_structured_output(CategorySummary).invoke(prompt, config=get_invoke_config())
 
         return result.model_dump()
 

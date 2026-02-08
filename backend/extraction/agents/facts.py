@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from core.base_agent import BaseAgent
 from extraction.models import CalendarEvent
+from config.posthog import get_invoke_config
 
 
 class EventExtractionAgent(BaseAgent):
@@ -64,7 +65,7 @@ class EventExtractionAgent(BaseAgent):
         result = chain.invoke({
             "description": description,
             "text": combined_text
-        })
+        }, config=get_invoke_config())
 
         return result
 
