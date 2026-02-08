@@ -1104,8 +1104,8 @@ def create_guest_text_session():
                 'error_type': 'input_too_large'
             }), 413
 
-        # Generate anonymous guest ID
-        guest_id = f"guest_{uuid.uuid4()}"
+        # Generate anonymous guest ID (must be valid UUID for DB column)
+        guest_id = str(uuid.uuid4())
 
         # Create session in database with guest_mode=True
         session = DBSession.create(
@@ -1165,8 +1165,8 @@ def upload_guest_file():
                 'error': f'Invalid file type. Expected {file_type}, got {file.content_type}'
             }), 400
 
-        # Generate anonymous guest ID for storage path
-        guest_id = f"guest_{uuid.uuid4()}"
+        # Generate anonymous guest ID (must be valid UUID for DB column)
+        guest_id = str(uuid.uuid4())
 
         # Upload to Supabase Storage (uses guest_id as user_id)
         file_path = FileStorage.upload_file(

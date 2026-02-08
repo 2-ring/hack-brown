@@ -301,5 +301,3 @@ class CalendarEvent(BaseModel):
                             raise ValueError(f"Invalid BYDAY code '{day}', must be one of {valid_days}")
 
         return v
-
-        return v

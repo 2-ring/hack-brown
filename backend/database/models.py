@@ -1285,7 +1285,7 @@ class Event:
             .eq("provider", provider)\
             .eq("provider_event_id", provider_event_id)\
             .is_("deleted_at", None)\
-            .maybeSingle().execute()
+            .maybe_single().execute()
         return response.data
 
     @staticmethod
