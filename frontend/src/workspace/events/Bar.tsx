@@ -48,9 +48,9 @@ function getInputSummary(input: InputInfo): string {
       const len = input.content?.length || 0
       if (len >= 1000) {
         const k = Math.round(len / 1000)
-        return `${k}k Characters`
+        return `${k}k Chars`
       }
-      return `${len} Characters`
+      return `${len} Chars`
     }
   }
 }

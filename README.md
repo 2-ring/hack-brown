@@ -1,99 +1,62 @@
-# Project Setup
+# DropCal
 
-A full-stack application with a TypeScript React frontend (Vite) and a Flask Python backend.
+Turn messy text, images, audio, PDFs, and emails into calendar events. Drop it in, get events out.
 
-## Project Structure
+**Production:** [dropcal.ai](https://dropcal.ai) | API at api.dropcal.ai
+
+## Stack
+
+Three-app monorepo:
+
+- `backend/` — Flask API, multi-agent LangChain pipeline, Supabase PostgreSQL
+- `frontend/` — React + Vite + TypeScript
+- `mobile/` — Expo / React Native
+
+Calendar integrations: Google, Microsoft Outlook, Apple (CalDAV).
+
+## Development
+
+Backend (port 5000):
 
 ```
-.
-├── frontend/          # React + TypeScript + Vite
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.ts
-└── backend/           # Flask Python API
-    ├── app.py
-    ├── requirements.txt
-    └── venv/
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python app.py
 ```
 
-## Prerequisites
+Frontend (port 5173):
 
-- Node.js (v18 or higher)
-- Python 3.8+
-- npm or yarn
+```
+cd frontend
+npm install
+npm run dev
+```
 
-## Setup Instructions
+## Deploy
 
-### Backend Setup
+Backend to Elastic Beanstalk:
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+```
+cd backend && eb deploy dropcal-prod
+```
 
-2. Create and activate virtual environment (if not already created):
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+Frontend to S3:
 
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```
+cd frontend && npm run build && aws s3 sync dist/ s3://dropcal-frontend --delete
+```
 
-4. Run the Flask server:
-   ```bash
-   python app.py
-   ```
+Database migrations:
 
-   The backend will run on `http://localhost:5000`
+```
+supabase db push
+supabase migration new <name>
+```
 
-### Frontend Setup
+## Tests
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies (if not already installed):
-   ```bash
-   npm install
-   ```
-
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-   The frontend will run on `http://localhost:5173`
-
-## Running the Application
-
-1. Start the backend server first (in one terminal):
-   ```bash
-   cd backend
-   source venv/bin/activate
-   python app.py
-   ```
-
-2. Start the frontend development server (in another terminal):
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-3. Open your browser and navigate to `http://localhost:5173`
-
-4. Click the "Test Backend Connection" button to verify the frontend can communicate with the backend
-
-## API Endpoints
-
-- `GET /api/health` - Health check endpoint
-- `GET /api/hello` - Returns a hello message
-
-## Development Notes
-
-- The frontend is configured to proxy API requests to the backend (see [vite.config.ts](frontend/vite.config.ts))
-- CORS is enabled on the backend using Flask-CORS
-- The backend runs in debug mode for development
+```
+cd backend && pytest tests/
+cd frontend && npx tsc --noEmit
+```

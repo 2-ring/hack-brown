@@ -103,11 +103,17 @@ PostHog tracks LLM costs, latency, token usage, and product analytics. Project I
 
 **How it works:** `config/posthog.py` initializes a PostHog client at startup. Before each agent pipeline run, `set_tracking_context(distinct_id, trace_id)` sets the user/trace for the current thread. Every `chain.invoke()` call passes `config=get_invoke_config()` which attaches a PostHog LangChain `CallbackHandler` that automatically captures model, tokens, cost, and latency.
 
-**Key files:**
+**Backend (LLM observability):**
 - `backend/config/posthog.py` — client init, thread-local tracking context, `get_invoke_config()` helper
 - Callbacks attached in: `identification.py`, `facts.py`, `modification/agent.py`, `preferences/agent.py`, `pattern_discovery_service.py`
 
-**Env vars:** `POSTHOG_API_KEY` (project key, `phc_` prefix), `POSTHOG_HOST`, `POSTHOG_PERSONAL_API_KEY` (API access, `phx_` prefix), `POSTHOG_PROJECT_ID`
+**Frontend (product analytics):**
+- `frontend/src/main.tsx` — PostHog init + `PostHogProvider` wrapper. Autocapture, pageviews, and pageleave enabled.
+- `frontend/src/auth/AuthContext.tsx` — `posthog.identify()` on sign-in/session restore, `posthog.reset()` on sign-out. Links frontend events to backend LLM costs by shared user ID.
+
+**Env vars:**
+- Backend: `POSTHOG_API_KEY`, `POSTHOG_HOST`, `POSTHOG_PERSONAL_API_KEY`, `POSTHOG_PROJECT_ID`
+- Frontend: `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`
 
 **PostHog API:** Use the personal API key for querying analytics programmatically:
 ```bash
@@ -127,5 +133,6 @@ curl -H "Authorization: Bearer $POSTHOG_PERSONAL_API_KEY" \
 
 - Only create markdown files for genuinely useful information. No completion reports, summaries, or self-evident docs.
 - AWS CLI (`aws`) and Supabase CLI (`supabase`) are installed and authenticated. Use them directly.
+- PostHog personal API key (`POSTHOG_PERSONAL_API_KEY`) is set in `backend/.env`. Use it to query the PostHog API directly (events, insights, dashboards, feature flags, experiments) as needed.
 - Don't modify `utils/encryption.py` or token encryption logic without explicit request.
 - When adding new endpoints, follow the blueprint pattern (see `auth/routes.py`, `calendars/routes.py`, `sessions/routes.py`).

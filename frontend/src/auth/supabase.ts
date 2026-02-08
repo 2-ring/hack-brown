@@ -25,7 +25,7 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       scopes: 'email profile openid https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
-      redirectTo: 'https://dropcal.ai',
+      redirectTo: window.location.origin,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',

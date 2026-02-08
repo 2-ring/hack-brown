@@ -73,7 +73,6 @@ function AppContent() {
   // Guest mode state
   const [isGuestMode, setIsGuestMode] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [authModalReason, setAuthModalReason] = useState<'calendar' | 'session_limit' | 'view_session'>('calendar')
 
   // Check guest mode on mount
   useEffect(() => {
@@ -120,7 +119,6 @@ function AppContent() {
 
       if (!user && !isGuestSession) {
         // Not authenticated and not their guest session
-        setAuthModalReason('view_session')
         setShowAuthModal(true)
         navigate('/')
         return
@@ -167,7 +165,6 @@ function AppContent() {
 
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           if (errorMessage.includes('authentication') || errorMessage.includes('requires authentication')) {
-            setAuthModalReason('view_session')
             setShowAuthModal(true)
           } else {
             toast.error('Failed to Load Session', {
@@ -250,7 +247,6 @@ function AppContent() {
 
     // Check if guest and at limit
     if (!user && GuestSessionManager.hasReachedLimit()) {
-      setAuthModalReason('session_limit')
       setShowAuthModal(true)
       return
     }
@@ -359,7 +355,6 @@ function AppContent() {
 
     // Check if guest and at limit
     if (!user && GuestSessionManager.hasReachedLimit()) {
-      setAuthModalReason('session_limit')
       setShowAuthModal(true)
       return
     }
@@ -496,7 +491,6 @@ function AppContent() {
   const handleAddToCalendar = useCallback(async (editedEvents?: CalendarEvent[]) => {
     // Require auth for calendar operations
     if (!user) {
-      setAuthModalReason('calendar')
       setShowAuthModal(true)
       return
     }
@@ -575,7 +569,6 @@ function AppContent() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        reason={authModalReason}
       />
       <Menu
         isOpen={sidebarOpen}

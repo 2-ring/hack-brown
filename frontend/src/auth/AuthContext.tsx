@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import posthog from 'posthog-js';
 import {
   getSession,
   getCurrentUser,
@@ -56,6 +57,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (currentSession) {
           const currentUser = await getCurrentUser();
           setUser(currentUser);
+
+          // Identify returning user in PostHog
+          if (currentUser) {
+            posthog.identify(currentUser.id, {
+              email: currentUser.email,
+              name: currentUser.user_metadata?.full_name,
+            });
+          }
 
           // Fetch preferences from backend profile
           try {
@@ -123,6 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Set user AFTER profile sync and token storage complete
           // so App.tsx syncCalendar() doesn't fire before tokens exist
           setUser(currentUser);
+
+          // Identify user in PostHog for analytics attribution
+          if (currentUser) {
+            posthog.identify(currentUser.id, {
+              email: currentUser.email,
+              name: currentUser.user_metadata?.full_name,
+            });
+          }
         } else {
           setUser(currentUser);
         }
@@ -130,6 +147,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setPreferences({});
         setPrimaryCalendarProvider(null);
+
+        // Reset PostHog identity on sign-out
+        posthog.reset();
       }
 
       setLoading(false);
