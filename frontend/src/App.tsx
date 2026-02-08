@@ -7,6 +7,8 @@ import { Menu } from './menu/Menu'
 import { Plans } from './payment/Plans'
 import { Welcome } from './welcome/Welcome'
 import { NotFound } from './NotFound'
+import { Privacy } from './legal/Privacy'
+import { Terms } from './legal/Terms'
 import { useAuth } from './auth/AuthContext'
 import { GuestSessionManager } from './auth/GuestSessionManager'
 import { AuthModal } from './auth/AuthModal'
@@ -529,6 +531,8 @@ function App() {
         <Route path="/s/:sessionId" element={<AppContent />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/welcome" element={<Welcome />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </NotificationProvider>

@@ -104,11 +104,11 @@ echo ""
 echo "⚙️  Configuration Checks"
 echo "─────────────────────────────────────────"
 
-# Check render.yaml exists
-if [ -f "render.yaml" ]; then
-    print_status 0 "render.yaml exists"
+# Check EB config exists
+if [ -f "backend/.elasticbeanstalk/config.yml" ]; then
+    print_status 0 "EB config exists"
 else
-    print_status 1 "render.yaml missing"
+    print_status 1 "EB config missing"
 fi
 
 # Check wsgi.py exists

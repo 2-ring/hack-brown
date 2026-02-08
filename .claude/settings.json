@@ -1,7 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(RENDER_API_KEY=rnd_3BQxQBjzcgww2XP2IDxariEq1Ar6 render workspace current:*)"
-    ]
+    "allow": []
   }
 }
