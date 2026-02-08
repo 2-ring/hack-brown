@@ -1,9 +1,10 @@
 """
-Agent 5: Preference Application
+Agent 3: Personalization
 
-Applies user's learned preferences to extracted facts using:
+Applies user's learned preferences to a CalendarEvent using:
 - Discovered patterns (calendar summaries, color patterns, style stats)
 - Few-shot learning from similar historical events
+- Correction learning from past user edits
 """
 
 from langchain_anthropic import ChatAnthropic
@@ -11,65 +12,53 @@ from langchain_core.prompts import ChatPromptTemplate
 from typing import List, Dict, Optional
 
 from core.base_agent import BaseAgent
-from extraction.models import ExtractedFacts
+from extraction.models import CalendarEvent
 from preferences.models import UserPreferences
 from preferences.similarity import ProductionSimilaritySearch
 from config.posthog import get_invoke_config
 
 
-class PreferenceApplicationAgent(BaseAgent):
+class PersonalizationAgent(BaseAgent):
     """
-    Single agent that handles:
-    - Calendar selection
-    - Color selection
-    - Title formatting
+    Personalizes a CalendarEvent to match the user's style.
+    Handles calendar selection, color selection, and title formatting.
 
     Uses discovered patterns + few-shot examples for personalization.
     """
 
     def __init__(self, llm: ChatAnthropic):
-        """
-        Initialize Preference Application Agent.
-
-        Args:
-            llm: Language model instance
-        """
-        super().__init__("Agent5_PreferenceApplication")
-        self.llm = llm.with_structured_output(ExtractedFacts)
+        super().__init__("Agent3_Personalization")
+        self.llm = llm.with_structured_output(CalendarEvent)
         self.system_prompt = self.load_prompt("preferences.txt")
-        self.similarity_search = None  # Initialized when historical events are provided
+        self.similarity_search = None
 
     def execute(
         self,
-        facts: ExtractedFacts,
+        event: CalendarEvent,
         discovered_patterns: Optional[Dict] = None,
         user_preferences: Optional[UserPreferences] = None,
         historical_events: Optional[List[Dict]] = None,
         user_id: Optional[str] = None
-    ) -> ExtractedFacts:
+    ) -> CalendarEvent:
         """
-        Apply user preferences to enhance extracted facts.
+        Apply user preferences to personalize a calendar event.
 
         Args:
-            facts: ExtractedFacts from Agent 2
+            event: CalendarEvent from Agent 2
             discovered_patterns: Patterns from PatternDiscoveryService (preferred)
-                - category_patterns: Dict[category_id, summary]
-                - style_stats: Dict
-            user_preferences: Legacy UserPreferences (fallback, optional)
+            user_preferences: Legacy UserPreferences (fallback)
             historical_events: User's historical events for similarity search
             user_id: User UUID (for querying corrections)
 
         Returns:
-            Enhanced ExtractedFacts with category + formatting applied
-            (Colors are automatically applied based on category during write)
+            Personalized CalendarEvent with calendar, colorId, and styled title
         """
-        if not facts:
-            raise ValueError("No facts provided for preference application")
+        if not event:
+            raise ValueError("No event provided for personalization")
 
-        # Prefer discovered_patterns, fall back to user_preferences
         if not discovered_patterns and not user_preferences:
-            self.log_info("No patterns or preferences available, returning facts unchanged")
-            return facts
+            self.log_info("No patterns or preferences available, returning event unchanged")
+            return event
 
         # Build preference context for LLM
         if discovered_patterns:
@@ -81,11 +70,11 @@ class PreferenceApplicationAgent(BaseAgent):
 
         # Build few-shot examples from similar historical events
         few_shot_examples = self._build_few_shot_examples_from_history(
-            facts, historical_events
+            event, historical_events
         )
 
         # Build correction learning context (learn from past mistakes)
-        correction_context = self._build_correction_learning_context(facts, user_id)
+        correction_context = self._build_correction_learning_context(event, user_id)
 
         # Combine into full prompt
         full_system_prompt = f"""{self.system_prompt}
@@ -97,33 +86,31 @@ class PreferenceApplicationAgent(BaseAgent):
 {correction_context}
 
 IMPORTANT - TASK OVERVIEW:
-You must format this event to match the user's personal style:
+You must personalize this event to match the user's style:
 1. SELECT CALENDAR: Based on calendar patterns and similar examples
 2. SELECT COLOR: Based on color patterns and similar examples
 3. FORMAT TITLE: Match capitalization, length, and structure from similar examples
-4. SET ALL FIELDS: Include all event details (start, end, duration, location, description)
+4. PRESERVE ALL FIELDS: Keep start, end, location, description, recurrence, attendees, meeting_url intact
 
 CALENDAR SELECTION:
 - Review calendar patterns above - which calendar fits this event type?
 - Check which calendars similar examples belong to
 - If a pattern clearly matches, assign that calendar
-- If no pattern matches or confidence is low, use "Default" (primary calendar)
-- Always include the calendar field in your response
+- If no pattern matches or confidence is low, leave calendar as null (primary)
 
-Think step-by-step, then output the complete enhanced event.
+Think step-by-step, then output the complete personalized event.
 """
 
         preference_prompt = ChatPromptTemplate.from_messages([
             ("system", full_system_prompt),
-            ("human", f"""NEW EVENT TO FORMAT:
+            ("human", f"""EVENT TO PERSONALIZE:
 
-{facts.model_dump_json(indent=2)}
+{event.model_dump_json(indent=2)}
 
-Apply the user's patterns and style to format this event completely.
-Return the enhanced ExtractedFacts with calendar, colorId, and formatted title.""")
+Apply the user's patterns and style. Set calendar, colorId, and format the title.
+Return the complete CalendarEvent with all fields preserved.""")
         ])
 
-        # Run preference application (single LLM call)
         chain = preference_prompt | self.llm
         result = chain.invoke({}, config=get_invoke_config())
 
@@ -317,21 +304,20 @@ USER SETTINGS:
 
     def _build_few_shot_examples_from_history(
         self,
-        query_facts: ExtractedFacts,
+        event: CalendarEvent,
         historical_events: Optional[List[Dict]] = None
     ) -> str:
         """
         Build few-shot examples from similar historical events using semantic similarity.
 
         Args:
-            query_facts: The facts we're trying to enhance
+            event: The CalendarEvent we're trying to personalize
             historical_events: User's historical calendar events
 
         Returns:
             Formatted few-shot examples string
         """
         if not historical_events or len(historical_events) < 3:
-            # Fallback to static examples if not enough history
             return self._build_few_shot_examples()
 
         # Build similarity index if not already built
@@ -340,11 +326,11 @@ USER SETTINGS:
             self.similarity_search = ProductionSimilaritySearch()
             self.similarity_search.build_index(historical_events)
 
-        # Create query event from extracted facts
+        # Create query event from CalendarEvent
         query_event = {
-            'title': query_facts.summary or '',
-            'all_day': query_facts.time is None,
-            'calendar_name': getattr(query_facts, 'calendar', 'Default')
+            'title': event.summary or '',
+            'all_day': event.start.date is not None,
+            'calendar_name': event.calendar or 'Default'
         }
 
         # Find similar events with diversity
@@ -403,17 +389,14 @@ match the user's discovered patterns and similar events.
 
     def _build_correction_learning_context(
         self,
-        facts: ExtractedFacts,
+        event: CalendarEvent,
         user_id: Optional[str]
     ) -> str:
         """
         Build correction learning context from past user corrections.
 
-        Queries corrections where Agent 5 saw similar facts and user made changes.
-        Shows what was wrong and what user wanted instead.
-
         Args:
-            facts: Current ExtractedFacts Agent 5 is processing
+            event: Current CalendarEvent being personalized
             user_id: User UUID for querying their corrections
 
         Returns:
@@ -425,8 +408,8 @@ match the user's discovered patterns and similar events.
         try:
             from feedback.correction_query_service import CorrectionQueryService
 
-            # Convert facts to dict for querying
-            facts_dict = facts.model_dump()
+            # Convert event to dict for querying
+            facts_dict = event.model_dump()
 
             # Query corrections (Agent 5 use case)
             query_service = CorrectionQueryService()

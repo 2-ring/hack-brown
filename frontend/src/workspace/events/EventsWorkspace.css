@@ -363,7 +363,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  background-color: var(--background);
   border-radius: 16px;
   box-shadow: var(--shadow-light);
   border: 1px solid var(--border-light);
@@ -942,6 +941,7 @@
   }
 
   .event-confirmation-header-content {
+    position: relative;
     height: var(--dock-height);
     padding: 0 1rem;
     font-size: 0.8125rem;
@@ -953,10 +953,22 @@
     font-size: 0.8125rem;
   }
 
+  .header-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
   .header-center .wordmark {
-    --wm-mark: clamp(16px, 5vw, 28px);
-    --wm-word: clamp(16px, 5vw, 28px);
-    --wm-gap: clamp(4px, 1.25vw, 7px);
+    --wm-mark: clamp(14px, 4vw, 22px);
+    --wm-word: clamp(14px, 4vw, 22px);
+    --wm-gap: clamp(3px, 1vw, 5px);
+  }
+
+  .header-wordmark .wordmark-word {
+    display: none;
   }
 
   .header-back-button {
@@ -980,6 +992,7 @@
 
   .event-confirmation-list {
     gap: 0.625rem;
+    padding-left: 0;
   }
 
   .event-confirmation-card {
@@ -999,6 +1012,12 @@
     font-size: 0.875rem;
   }
 
+  .event-confirmation-card-time-inline {
+    display: block;
+    margin-left: 0;
+    font-size: 0.8125rem;
+  }
+
   .event-confirmation-card-description {
     font-size: 0.875rem;
   }
@@ -1014,8 +1033,8 @@
 
   /* Date Group Mobile */
   .event-date-group {
-    grid-template-columns: 50px 1fr;
-    gap: 0.5rem;
+    grid-template-columns: 40px 1fr;
+    gap: 0.375rem;
   }
 
   /* Date Header Mobile */

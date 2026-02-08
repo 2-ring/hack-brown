@@ -12,8 +12,10 @@ from database.models import Session as DBSession, Event
 from processors.factory import InputProcessorFactory, InputType
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import EventExtractionAgent
+from preferences.agent import PersonalizationAgent
 from extraction.title_generator import get_title_generator
 from events.service import EventService
+from preferences.service import PersonalizationService
 from processing.parallel import process_events_parallel, EventProcessingResult
 from config.posthog import set_tracking_context
 
@@ -23,13 +25,14 @@ logger = logging.getLogger(__name__)
 class SessionProcessor:
     """Processes sessions through the full AI pipeline."""
 
-    def __init__(self, llm, input_processor_factory: InputProcessorFactory):
+    def __init__(self, llm, input_processor_factory: InputProcessorFactory, llm_personalization=None):
         """
         Initialize the session processor with agents.
 
         Args:
             llm: LangChain LLM instance for agents
             input_processor_factory: Factory for processing files
+            llm_personalization: Optional separate LLM for personalization agent
         """
         self.llm = llm
         self.input_processor_factory = input_processor_factory
@@ -37,6 +40,10 @@ class SessionProcessor:
         # Initialize agents
         self.agent_1_identification = EventIdentificationAgent(llm)
         self.agent_2_extraction = EventExtractionAgent(llm)
+        self.agent_3_personalization = PersonalizationAgent(llm_personalization or llm)
+
+        # Services
+        self.personalization_service = PersonalizationService()
 
         # Initialize title generator
         self.title_generator = get_title_generator()
@@ -75,12 +82,36 @@ class SessionProcessor:
             # Don't fail the entire session if title generation fails
             # Just leave it without a title
 
+    def _load_personalization_context(self, user_id: str, is_guest: bool):
+        """
+        Load personalization context for a user (once per session).
+
+        Returns (patterns, historical_events) or (None, None) if not available.
+        """
+        if is_guest:
+            return None, None
+
+        try:
+            patterns = self.personalization_service.load_patterns(user_id)
+            if not patterns:
+                return None, None
+
+            historical_events = EventService.get_historical_events_with_embeddings(
+                user_id=user_id,
+                limit=200
+            )
+            return patterns, historical_events
+        except Exception as e:
+            logger.warning(f"Could not load personalization context: {e}")
+            return None, None
+
     def _process_events_for_session(
         self,
         session_id: str,
         user_id: str,
         events: list,
         timezone: str,
+        is_guest: bool = False,
     ) -> None:
         """
         Process identified events in parallel and write to DB.
@@ -92,7 +123,17 @@ class SessionProcessor:
             user_id: User ID for event ownership
             events: List of IdentifiedEvent objects from Agent 1
             timezone: User's IANA timezone
+            is_guest: Whether this is a guest session
         """
+        # Load personalization context once for the session
+        patterns, historical_events = self._load_personalization_context(user_id, is_guest)
+        use_personalization = patterns is not None
+
+        if use_personalization:
+            logger.info(f"Session {session_id}: Using personalization (Agent 3)")
+        else:
+            logger.info(f"Session {session_id}: Skipping personalization")
+
         # Lock for thread-safe DB writes (Session.add_event does read-modify-write)
         db_lock = threading.Lock()
 
@@ -104,6 +145,15 @@ class SessionProcessor:
                     event.description,
                     timezone=timezone
                 )
+
+                # Agent 3: Personalize (if patterns available)
+                if use_personalization:
+                    calendar_event = self.agent_3_personalization.execute(
+                        event=calendar_event,
+                        discovered_patterns=patterns,
+                        historical_events=historical_events,
+                        user_id=user_id
+                    )
 
                 # DB write with lock to avoid race condition on event_ids
                 with db_lock:
@@ -202,9 +252,10 @@ class SessionProcessor:
             ]
             DBSession.update_extracted_events(session_id, extracted_events)
 
-            # Step 2: Process events in parallel (extraction → calendar event)
+            # Step 2: Process events (extraction → optional personalization → DB)
             session = DBSession.get_by_id(session_id)
             user_id = session['user_id']
+            is_guest = session.get('guest_mode', False)
             timezone = self._get_user_timezone(user_id)
 
             self._process_events_for_session(
@@ -212,6 +263,7 @@ class SessionProcessor:
                 user_id=user_id,
                 events=identification_result.events,
                 timezone=timezone,
+                is_guest=is_guest,
             )
 
             # Mark session as complete
@@ -292,9 +344,10 @@ class SessionProcessor:
             ]
             DBSession.update_extracted_events(session_id, extracted_events)
 
-            # Step 2: Process events in parallel (extraction → calendar event)
+            # Step 2: Process events (extraction → optional personalization → DB)
             session = DBSession.get_by_id(session_id)
             user_id = session['user_id']
+            is_guest = session.get('guest_mode', False)
             timezone = self._get_user_timezone(user_id)
 
             self._process_events_for_session(
@@ -302,6 +355,7 @@ class SessionProcessor:
                 user_id=user_id,
                 events=identification_result.events,
                 timezone=timezone,
+                is_guest=is_guest,
             )
 
             # Mark session as complete

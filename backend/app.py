@@ -40,7 +40,7 @@ from events.service import EventService
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import EventExtractionAgent
 from modification.agent import EventModificationAgent
-from preferences.agent import PreferenceApplicationAgent
+from preferences.agent import PersonalizationAgent
 
 # Import models
 from extraction.models import ExtractedFacts
@@ -160,7 +160,7 @@ data_collection_service = DataCollectionService(calendar_service)
 agent_1_identification = EventIdentificationAgent(llm_agent_1)
 agent_2_extraction = EventExtractionAgent(llm_agent_2)
 agent_4_modification = EventModificationAgent(llm_agent_4)
-agent_5_preferences = PreferenceApplicationAgent(llm_agent_5)
+agent_3_personalization = PersonalizationAgent(llm_agent_5)
 
 # Initialize input processor factory and register all processors
 input_processor_factory = InputProcessorFactory()
@@ -567,7 +567,7 @@ def update_event(event_id):
 @require_auth
 def apply_preferences_endpoint():
     """
-    Agent 5: Apply user preferences to extracted facts.
+    Agent 3: Apply user preferences to a calendar event.
 
     Supports both new pattern format and legacy preferences format.
 
@@ -575,36 +575,35 @@ def apply_preferences_endpoint():
 
     Expects JSON body:
     {
-        "facts": {...}  # Extracted facts from Agent 2
+        "event": {...}  # CalendarEvent from Agent 2
     }
 
-    Returns enhanced facts with user preferences applied.
+    Returns personalized event with user preferences applied.
     """
     try:
+        from extraction.models import CalendarEvent
+
         data = request.get_json()
-        facts_dict = data.get('facts')
+        event_dict = data.get('event') or data.get('facts')  # Accept both for backwards compat
 
         # Get user_id from auth middleware (set by @require_auth)
         user_id = request.user_id
 
-        if not facts_dict:
-            return jsonify({'error': 'No facts provided'}), 400
+        if not event_dict:
+            return jsonify({'error': 'No event provided'}), 400
 
-        # Convert dict to ExtractedFacts model
-        facts = ExtractedFacts(**facts_dict)
+        # Convert dict to CalendarEvent model
+        event = CalendarEvent(**event_dict)
 
         # Set PostHog tracking context
         set_tracking_context(distinct_id=user_id, trace_id=f"prefs-{uuid.uuid4().hex[:8]}")
 
         # Try to load new patterns first (preferred)
         patterns = personalization_service.load_patterns(user_id)
-        preferences = None
         historical_events = []
 
         if patterns:
-            # New pattern format - fetch historical events from database
             try:
-                # Get historical events with embeddings (fast, from events table)
                 historical_events = EventService.get_historical_events_with_embeddings(
                     user_id=user_id,
                     limit=200
@@ -613,16 +612,15 @@ def apply_preferences_endpoint():
                 print(f"Warning: Could not fetch historical events: {e}")
                 historical_events = []
 
-            # Use the Preference Application Agent with new patterns
-            enhanced_facts = agent_5_preferences.execute(
-                facts=facts,
+            personalized_event = agent_3_personalization.execute(
+                event=event,
                 discovered_patterns=patterns,
                 historical_events=historical_events,
                 user_id=user_id
             )
 
             return jsonify({
-                'enhanced_facts': enhanced_facts.model_dump(),
+                'event': personalized_event.model_dump(),
                 'preferences_applied': True,
                 'user_id': user_id,
                 'events_analyzed': patterns.get('total_events_analyzed', 0),
@@ -634,21 +632,19 @@ def apply_preferences_endpoint():
             preferences = personalization_service.load_preferences(user_id)
 
             if not preferences:
-                # No preferences or patterns, return facts unchanged
                 return jsonify({
-                    'enhanced_facts': facts_dict,
+                    'event': event_dict,
                     'preferences_applied': False,
                     'message': 'No user patterns or preferences found. Run pattern discovery first.'
                 })
 
-            # Use the Preference Application Agent with legacy format
-            enhanced_facts = agent_5_preferences.execute(
-                facts=facts,
+            personalized_event = agent_3_personalization.execute(
+                event=event,
                 user_preferences=preferences
             )
 
             return jsonify({
-                'enhanced_facts': enhanced_facts.model_dump(),
+                'event': personalized_event.model_dump(),
                 'preferences_applied': True,
                 'user_id': user_id,
                 'events_analyzed': preferences.total_events_analyzed,

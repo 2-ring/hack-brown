@@ -57,7 +57,7 @@ export function Event({
     <div
       key={`event-${index}`}
       className="event-confirmation-card event-card-clickable"
-      style={{ borderLeft: `8px solid ${calendarColor}` }}
+      style={{ borderLeft: `8px solid ${calendarColor}`, backgroundColor: `${calendarColor}12` }}
       onClick={onClick}
     >
       {/* Title with Time */}

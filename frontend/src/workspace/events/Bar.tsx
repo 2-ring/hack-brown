@@ -99,7 +99,7 @@ export function TopBar({
           )}
         </div>
         <div className="header-center">
-          <WordMark size={28} />
+          <WordMark size={28} className="header-wordmark" />
         </div>
         <div className="header-right">
           {!eventCount ? (

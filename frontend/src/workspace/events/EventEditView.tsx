@@ -43,6 +43,7 @@ interface EventEditViewProps {
   isLoadingCalendars?: boolean
   onClose: () => void
   onSave: (event: CalendarEvent) => void
+  onChange?: (event: CalendarEvent) => void
   getCalendarColor: (calendarName: string | undefined) => string
 }
 
@@ -54,6 +55,7 @@ export function EventEditView({
   isLoadingCalendars = false,
   onClose: _onClose,
   onSave: _onSave,
+  onChange,
   getCalendarColor: _getCalendarColor,
 }: EventEditViewProps) {
   const [editedEvent, setEditedEvent] = useState<CalendarEvent>(event)
@@ -63,10 +65,11 @@ export function EventEditView({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
 
   const handleChange = (field: keyof CalendarEvent, value: any) => {
-    setEditedEvent(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    setEditedEvent(prev => {
+      const updated = { ...prev, [field]: value }
+      onChange?.(updated)
+      return updated
+    })
   }
 
   const handleEditClick = (field: EditableField, e?: React.MouseEvent) => {
@@ -197,13 +200,11 @@ export function EventEditView({
                       <DateInput
                         value={editedEvent.start.dateTime}
                         onChange={(newDate) => {
-                          setEditedEvent(prev => ({
-                            ...prev,
-                            start: {
-                              ...prev.start,
-                              dateTime: newDate
-                            }
-                          }))
+                          setEditedEvent(prev => {
+                            const updated = { ...prev, start: { ...prev.start, dateTime: newDate } }
+                            onChange?.(updated)
+                            return updated
+                          })
                         }}
                         onFocus={() => setEditingField('startDate')}
                         onBlur={handleEditBlur}
@@ -216,13 +217,11 @@ export function EventEditView({
                         <TimeInput
                           value={editedEvent.start.dateTime}
                           onChange={(newTime) => {
-                            setEditedEvent(prev => ({
-                              ...prev,
-                              start: {
-                                ...prev.start,
-                                dateTime: newTime
-                              }
-                            }))
+                            setEditedEvent(prev => {
+                              const updated = { ...prev, start: { ...prev.start, dateTime: newTime } }
+                              onChange?.(updated)
+                              return updated
+                            })
                           }}
                           onFocus={() => setEditingField('startTime')}
                           onBlur={handleEditBlur}
@@ -237,13 +236,11 @@ export function EventEditView({
                       <DateInput
                         value={editedEvent.end.dateTime}
                         onChange={(newDate) => {
-                          setEditedEvent(prev => ({
-                            ...prev,
-                            end: {
-                              ...prev.end,
-                              dateTime: newDate
-                            }
-                          }))
+                          setEditedEvent(prev => {
+                            const updated = { ...prev, end: { ...prev.end, dateTime: newDate } }
+                            onChange?.(updated)
+                            return updated
+                          })
                         }}
                         onFocus={() => setEditingField('endDate')}
                         onBlur={handleEditBlur}
@@ -256,13 +253,11 @@ export function EventEditView({
                         <TimeInput
                           value={editedEvent.end.dateTime}
                           onChange={(newTime) => {
-                            setEditedEvent(prev => ({
-                              ...prev,
-                              end: {
-                                ...prev.end,
-                                dateTime: newTime
-                              }
-                            }))
+                            setEditedEvent(prev => {
+                              const updated = { ...prev, end: { ...prev.end, dateTime: newTime } }
+                              onChange?.(updated)
+                              return updated
+                            })
                           }}
                           onFocus={() => setEditingField('endTime')}
                           onBlur={handleEditBlur}
