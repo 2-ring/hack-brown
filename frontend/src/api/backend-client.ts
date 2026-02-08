@@ -216,15 +216,12 @@ export async function syncUserProfile(): Promise<{
   provider: string;
   message: string;
 }> {
-  const token = await getAccessToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  const headers = await getAuthHeaders();
 
   const response = await fetch(`${API_URL}/api/auth/sync-profile`, {
     method: 'POST',
     headers,
+    body: JSON.stringify({}),
   });
 
   return handleResponse(response);

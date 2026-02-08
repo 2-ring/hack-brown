@@ -43,7 +43,9 @@ export interface SyncResult {
 export const syncCalendar = async (): Promise<SyncResult> => {
   const token = await getAccessToken();
 
-  const headers: HeadersInit = {};
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -52,6 +54,7 @@ export const syncCalendar = async (): Promise<SyncResult> => {
   const response = await fetch(`${API_URL}/api/calendar/sync`, {
     method: 'POST',
     headers,
+    body: JSON.stringify({}),
   });
 
   if (!response.ok) {
