@@ -50,6 +50,7 @@ from extraction.models import ExtractedFacts
 from calendars.routes import calendar_bp
 from auth.routes import auth_bp
 from sessions.routes import sessions_bp
+from inbound_email.routes import inbound_email_bp
 
 # Import auth middleware
 from auth.middleware import require_auth
@@ -107,6 +108,7 @@ else:
 app.register_blueprint(auth_bp)
 app.register_blueprint(calendar_bp)
 app.register_blueprint(sessions_bp)
+app.register_blueprint(inbound_email_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
@@ -176,6 +178,7 @@ input_processor_factory.register_processor(InputType.PDF, pdf_processor)
 
 # Initialize session processor
 session_processor = SessionProcessor(llm_session_processor, input_processor_factory)
+app.session_processor = session_processor
 
 
 # ============================================================================

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { Mailbox, FingerprintSimple, ShootingStar, Link } from '@phosphor-icons/react'
-import { WordMark } from '../components/WordMark'
+import { ShootingStar, Link } from '@phosphor-icons/react'
+import { PageHeader } from '../components/PageHeader'
 import { FunnelAnimation } from './FunnelAnimation'
 import './Welcome.css'
 
@@ -9,19 +9,7 @@ export function Welcome() {
 
   return (
     <div className="welcome">
-      <header className="welcome-header">
-        <WordMark size={32} />
-        <nav className="welcome-nav">
-          <a href="mailto:lucas@dropcal.ai" className="welcome-link">
-            <Mailbox size={20} weight="duotone" />
-            Contact
-          </a>
-          <button onClick={() => navigate('/')} className="welcome-link">
-            <FingerprintSimple size={20} weight="duotone" />
-            Log In
-          </button>
-        </nav>
-      </header>
+      <PageHeader />
 
       <main className="welcome-main">
         <div className="welcome-content">

@@ -1,17 +1,10 @@
-import { useNavigate } from 'react-router-dom'
-import { WordMark } from '../components/WordMark'
+import { PageHeader } from '../components/PageHeader'
 import './Legal.css'
 
 export function Terms() {
-  const navigate = useNavigate()
-
   return (
     <div className="legal">
-      <div className="legal-header">
-        <div className="legal-logo" onClick={() => navigate('/')}>
-          <WordMark size={32} />
-        </div>
-      </div>
+      <PageHeader />
       <div className="legal-content">
         <h1>Terms of Service</h1>
         <p className="legal-updated">Last updated: February 7, 2026</p>

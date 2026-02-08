@@ -28,6 +28,43 @@
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DropCal",
+      "url": "https://dropcal.ai",
+      "description": "Drop anything in. Get calendar events out. Paste text, upload an image, forward an email—get perfectly formatted events ready for your calendar.",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "image": "https://dropcal.ai/og-image.png",
+      "screenshot": "https://dropcal.ai/og-image.png",
+      "featureList": [
+        "Extract calendar events from text, images, audio, and documents",
+        "AI-powered event parsing with smart formatting",
+        "Google Calendar integration",
+        "Scheduling conflict detection"
+      ],
+      "creator": {
+        "@type": "Organization",
+        "name": "DropCal",
+        "url": "https://dropcal.ai",
+        "logo": "https://dropcal.ai/android-chrome-512x512.png",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "hello@dropcal.ai",
+          "contactType": "customer support"
+        }
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

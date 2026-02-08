@@ -21,38 +21,6 @@
   overflow: hidden;
 }
 
-/* Header */
-.welcome-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 48px;
-  background-color: transparent;
-  position: relative;
-  z-index: 10;
-}
-
-.welcome-nav {
-  display: flex;
-  gap: 32px;
-  align-items: center;
-}
-
-.welcome-link {
-  color: var(--primary);
-  font-weight: 800;
-  font-size: 16px;
-  text-decoration: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 /* Main Content */
 .welcome-main {
   position: absolute;

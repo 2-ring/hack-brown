@@ -4,16 +4,6 @@
   color: var(--text-primary);
 }
 
-.legal-header {
-  padding: 20px 32px;
-  border-bottom: 1px solid var(--border);
-}
-
-.legal-logo {
-  cursor: pointer;
-  display: inline-block;
-}
-
 .legal-content {
   max-width: 680px;
   margin: 0 auto;

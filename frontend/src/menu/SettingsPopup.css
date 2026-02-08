@@ -254,6 +254,88 @@
   line-height: 1;
 }
 
+/* Apple connect form */
+.settings-apple-connect {
+  padding: 4px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-apple-connect-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settings-apple-connect-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.settings-apple-connect-desc a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.settings-apple-connect-desc a:hover {
+  text-decoration: underline;
+}
+
+.settings-apple-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.settings-apple-input:focus {
+  border-color: var(--primary);
+}
+
+.settings-apple-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.settings-apple-error {
+  font-size: 12px;
+  color: var(--error);
+  margin: 0;
+}
+
+.settings-apple-connect-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.settings-apple-connect-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.settings-apple-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .settings-popup {

@@ -26,7 +26,7 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import './SettingsPopup.css';
 import { useState, useEffect, useRef } from 'react';
-import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider, getUserPreferences } from '../api/backend-client';
+import { getCalendarProviders, setPrimaryCalendarProvider, disconnectCalendarProvider, getUserPreferences, sendAppleCredentials } from '../api/backend-client';
 import { Tooltip } from '../components/Tooltip';
 import { useTheme } from '../theme';
 
@@ -48,7 +48,7 @@ interface CalendarIntegration {
   isConnected: boolean;
 }
 
-type ViewMode = 'main' | 'integrations';
+type ViewMode = 'main' | 'integrations' | 'apple-connect';
 
 export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoading = false, triggerRef }: SettingsPopupProps) {
   const navigate = useNavigate();
@@ -68,6 +68,12 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
 
   // Calendar integrations data from backend
   const [calendars, setCalendars] = useState<CalendarIntegration[]>([]);
+
+  // Apple connect form state
+  const [appleId, setAppleId] = useState('');
+  const [appleAppPassword, setAppleAppPassword] = useState('');
+  const [appleConnecting, setAppleConnecting] = useState(false);
+  const [appleError, setAppleError] = useState<string | null>(null);
 
   // Fetch calendar providers from backend
   useEffect(() => {
@@ -189,9 +195,27 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
         console.error('Microsoft Calendar connection failed:', error);
       }
     } else if (provider === 'apple') {
-      // TODO: Implement Apple Calendar flow (requires Apple ID + app password)
-      console.log('Apple Calendar integration not yet implemented');
-      alert('Apple calendar integration coming soon!');
+      setAppleId('');
+      setAppleAppPassword('');
+      setAppleError(null);
+      setViewMode('apple-connect');
+    }
+  };
+
+  const handleAppleConnect = async () => {
+    if (!appleId || !appleAppPassword) {
+      setAppleError('Both fields are required.');
+      return;
+    }
+    setAppleConnecting(true);
+    setAppleError(null);
+    try {
+      await sendAppleCredentials(appleId, appleAppPassword);
+      setViewMode('integrations');
+    } catch (error: any) {
+      setAppleError(error.message || 'Failed to connect. Check your credentials.');
+    } finally {
+      setAppleConnecting(false);
     }
   };
 
@@ -254,6 +278,11 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                   <CaretLeft size={12} weight="bold" />
                 </button>
               )}
+              {viewMode === 'apple-connect' && (
+                <button className="settings-popup-back-button" onClick={() => setViewMode('integrations')}>
+                  <CaretLeft size={12} weight="bold" />
+                </button>
+              )}
               <div className="settings-popup-user">
                 {userAvatar ? (
                   <img src={userAvatar} alt={userName} className="settings-popup-avatar" referrerPolicy="no-referrer" />
@@ -283,6 +312,47 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                 </div>
               ))}
             </>
+          ) : viewMode === 'apple-connect' ? (
+            <div className="settings-apple-connect">
+              <div className="settings-apple-connect-header">
+                <AppleLogo size={24} weight="duotone" />
+                <span>Connect Apple Calendar</span>
+              </div>
+              <p className="settings-apple-connect-desc">
+                Apple Calendar requires an{' '}
+                <a href="https://support.apple.com/en-us/102654" target="_blank" rel="noopener noreferrer">
+                  app-specific password
+                </a>.
+                Generate one at{' '}
+                <a href="https://appleid.apple.com/account/manage" target="_blank" rel="noopener noreferrer">
+                  appleid.apple.com
+                </a>.
+              </p>
+              <input
+                type="email"
+                className="settings-apple-input"
+                placeholder="Apple ID (email)"
+                value={appleId}
+                onChange={(e) => setAppleId(e.target.value)}
+                autoFocus
+              />
+              <input
+                type="password"
+                className="settings-apple-input"
+                placeholder="App-specific password"
+                value={appleAppPassword}
+                onChange={(e) => setAppleAppPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAppleConnect()}
+              />
+              {appleError && <p className="settings-apple-error">{appleError}</p>}
+              <button
+                className="settings-apple-connect-btn"
+                onClick={handleAppleConnect}
+                disabled={appleConnecting || !appleId || !appleAppPassword}
+              >
+                {appleConnecting ? 'Connecting...' : 'Connect'}
+              </button>
+            </div>
           ) : viewMode === 'main' ? (
             <>
               <button className="settings-popup-item" onClick={handleUpgradePlan}>

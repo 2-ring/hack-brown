@@ -385,6 +385,29 @@ export async function sendMicrosoftTokens(tokenData: {
 }
 
 // ============================================================================
+// Apple Calendar Connection
+// ============================================================================
+
+/**
+ * Send Apple ID + app-specific password to backend for CalDAV calendar connection.
+ */
+export async function sendAppleCredentials(appleId: string, appPassword: string): Promise<{
+  success: boolean;
+  message: string;
+  provider: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/auth/apple/connect`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ apple_id: appleId, app_password: appPassword }),
+  });
+
+  return handleResponse(response);
+}
+
+// ============================================================================
 // Calendar Provider Management
 // ============================================================================
 

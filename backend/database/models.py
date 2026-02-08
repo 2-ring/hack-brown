@@ -75,6 +75,22 @@ class User:
         return response.data[0] if response.data else None
 
     @staticmethod
+    def get_by_email_prefix(prefix: str) -> Optional[Dict[str, Any]]:
+        """
+        Get user by email prefix (the part before @).
+        Used for resolving inbound email addresses like lucas@events.dropcal.ai → lucas@gmail.com user.
+
+        Args:
+            prefix: The local part of the email (e.g., 'lucas')
+
+        Returns:
+            Dict containing user data or None if not found
+        """
+        supabase = get_supabase()
+        response = supabase.table("users").select("*").like("email", f"{prefix}@%").limit(1).execute()
+        return response.data[0] if response.data else None
+
+    @staticmethod
     def get_by_google_id(google_id: str) -> Optional[Dict[str, Any]]:
         """
         Get user by Google OAuth ID.
