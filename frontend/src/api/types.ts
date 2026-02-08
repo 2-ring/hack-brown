@@ -24,6 +24,7 @@ export interface Session {
   input_type: 'text' | 'image' | 'audio' | 'email';
   input_content: string;
   status: 'pending' | 'processing' | 'processed' | 'error';
+  title?: string;
   extracted_events?: any[];
   processed_events?: any[];
   conflicts?: any[];

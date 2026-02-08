@@ -467,7 +467,7 @@ function AppContent() {
   // Convert backend sessions to menu format
   const menuSessions: SessionListItem[] = sessionHistory.map(session => ({
     id: session.id,
-    title: session.input_content.substring(0, 50) + (session.input_content.length > 50 ? '...' : ''),
+    title: session.title || session.input_content.substring(0, 50) + (session.input_content.length > 50 ? '...' : ''),
     timestamp: new Date(session.created_at),
     inputType: session.input_type as 'text' | 'image' | 'audio',
     status: session.status === 'processed' ? 'completed' : session.status === 'error' ? 'error' : 'active',

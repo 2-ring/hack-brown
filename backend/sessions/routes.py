@@ -3,7 +3,7 @@ Session routes for real-time updates via Server-Sent Events (SSE).
 Provides streaming updates for session titles as they're generated.
 """
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify
 from database.models import Session as DBSession
 import json
 import time
@@ -104,25 +104,6 @@ def stream_session_updates(session_id: str):
             'Connection': 'keep-alive'
         }
     )
-
-
-@sessions_bp.route('/<session_id>', methods=['GET'])
-def get_session(session_id: str):
-    """
-    Get session by ID.
-
-    Args:
-        session_id: Session UUID
-
-    Returns:
-        JSON with session data
-    """
-    session = DBSession.get_by_id(session_id)
-
-    if not session:
-        return jsonify({'error': 'Session not found'}), 404
-
-    return jsonify(session)
 
 
 @sessions_bp.route('/<session_id>', methods=['DELETE'])
