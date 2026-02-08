@@ -3,7 +3,7 @@ main = "email-worker.js"
 compatibility_date = "2026-02-01"
 
 [vars]
-WEBHOOK_URL = "https://dropcal-backend.onrender.com/api/webhook/inbound-email"
+WEBHOOK_URL = "https://api.dropcal.ai/api/webhook/inbound-email"
 
 # Secrets (set via `wrangler secret put`):
 #   WEBHOOK_SECRET - shared secret matching CLOUDFLARE_WEBHOOK_SECRET on the backend
