@@ -977,35 +977,56 @@
   box-shadow: var(--shadow-medium);
 }
 
-/* Swipeable Event (react-swipeable-list) */
-.swipeable-list {
-  overflow: visible;
+/* Swipeable Event */
+.swipeable-event-container {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.swipeable-list-item {
+.swipeable-card {
+  position: relative;
+  z-index: 2;
+  touch-action: pan-y;
+  background-color: var(--background);
   border-radius: 16px;
 }
 
-.swipe-action-panel {
+/* Full-bleed color behind the card (inset: 0 covers rounded corner gaps) */
+.swipe-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.swipe-bg-add {
+  background-color: #10B981;
+  justify-content: flex-start;
+}
+
+.swipe-bg-remove {
+  background-color: #EF4444;
+  justify-content: flex-end;
+}
+
+/* Icon wrapper — width = exposed gap, icon centers within it */
+.swipe-icon-wrapper {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  height: 100%;
-  padding: 0 1.5rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.swipe-bg-content {
   color: #ffffff;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  white-space: nowrap;
   user-select: none;
-}
-
-.swipe-action-panel.swipe-action-add {
-  background-color: #10B981;
-}
-
-.swipe-action-panel.swipe-action-remove {
-  background-color: #EF4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Responsive Design */
@@ -1072,6 +1093,11 @@
 
   .event-confirmation-card {
     padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .swipeable-event-container,
+  .swipeable-card {
     border-radius: 12px;
   }
 

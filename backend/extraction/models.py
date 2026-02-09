@@ -76,17 +76,19 @@ class ExtractedFacts(BaseModel):
     def validate_title(cls, v: str) -> str:
         """
         Validate title length and truncate if necessary.
-        Hard limit: 100 characters (for consistency with Google Calendar)
+        Hard limit from TextLimits.EVENT_TITLE_MAX_LENGTH (for consistency with Google Calendar)
         Soft warning: >8 words (logged in pipeline but not blocked here)
         """
+        from config.limits import TextLimits
+        max_len = TextLimits.EVENT_TITLE_MAX_LENGTH
+
         if not v or not v.strip():
             raise ValueError("Title cannot be empty")
 
         v = v.strip()
 
-        # Hard limit: 100 characters - truncate if exceeded
-        if len(v) > 100:
-            v = v[:97] + "..."
+        if len(v) > max_len:
+            v = v[:max_len - 3] + "..."
 
         return v
 
@@ -255,12 +257,15 @@ class CalendarEvent(BaseModel):
     @classmethod
     def validate_summary(cls, v: str) -> str:
         """Validate and truncate summary"""
+        from config.limits import TextLimits
+        max_len = TextLimits.EVENT_TITLE_MAX_LENGTH
+
         if not v or not v.strip():
             raise ValueError("Summary cannot be empty")
 
         v = v.strip()
-        if len(v) > 100:
-            v = v[:97] + "..."
+        if len(v) > max_len:
+            v = v[:max_len - 3] + "..."
 
         return v
 

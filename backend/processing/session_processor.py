@@ -72,7 +72,8 @@ class SessionProcessor:
         """
         try:
             # Generate title
-            title = self.title_generator.generate(text, max_words=3, vision_metadata=metadata)
+            from config.limits import TextLimits
+            title = self.title_generator.generate(text, max_words=TextLimits.SESSION_TITLE_MAX_WORDS, vision_metadata=metadata)
 
             # Update session with title
             DBSession.update_title(session_id, title)
@@ -97,9 +98,10 @@ class SessionProcessor:
             if not patterns:
                 return None, None
 
+            from config.database import QueryLimits
             historical_events = EventService.get_historical_events_with_embeddings(
                 user_id=user_id,
-                limit=200
+                limit=QueryLimits.PERSONALIZATION_HISTORICAL_LIMIT
             )
             return patterns, historical_events
         except Exception as e:

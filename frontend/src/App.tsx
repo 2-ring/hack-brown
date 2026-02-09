@@ -237,121 +237,6 @@ function AppContent() {
     setSidebarOpen(prev => !prev)
   }, [])
 
-  // Process file upload
-  const processFile = useCallback(async (file: File) => {
-    if (isProcessing) {
-      addNotification(createWarningNotification('Please wait for the current file to finish processing.'))
-      return
-    }
-
-    // Check if guest and at limit
-    if (!user && GuestSessionManager.hasReachedLimit()) {
-      setAuthModalHeading("You've used all 3 free sessions. Sign in to keep going.")
-      return
-    }
-
-    const validation = validateFile(file)
-    if (!validation.valid) {
-      addNotification(createValidationErrorNotification(validation.error || 'Invalid file'))
-      return
-    }
-
-    setIsProcessing(true)
-    setAppState('loading')
-    setCalendarEvents([])
-    setFeedbackMessage('')
-    setLoadingConfig(LOADING_MESSAGES.READING_FILE)
-
-    try {
-      // Determine file type for backend routing
-      const fileType: 'image' | 'audio' | 'pdf' = file.type.startsWith('audio/')
-        ? 'audio'
-        : file.type === 'application/pdf'
-          ? 'pdf'
-          : 'image'
-
-      // Route to guest or authenticated endpoint
-      const { session } = user
-        ? await apiUploadFile(file, fileType)
-        : await uploadGuestFile(file, fileType)
-
-      setCurrentSession(session)
-      activeViewSessionRef.current = session.id
-
-      // Track guest session with access token
-      if (!user && session.access_token) {
-        GuestSessionManager.addGuestSession(session.id, session.access_token)
-      }
-
-      // Silently refresh session list so the new session appears as a skeleton
-      if (user) {
-        getUserSessions().then(setSessionHistory).catch(console.error)
-      }
-
-      setLoadingConfig(LOADING_MESSAGES.PROCESSING_FILE)
-
-      // Poll for completion (use guest endpoint if not authenticated)
-      const completedSession = await pollSession(
-        session.id,
-        (updatedSession) => {
-          // Only update loading UI if user is still viewing this session
-          if (activeViewSessionRef.current === session.id) {
-            setCurrentSession(updatedSession)
-            if (updatedSession.status === 'processing') {
-              setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS)
-            }
-          }
-        },
-        2000,
-        !user // isGuest parameter
-      )
-
-      // Always refresh session list so sidebar updates
-      if (user) {
-        getUserSessions().then(setSessionHistory).catch(console.error)
-      }
-
-      // If user navigated away, don't touch UI state
-      if (activeViewSessionRef.current !== session.id) {
-        return
-      }
-
-      // Fetch events from events table
-      const events = await getSessionEvents(completedSession.id, !user)
-
-      if (events.length === 0) {
-        // Backward compat: try processed_events blob
-        if (completedSession.processed_events && completedSession.processed_events.length > 0) {
-          setCalendarEvents(completedSession.processed_events as CalendarEvent[])
-        } else {
-          setFeedbackMessage("Hmm, we couldn't find any events in there. Try a different file!")
-          setAppState('input')
-          return
-        }
-      } else {
-        setCalendarEvents(events)
-      }
-
-      setAppState('review')
-
-      // Navigate to the session URL
-      navigate(`/s/${completedSession.id}`)
-
-    } catch (error) {
-      // Only show error if user is still viewing this session
-      if (activeViewSessionRef.current === null || activeViewSessionRef.current === currentSession?.id) {
-        addNotification(createErrorNotification("Oops! Something went wrong. Mind trying that again?"))
-        setAppState('input')
-      }
-      // Always refresh session list so the failed session gets filtered out
-      if (user) {
-        getUserSessions().then(setSessionHistory).catch(console.error)
-      }
-    } finally {
-      setIsProcessing(false)
-    }
-  }, [isProcessing, navigate, user])
-
   // Process text input
   const processText = useCallback(async (text: string) => {
     if (isProcessing) {
@@ -451,6 +336,133 @@ function AppContent() {
       setIsProcessing(false)
     }
   }, [isProcessing, navigate, user])
+
+  // Process file upload
+  const processFile = useCallback(async (file: File) => {
+    if (isProcessing) {
+      addNotification(createWarningNotification('Please wait for the current file to finish processing.'))
+      return
+    }
+
+    // Check if guest and at limit
+    if (!user && GuestSessionManager.hasReachedLimit()) {
+      setAuthModalHeading("You've used all 3 free sessions. Sign in to keep going.")
+      return
+    }
+
+    const validation = validateFile(file)
+    if (!validation.valid) {
+      addNotification(createValidationErrorNotification(validation.error || 'Invalid file'))
+      return
+    }
+
+    // Text-based files (.txt, .md, .eml) → read content and use text session path
+    const isTextFile = /\.(txt|text|md|markdown|eml|email)$/i.test(file.name)
+    if (isTextFile) {
+      const text = await file.text()
+      if (!text.trim()) {
+        addNotification(createErrorNotification('File is empty.'))
+        return
+      }
+      processText(text)
+      return
+    }
+
+    setIsProcessing(true)
+    setAppState('loading')
+    setCalendarEvents([])
+    setFeedbackMessage('')
+    setLoadingConfig(LOADING_MESSAGES.READING_FILE)
+
+    try {
+      // Determine file type for backend routing (binary files only)
+      const fileType: 'image' | 'audio' | 'pdf' = file.type.startsWith('audio/')
+        ? 'audio'
+        : file.type === 'application/pdf'
+          ? 'pdf'
+          : 'image'
+
+      // Route to guest or authenticated endpoint
+      const { session } = user
+        ? await apiUploadFile(file, fileType)
+        : await uploadGuestFile(file, fileType)
+
+      setCurrentSession(session)
+      activeViewSessionRef.current = session.id
+
+      // Track guest session with access token
+      if (!user && session.access_token) {
+        GuestSessionManager.addGuestSession(session.id, session.access_token)
+      }
+
+      // Silently refresh session list so the new session appears as a skeleton
+      if (user) {
+        getUserSessions().then(setSessionHistory).catch(console.error)
+      }
+
+      setLoadingConfig(LOADING_MESSAGES.PROCESSING_FILE)
+
+      // Poll for completion (use guest endpoint if not authenticated)
+      const completedSession = await pollSession(
+        session.id,
+        (updatedSession) => {
+          // Only update loading UI if user is still viewing this session
+          if (activeViewSessionRef.current === session.id) {
+            setCurrentSession(updatedSession)
+            if (updatedSession.status === 'processing') {
+              setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS)
+            }
+          }
+        },
+        2000,
+        !user // isGuest parameter
+      )
+
+      // Always refresh session list so sidebar updates
+      if (user) {
+        getUserSessions().then(setSessionHistory).catch(console.error)
+      }
+
+      // If user navigated away, don't touch UI state
+      if (activeViewSessionRef.current !== session.id) {
+        return
+      }
+
+      // Fetch events from events table
+      const events = await getSessionEvents(completedSession.id, !user)
+
+      if (events.length === 0) {
+        // Backward compat: try processed_events blob
+        if (completedSession.processed_events && completedSession.processed_events.length > 0) {
+          setCalendarEvents(completedSession.processed_events as CalendarEvent[])
+        } else {
+          setFeedbackMessage("Hmm, we couldn't find any events in there. Try a different file!")
+          setAppState('input')
+          return
+        }
+      } else {
+        setCalendarEvents(events)
+      }
+
+      setAppState('review')
+
+      // Navigate to the session URL
+      navigate(`/s/${completedSession.id}`)
+
+    } catch (error) {
+      // Only show error if user is still viewing this session
+      if (activeViewSessionRef.current === null || activeViewSessionRef.current === currentSession?.id) {
+        addNotification(createErrorNotification("Oops! Something went wrong. Mind trying that again?"))
+        setAppState('input')
+      }
+      // Always refresh session list so the failed session gets filtered out
+      if (user) {
+        getUserSessions().then(setSessionHistory).catch(console.error)
+      }
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [isProcessing, navigate, user, processText])
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {

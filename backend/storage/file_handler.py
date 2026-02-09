@@ -20,7 +20,6 @@ class FileStorage:
             'audio/ogg', 'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/flac',
         ],
         'pdf': ['application/pdf'],
-        'document': ['application/pdf', 'text/plain'],
     }
 
     @staticmethod

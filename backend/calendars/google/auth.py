@@ -109,6 +109,11 @@ def refresh_if_needed(user_id: str, credentials: Credentials) -> bool:
     if credentials.valid:
         return True
 
+    # Guard against corrupted refresh token (historical bug stored str(None))
+    if credentials.refresh_token == "None":
+        print(f"Corrupted refresh_token (literal 'None') for user {user_id}. Re-auth required.")
+        return False
+
     # Try to refresh
     if credentials.expired and credentials.refresh_token:
         try:
@@ -158,6 +163,9 @@ def store_google_tokens_from_supabase(user_id: str, provider_token: dict) -> Non
 
     if not access_token:
         raise ValueError("No access_token in provider_token")
+
+    if not refresh_token:
+        print(f"Warning: No refresh_token provided for user {user_id}. Existing refresh token will be preserved.")
 
     # Get user to check provider connections
     user = User.get_by_id(user_id)

@@ -137,8 +137,8 @@ export function Event({
 
         if (syncStatus !== 'draft') {
           const config = {
-            applied: { label: 'Synced', Icon: CheckCircle, className: 'status-created' },
-            edited: { label: 'Apply edits', Icon: ArrowsClockwise, className: 'status-apply-edits' },
+            applied: { label: 'Created', Icon: CheckCircle, className: 'status-created' },
+            edited: { label: 'Edits applied', Icon: ArrowsClockwise, className: 'status-apply-edits' },
           } as const
 
           const status = config[syncStatus]

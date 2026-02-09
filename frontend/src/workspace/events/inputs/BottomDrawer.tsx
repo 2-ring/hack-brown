@@ -11,8 +11,8 @@ interface BottomDrawerProps {
 
 export function BottomDrawer({ isOpen, onClose, title, children }: BottomDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null)
-  const dragState = useRef<{ startY: number; currentY: number; dragging: boolean }>({
-    startY: 0, currentY: 0, dragging: false,
+  const dragState = useRef<{ startY: number; currentY: number; dragging: boolean; hasMoved: boolean }>({
+    startY: 0, currentY: 0, dragging: false, hasMoved: false,
   })
 
   useEffect(() => {
@@ -26,6 +26,7 @@ export function BottomDrawer({ isOpen, onClose, title, children }: BottomDrawerP
     dragState.current.startY = e.touches[0].clientY
     dragState.current.currentY = e.touches[0].clientY
     dragState.current.dragging = true
+    dragState.current.hasMoved = false
   }, [])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -34,8 +35,9 @@ export function BottomDrawer({ isOpen, onClose, title, children }: BottomDrawerP
     const deltaY = currentY - dragState.current.startY
     dragState.current.currentY = currentY
 
-    // Only allow dragging downward
-    if (deltaY > 0) {
+    // Only start dragging after threshold to avoid interfering with taps
+    if (deltaY > 10) {
+      dragState.current.hasMoved = true
       panelRef.current.style.transform = `translateY(${deltaY}px)`
       panelRef.current.style.transition = 'none'
     }
@@ -44,6 +46,8 @@ export function BottomDrawer({ isOpen, onClose, title, children }: BottomDrawerP
   const handleTouchEnd = useCallback(() => {
     if (!dragState.current.dragging || !panelRef.current) return
     dragState.current.dragging = false
+
+    if (!dragState.current.hasMoved) return
 
     const deltaY = dragState.current.currentY - dragState.current.startY
     panelRef.current.style.transition = ''

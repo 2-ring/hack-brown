@@ -16,7 +16,7 @@ import {
 } from './animations'
 import { useAuth } from '../../auth/AuthContext'
 import { getAccessToken } from '../../auth/supabase'
-import { updateEvent, deleteEvent, addSessionToCalendar, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
+import { updateEvent, deleteEvent, addSessionToCalendar, getSessionEvents, checkEventConflicts, refreshGoogleCalendarTokens } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
 import {
   useNotificationQueue,
@@ -87,28 +87,50 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       primary: true,
     }
 
+    const fetchCalendarList = async (): Promise<GoogleCalendar[] | null> => {
+      const token = await getAccessToken()
+      const headers: HeadersInit = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch(`${API_URL}/api/calendar/list-calendars`, { headers })
+      if (response.ok) {
+        const data = await response.json()
+        const fetched: GoogleCalendar[] = data.calendars || []
+        if (!fetched.some(cal => cal.primary || cal.id === 'primary')) {
+          fetched.unshift(DEFAULT_CALENDAR)
+        }
+        return fetched
+      }
+      if (response.status === 401) return null // signal to retry
+      return [DEFAULT_CALENDAR]
+    }
+
     const fetchCalendars = async () => {
       setIsLoadingCalendars(true)
       try {
-        const token = await getAccessToken()
-        const headers: HeadersInit = {}
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`
-        }
-        const response = await fetch(`${API_URL}/api/calendar/list-calendars`, { headers })
-        if (response.ok) {
-          const data = await response.json()
-          const fetched: GoogleCalendar[] = data.calendars || []
+        let result = await fetchCalendarList()
 
-          // Ensure primary/default calendar is always present
-          if (!fetched.some(cal => cal.primary || cal.id === 'primary')) {
-            fetched.unshift(DEFAULT_CALENDAR)
+        // 401 — attempt silent token refresh then retry once
+        if (result === null) {
+          try {
+            const refreshResult = await refreshGoogleCalendarTokens()
+            if (refreshResult.refreshed) {
+              result = await fetchCalendarList()
+            }
+            if (result === null && refreshResult.needs_reauth) {
+              addNotification(createWarningNotification(
+                'Calendar session expired. Please sign in again to restore your calendars.'
+              ))
+              result = [DEFAULT_CALENDAR]
+            }
+          } catch {
+            // Refresh attempt itself failed
           }
-
-          setCalendars(fetched)
-        } else {
-          setCalendars([DEFAULT_CALENDAR])
+          result = result ?? [DEFAULT_CALENDAR]
         }
+
+        setCalendars(result)
       } catch (error) {
         console.error('Failed to fetch calendars:', error)
         setCalendars([DEFAULT_CALENDAR])

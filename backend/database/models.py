@@ -184,8 +184,11 @@ class User:
             else:
                 encrypted_tokens[key] = encrypt_token(str(value))
 
-        # Update the connection with encrypted tokens
-        connections[provider_idx]['encrypted_tokens'] = encrypted_tokens
+        # Merge new tokens into existing (preserves keys not in this update,
+        # e.g. keeps refresh_token when only access_token is refreshed)
+        existing_tokens = connections[provider_idx].get('encrypted_tokens', {})
+        existing_tokens.update(encrypted_tokens)
+        connections[provider_idx]['encrypted_tokens'] = existing_tokens
 
         # Update database
         response = supabase.table("users").update({

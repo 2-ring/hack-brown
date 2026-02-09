@@ -101,7 +101,7 @@ export function DesktopDropArea({
     if (target.classList.contains('drop-area') || target.classList.contains('icon-row')) {
       const input = document.createElement('input')
       input.type = 'file'
-      input.accept = 'image/*,.txt,.pdf,.eml,.mp3,.wav,.m4a'
+      input.accept = 'image/*,.txt,.md,.pdf,.eml,.mp3,.wav,.m4a'
       input.onchange = (e) => {
         const files = (e.target as HTMLInputElement).files
         if (files && files.length > 0) {

@@ -33,7 +33,7 @@ export function useInputHandlers({
     e.stopPropagation()
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.txt,.pdf,.doc,.docx,.eml'
+    input.accept = '.txt,.md,.pdf,.eml'
     input.onchange = (e) => {
       const files = (e.target as HTMLInputElement).files
       if (files && files.length > 0) {

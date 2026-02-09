@@ -355,6 +355,25 @@ export async function checkGoogleCalendarStatus(): Promise<{
 }
 
 /**
+ * Attempt to refresh Google Calendar tokens on the backend.
+ * Called when a calendar API call returns 401.
+ */
+export async function refreshGoogleCalendarTokens(): Promise<{
+  refreshed: boolean;
+  needs_reauth: boolean;
+  error?: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/auth/google-calendar/refresh-tokens`, {
+    method: 'POST',
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+/**
  * Smart sync a session's events to the user's calendar.
  * Creates new events, updates edited ones, skips unchanged ones.
  *

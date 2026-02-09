@@ -136,20 +136,23 @@ def _greedy_chunk(
     Greedily partition text into (start, end) ranges.
 
     For each chunk, searches for the best split candidate in the window
-    [target_size * 0.5, target_size * 1.3] from the current position.
+    [target_size * CHUNK_WINDOW_MIN_RATIO, target_size * CHUNK_WINDOW_MAX_RATIO]
+    from the current position.
     Picks the highest-priority (lowest number) candidate closest to target_size.
     """
     ranges = []
     pos = 0
     text_len = len(text)
+    window_min = ProcessingConfig.CHUNK_WINDOW_MIN_RATIO
+    window_max = ProcessingConfig.CHUNK_WINDOW_MAX_RATIO
 
     while pos < text_len:
-        if text_len - pos <= int(target_size * 1.3):
+        if text_len - pos <= int(target_size * window_max):
             ranges.append((pos, text_len))
             break
 
-        window_start = pos + int(target_size * 0.5)
-        window_end = pos + int(target_size * 1.3)
+        window_start = pos + int(target_size * window_min)
+        window_end = pos + int(target_size * window_max)
 
         window_candidates = [
             (p, pri) for (p, pri) in split_candidates

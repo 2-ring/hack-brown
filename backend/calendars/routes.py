@@ -444,6 +444,50 @@ def check_google_calendar_status():
         return jsonify({'error': f'Failed to check status: {str(e)}'}), 500
 
 
+@calendar_bp.route('/api/auth/google-calendar/refresh-tokens', methods=['POST'])
+@require_auth
+def refresh_google_calendar_tokens():
+    """
+    Attempt to refresh Google Calendar tokens.
+    Called by frontend when a calendar API call returns 401.
+
+    Returns 200 in all cases (failure is an expected state, not a server error):
+        - refreshed: Whether tokens were refreshed successfully
+        - needs_reauth: Whether user needs to re-authenticate
+    """
+    try:
+        user_id = request.user_id
+        credentials = google_auth.load_credentials(user_id)
+
+        if not credentials:
+            return jsonify({
+                'refreshed': False,
+                'needs_reauth': True,
+                'error': 'No calendar credentials found'
+            })
+
+        if not credentials.refresh_token or credentials.refresh_token == "None":
+            return jsonify({
+                'refreshed': False,
+                'needs_reauth': True,
+                'error': 'No valid refresh token'
+            })
+
+        success = google_auth.refresh_if_needed(user_id, credentials)
+
+        return jsonify({
+            'refreshed': success,
+            'needs_reauth': not success
+        })
+
+    except Exception as e:
+        return jsonify({
+            'refreshed': False,
+            'needs_reauth': True,
+            'error': str(e)
+        })
+
+
 @calendar_bp.route('/api/auth/google-calendar/store-tokens', methods=['POST'])
 @require_auth
 def store_google_calendar_tokens():

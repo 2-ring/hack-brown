@@ -6,7 +6,7 @@
 export interface ValidationResult {
   valid: boolean
   error?: string
-  fileType?: 'image' | 'audio' | 'document' | 'pdf' | 'text' | 'email' | 'unknown'
+  fileType?: 'image' | 'audio' | 'pdf' | 'text' | 'email' | 'unknown'
 }
 
 // Supported file types with their extensions and MIME types
@@ -29,12 +29,6 @@ const FILE_TYPES = {
     maxSize: 20 * 1024 * 1024, // 20MB
     label: 'PDF'
   },
-  document: {
-    extensions: ['.doc', '.docx'],
-    mimeTypes: ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-    maxSize: 10 * 1024 * 1024, // 10MB
-    label: 'Document'
-  },
   text: {
     extensions: ['.txt', '.text', '.md', '.markdown'],
     mimeTypes: ['text/plain', 'text/markdown'],
@@ -42,8 +36,8 @@ const FILE_TYPES = {
     label: 'Text'
   },
   email: {
-    extensions: ['.eml', '.msg'],
-    mimeTypes: ['message/rfc822', 'application/vnd.ms-outlook'],
+    extensions: ['.eml', '.email'],
+    mimeTypes: ['message/rfc822'],
     maxSize: 10 * 1024 * 1024, // 10MB
     label: 'Email'
   }
@@ -59,7 +53,7 @@ function getFileExtension(filename: string): string {
 /**
  * Detect file type based on extension and MIME type
  */
-function detectFileType(file: File): 'image' | 'audio' | 'document' | 'pdf' | 'text' | 'email' | 'unknown' {
+function detectFileType(file: File): 'image' | 'audio' | 'pdf' | 'text' | 'email' | 'unknown' {
   const extension = getFileExtension(file.name)
   const mimeType = file.type.toLowerCase()
 
