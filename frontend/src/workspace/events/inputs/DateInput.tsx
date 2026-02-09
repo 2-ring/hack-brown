@@ -263,7 +263,7 @@ export function DateInputMobile({ value, onChange, onFocus, onBlur, isEditing, c
   return (
     <>
       <span className={className}>{displayValue}</span>
-      <BottomDrawer isOpen={!!isEditing} onClose={handleClose} title="Select Date">
+      <BottomDrawer isOpen={!!isEditing} onClose={handleClose}>
         <CalendarGrid
           value={value}
           viewYear={viewYear}

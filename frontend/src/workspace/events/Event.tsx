@@ -76,35 +76,41 @@ export function Event({
           <span className="event-confirmation-card-time-inline">
             ({formatTimeRange(event.start.dateTime, event.end.dateTime)})
           </span>
+          {event.recurrence && event.recurrence.length > 0 && (
+            <span className="event-recurrence-after-time">
+              <RepeatIcon size={14} weight="bold" className="meta-icon" />
+              {formatRecurrence(event.recurrence)}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Location */}
-      {event.location && (
-        <div className="event-confirmation-card-row">
-          <div className="event-confirmation-card-meta">
-            <LocationIcon size={16} weight="bold" className="meta-icon" />
-            <span>{event.location}</span>
+      {/* Location & Recurrence (inline) */}
+      {(event.location || (event.recurrence && event.recurrence.length > 0)) && (
+        <div className="event-confirmation-card-row event-row-location">
+          <div className="event-confirmation-card-meta-inline">
+            {event.location && (
+              <div className="event-confirmation-card-meta">
+                <LocationIcon size={16} weight="bold" className="meta-icon" />
+                <span>{event.location}</span>
+              </div>
+            )}
+            {event.recurrence && event.recurrence.length > 0 && (
+              <div className="event-confirmation-card-meta event-recurrence-in-meta">
+                <RepeatIcon size={16} weight="bold" className="meta-icon" />
+                <span>{formatRecurrence(event.recurrence)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Description */}
       {event.description && (
-        <div className="event-confirmation-card-row">
+        <div className="event-confirmation-card-row event-row-description">
           <div className="event-confirmation-card-meta">
             <EqualsIcon size={16} weight="bold" className="meta-icon" />
             <span>{event.description}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Recurrence */}
-      {event.recurrence && event.recurrence.length > 0 && (
-        <div className="event-confirmation-card-row">
-          <div className="event-confirmation-card-meta">
-            <RepeatIcon size={16} weight="bold" className="meta-icon" />
-            <span>{formatRecurrence(event.recurrence)}</span>
           </div>
         </div>
       )}
@@ -125,8 +131,26 @@ export function Event({
         </div>
       </div>
 
-      {/* Status Bar — conflicts take priority */}
+      {/* Status Bar — sync status takes priority over conflicts */}
       {(() => {
+        const syncStatus = getEventSyncStatus(event, activeProvider)
+
+        if (syncStatus !== 'draft') {
+          const config = {
+            applied: { label: 'Created', Icon: CheckCircle, className: 'status-created' },
+            edited: { label: 'Apply edits', Icon: ArrowsClockwise, className: 'status-apply-edits' },
+          } as const
+
+          const status = config[syncStatus]
+
+          return (
+            <div className={`event-status-bar ${status.className}`}>
+              <status.Icon size={14} weight="bold" />
+              <span>{status.label}</span>
+            </div>
+          )
+        }
+
         if (conflictInfo && conflictInfo.length > 0) {
           const message = conflictInfo.length === 1
             ? `Conflict with ${conflictInfo[0].summary} (${formatTimeRange(conflictInfo[0].start_time, conflictInfo[0].end_time)})`
@@ -140,22 +164,7 @@ export function Event({
           )
         }
 
-        const syncStatus = getEventSyncStatus(event, activeProvider)
-        if (syncStatus === 'draft') return null
-
-        const config = {
-          applied: { label: 'Created', Icon: CheckCircle, className: 'status-created' },
-          edited: { label: 'Apply edits', Icon: ArrowsClockwise, className: 'status-apply-edits' },
-        } as const
-
-        const status = config[syncStatus]
-
-        return (
-          <div className={`event-status-bar ${status.className}`}>
-            <status.Icon size={14} weight="bold" />
-            <span>{status.label}</span>
-          </div>
-        )
+        return null
       })()}
     </div>
   )

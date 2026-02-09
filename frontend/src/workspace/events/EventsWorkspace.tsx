@@ -48,7 +48,7 @@ interface EventsWorkspaceProps {
 }
 
 export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId }: EventsWorkspaceProps) {
-  const { user } = useAuth()
+  const { user, calendarReady } = useAuth()
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
@@ -75,12 +75,10 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     }
   }
 
-  // Fetch calendar list when user is authenticated
+  // Fetch calendar list once calendar tokens are ready
   useEffect(() => {
-    if (!user) {
-      setIsLoadingCalendars(false)
-      return
-    }
+    if (!calendarReady) return
+
     const DEFAULT_CALENDAR: GoogleCalendar = {
       id: 'primary',
       summary: 'Primary',
@@ -88,7 +86,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       primary: true,
     }
 
-    const fetchCalendars = async (retriesLeft = 2): Promise<void> => {
+    const fetchCalendars = async () => {
       setIsLoadingCalendars(true)
       try {
         const token = await getAccessToken()
@@ -107,26 +105,18 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
           }
 
           setCalendars(fetched)
-          setIsLoadingCalendars(false)
-        } else if (retriesLeft > 0) {
-          // Token storage may still be in progress — retry after delay
-          setTimeout(() => fetchCalendars(retriesLeft - 1), 3000)
         } else {
           setCalendars([DEFAULT_CALENDAR])
-          setIsLoadingCalendars(false)
         }
       } catch (error) {
         console.error('Failed to fetch calendars:', error)
-        if (retriesLeft > 0) {
-          setTimeout(() => fetchCalendars(retriesLeft - 1), 3000)
-        } else {
-          setCalendars([DEFAULT_CALENDAR])
-          setIsLoadingCalendars(false)
-        }
+        setCalendars([DEFAULT_CALENDAR])
+      } finally {
+        setIsLoadingCalendars(false)
       }
     }
     fetchCalendars()
-  }, [user])
+  }, [calendarReady])
 
   // Sync editedEvents with events prop
   useEffect(() => {

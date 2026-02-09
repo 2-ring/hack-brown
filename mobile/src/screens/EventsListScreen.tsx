@@ -10,13 +10,13 @@ import {
   Platform,
   Animated,
   Modal,
+  TouchableOpacity,
 } from 'react-native';
-import { FlatList } from 'react-native';
+import { SwipeListView, RowMap } from 'react-native-swipe-list-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import {
   EventCard,
-  SwipeableEventCard,
   DateHeader,
   MonthHeader,
   Icon,
@@ -320,7 +320,7 @@ export function EventsListScreen({
   const listItems = groupEventsByDate(localEvents);
 
   /**
-   * Render item based on type
+   * Render visible row
    */
   const renderItem = useCallback(
     ({ item }: { item: EventListItem }) => {
@@ -333,7 +333,7 @@ export function EventsListScreen({
 
         case 'event':
           return (
-            <SwipeableEventCard
+            <EventCard
               event={item.data}
               index={item.index!}
               isLoading={isLoading}
@@ -341,8 +341,6 @@ export function EventsListScreen({
               formatTimeRange={formatTimeRange}
               getCalendarColor={getCalendarColor}
               onClick={() => handleEventClick(item.data, item.index!)}
-              onSwipeRight={() => onAddEvent?.(item.data)}
-              onSwipeLeft={() => onDeleteEvent?.(item.data)}
             />
           );
 
@@ -351,6 +349,66 @@ export function EventsListScreen({
       }
     },
     [isLoading, calendars, getCalendarColor, handleEventClick]
+  );
+
+  /**
+   * Render hidden row behind each item (swipe actions)
+   * Only event rows get swipe actions; headers get empty hidden views
+   */
+  const renderHiddenItem = useCallback(
+    ({ item }: { item: EventListItem }) => {
+      if (item.type !== 'event') {
+        return <View />;
+      }
+
+      return (
+        <View style={styles.swipeActionsContainer}>
+          {/* Left side - revealed when swiping right (Add) */}
+          <TouchableOpacity
+            style={styles.swipeActionAdd}
+            onPress={() => onAddEvent?.(item.data)}
+          >
+            <Icon name="CalendarStar" size={28} color="#ffffff" weight="duotone" />
+            <Text style={styles.swipeActionText}>Add</Text>
+          </TouchableOpacity>
+
+          {/* Right side - revealed when swiping left (Remove) */}
+          <TouchableOpacity
+            style={styles.swipeActionDelete}
+            onPress={() => onDeleteEvent?.(item.data)}
+          >
+            <Icon name="X" size={28} color="#ffffff" weight="bold" />
+            <Text style={styles.swipeActionText}>Remove</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [onAddEvent, onDeleteEvent]
+  );
+
+  /**
+   * Handle row open — trigger action and close
+   */
+  const handleRowOpen = useCallback(
+    (rowKey: string, rowMap: RowMap<EventListItem>, toValue: number) => {
+      // Find the item
+      const item = listItems.find((i) => i.key === rowKey);
+      if (!item || item.type !== 'event') return;
+
+      if (toValue > 0) {
+        // Swiped right → Add
+        onAddEvent?.(item.data);
+      } else {
+        // Swiped left → Delete
+        onDeleteEvent?.(item.data);
+      }
+
+      // Close the row after action
+      if (rowMap[rowKey]) {
+        rowMap[rowKey].closeRow();
+      }
+    },
+    [listItems, onAddEvent, onDeleteEvent]
   );
 
   /**
@@ -581,10 +639,16 @@ export function EventsListScreen({
       {renderTopBar()}
 
       {/* Events List */}
-      <FlatList
+      <SwipeListView
         data={listItems}
         renderItem={renderItem}
+        renderHiddenItem={renderHiddenItem}
         keyExtractor={(item) => item.key}
+        leftOpenValue={120}
+        rightOpenValue={-120}
+        onRowOpen={handleRowOpen}
+        disableLeftSwipe={false}
+        disableRightSwipe={false}
         contentContainerStyle={[
           styles.listContent,
           listItems.length === 0 && styles.listContentEmpty,
@@ -599,7 +663,6 @@ export function EventsListScreen({
           />
         }
         ListEmptyComponent={renderEmptyState}
-        // Performance optimizations
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         updateCellsBatchingPeriod={50}
@@ -876,5 +939,37 @@ const styles = StyleSheet.create({
   processingText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+
+  // Swipe Actions
+  swipeActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'stretch',
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    flex: 1,
+  },
+  swipeActionAdd: {
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 120,
+    borderRadius: 16,
+    gap: 4,
+  },
+  swipeActionDelete: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 120,
+    borderRadius: 16,
+    gap: 4,
+  },
+  swipeActionText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

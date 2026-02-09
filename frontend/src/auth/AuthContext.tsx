@@ -31,6 +31,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  calendarReady: boolean;
   preferences: UserPreferences;
   setPreferences: React.Dispatch<React.SetStateAction<UserPreferences>>;
   primaryCalendarProvider: string | null;
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState<UserPreferences>({});
   const [primaryCalendarProvider, setPrimaryCalendarProvider] = useState<string | null>(null);
+  const [calendarReady, setCalendarReady] = useState(false);
 
   useEffect(() => {
     // Initialize session on mount — always set user immediately
@@ -79,6 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } catch {
             // Preferences will use defaults
+          }
+
+          // Only mark calendar ready if this is a genuine session restore (no
+          // provider_token). If provider_token is present, this is an OAuth
+          // redirect — tokens still need storing, so let onAuthStateChange do it.
+          if (!currentSession.provider_token) {
+            setCalendarReady(true);
           }
         }
       } catch (error) {
@@ -115,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           (event === 'INITIAL_SESSION' && hasProviderToken);
 
         if (shouldSync) {
-          // Fire-and-forget: sync profile, store tokens, load preferences
+          // Background: sync profile, store tokens, load preferences
           (async () => {
             try {
               const result = await syncUserProfile();
@@ -144,12 +153,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error('Failed to store Google Calendar tokens:', error);
               }
             }
+
+            // Signal that calendar tokens are now stored and ready
+            setCalendarReady(true);
           })();
+        } else {
+          // No token storage needed (session restore via listener) — already ready
+          setCalendarReady(true);
         }
       } else {
         setUser(null);
         setPreferences({});
         setPrimaryCalendarProvider(null);
+        setCalendarReady(false);
 
         // Reset PostHog identity on sign-out
         posthog.reset();
@@ -187,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user,
     loading,
+    calendarReady,
     preferences,
     setPreferences,
     primaryCalendarProvider,

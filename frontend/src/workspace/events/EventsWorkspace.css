@@ -426,8 +426,8 @@
 }
 
 .event-status-bar.status-conflict {
-  background-color: var(--error-background);
-  color: var(--error);
+  background-color: var(--warning-background);
+  color: var(--warning);
 }
 
 /* Skeleton card styling */
@@ -497,6 +497,10 @@
   margin-left: 0.5rem;
 }
 
+.event-recurrence-after-time {
+  display: none;
+}
+
 .event-confirmation-card-date {
   font-size: 0.875rem;
   color: var(--text-secondary);
@@ -529,6 +533,14 @@
   min-width: 0;
 }
 
+.event-confirmation-card-meta-inline {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
 .event-confirmation-card-meta {
   display: flex;
   align-items: flex-start;
@@ -536,7 +548,7 @@
   font-size: 0.875rem;
   color: var(--text-secondary);
   line-height: 1.5;
-  flex: 1;
+  flex-shrink: 1;
   min-width: 0;
 }
 
@@ -1054,6 +1066,20 @@
     display: block;
     margin-left: 0;
     font-size: 0.8125rem;
+  }
+
+  .event-recurrence-after-time {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: 0.125rem;
+  }
+
+  .event-recurrence-in-meta {
+    display: none;
   }
 
   .event-confirmation-card-description {

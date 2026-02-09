@@ -52,6 +52,7 @@ export function TimezoneInputDesktop({ value, onChange, onFocus, onBlur, isEditi
     onChange(iana)
     setIsOpen(false)
     setSearchQuery('')
+    onBlur?.()
   }
 
   // Click-outside to close

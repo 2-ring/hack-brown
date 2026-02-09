@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon, CaretLeft, Images, Files, Microphone, Pen } from '@phosphor-icons/react'
+import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon, CaretLeft, Images, Files, Microphone, Pen, CalendarDots } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import type { LoadingStateConfig } from './types'
 import { Tooltip } from '../../components/Tooltip'
@@ -85,11 +85,11 @@ export function TopBar({
   return (
     <div className={`event-confirmation-header ${!isScrollable ? 'no-scroll' : ''}`}>
       <div className="event-confirmation-header-content">
-        {onBack && (
+        {/* {onBack && (
           <button className="header-back-button" onClick={onBack} title="Back">
             <CaretLeft size={20} weight="bold" />
           </button>
-        )}
+        )} */}
         <div className="header-left">
           {input && InputIcon ? (
             <div className="input-display">
@@ -107,9 +107,12 @@ export function TopBar({
           {!eventCount ? (
             <Skeleton width={80} height={20} />
           ) : (
-            <span>
-              {eventCount} {eventCount === 1 ? 'event' : 'events'}
-            </span>
+            <div className="input-display">
+              <CalendarDots size={16} weight="regular" />
+              <span className="input-display-text">
+                {eventCount} {eventCount === 1 ? 'event' : 'events'}
+              </span>
+            </div>
           )}
         </div>
       </div>
