@@ -131,6 +131,10 @@ class SessionProcessor:
             if not patterns:
                 return None, None
 
+            # Trigger background refresh check (non-blocking)
+            if self.pattern_refresh_service:
+                self.pattern_refresh_service.maybe_refresh(user_id, patterns)
+
             from config.database import QueryLimits
             historical_events = EventService.get_historical_events_with_embeddings(
                 user_id=user_id,

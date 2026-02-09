@@ -188,8 +188,18 @@ from processors.document import DocumentProcessor
 document_processor = DocumentProcessor()
 input_processor_factory.register_processor(InputType.DOCUMENT, document_processor)
 
+# Initialize Pattern Refresh service (incremental background refresh)
+from preferences.pattern_refresh_service import PatternRefreshService
+pattern_refresh_service = PatternRefreshService(
+    pattern_discovery_service=pattern_discovery_service,
+    personalization_service=personalization_service,
+)
+
 # Initialize session processor
-session_processor = SessionProcessor(llm_session_processor, input_processor_factory)
+session_processor = SessionProcessor(
+    llm_session_processor, input_processor_factory,
+    pattern_refresh_service=pattern_refresh_service
+)
 app.session_processor = session_processor
 
 

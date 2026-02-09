@@ -45,14 +45,23 @@ class CollectionConfig:
 
 
 class RefreshConfig:
-    """Incremental pattern refresh thresholds."""
+    """Incremental pattern refresh thresholds.
+
+    Conservative by design — patterns change slowly and don't need
+    aggressive updating. Refresh is a nice-to-have, not critical.
+
+    Growth threshold is adaptive to calendar size:
+      threshold = max(FLOOR, min(stored * RATIO, CAP))
+    Small calendars use proportional growth, large calendars are capped.
+    """
 
     # Minimum days between refreshes of the same calendar
-    MIN_REFRESH_INTERVAL_DAYS: int = 7
+    MIN_REFRESH_INTERVAL_DAYS: int = 30
 
-    # Event count growth thresholds (either triggers refresh)
-    EVENT_GROWTH_RATIO: float = 0.5        # 50% more events
-    EVENT_GROWTH_ABSOLUTE: int = 50        # or 50+ more events
+    # Adaptive growth threshold parameters
+    EVENT_GROWTH_RATIO: float = 0.75       # proportional growth trigger
+    EVENT_GROWTH_CAP: int = 75             # absolute cap for large calendars
+    EVENT_GROWTH_FLOOR: int = 10           # minimum to ignore noise on tiny calendars
 
     # Max events to fetch per calendar for refresh analysis
     MAX_EVENTS_PER_CALENDAR: int = 500

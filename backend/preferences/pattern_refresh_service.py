@@ -271,16 +271,23 @@ class PatternRefreshService:
 
         current_count = len(events)
 
-        # For stale calendars, check if growth warrants an LLM call
+        # For stale calendars, check if growth warrants an LLM call.
+        # Adaptive threshold: ratio-based for small calendars, capped for large ones,
+        # with a floor to ignore noise on tiny calendars.
         if stored_event_count > 0:
             growth = current_count - stored_event_count
-            growth_ratio = growth / stored_event_count if stored_event_count else 0
+            growth_threshold = max(
+                RefreshConfig.EVENT_GROWTH_FLOOR,
+                min(
+                    stored_event_count * RefreshConfig.EVENT_GROWTH_RATIO,
+                    RefreshConfig.EVENT_GROWTH_CAP
+                )
+            )
 
-            if (growth < RefreshConfig.EVENT_GROWTH_ABSOLUTE and
-                    growth_ratio < RefreshConfig.EVENT_GROWTH_RATIO):
+            if growth < growth_threshold:
                 logger.info(
                     f"Skipping LLM refresh for {cal_name}: "
-                    f"growth {growth} ({growth_ratio:.0%}) below threshold"
+                    f"growth {growth} below threshold {growth_threshold:.0f}"
                 )
                 # Update timestamp so we don't re-check too soon
                 return {
