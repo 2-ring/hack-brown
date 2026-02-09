@@ -20,9 +20,10 @@ class CorrectionQueryService:
     """
 
     def __init__(self):
+        from config.similarity import EmbeddingConfig
         # Reuse same embedding model as storage service
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.embedding_model.max_seq_length = 256
+        self.embedding_model = SentenceTransformer(EmbeddingConfig.MODEL_NAME)
+        self.embedding_model.max_seq_length = EmbeddingConfig.CORRECTION_MAX_SEQ_LENGTH
         self.supabase = get_supabase()
 
     def query_for_fact_extraction(

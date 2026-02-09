@@ -28,6 +28,7 @@ from .models import (
     SimilarEvent,
     SimilaritySearchResult
 )
+from config.similarity import EmbeddingConfig
 
 
 class CalendarEventSimilarity:
@@ -62,7 +63,7 @@ class CalendarEventSimilarity:
         # Load sentence transformer model
         print(f"Loading sentence transformer model: {model_name}")
         self.model = SentenceTransformer(model_name)
-        self.model.max_seq_length = 128  # Calendar events are short
+        self.model.max_seq_length = EmbeddingConfig.MAX_SEQ_LENGTH
         print(f"✓ Model loaded (dimension: {self.model.get_sentence_embedding_dimension()})")
 
         # Similarity weights (research-backed defaults)
@@ -200,7 +201,7 @@ class CalendarEventSimilarity:
 
         # Exponential decay: exp(-diff / T)
         # T=3 gives smooth tapering: same length=1.0, diff=3→0.37, diff=6→0.13
-        similarity = np.exp(-diff / 3.0)
+        similarity = np.exp(-diff / EmbeddingConfig.LENGTH_SIMILARITY_DECAY_T)
 
         return float(similarity)
 
@@ -256,7 +257,7 @@ class CalendarEventSimilarity:
         else:
             return 0.5
 
-    @lru_cache(maxsize=1000)
+    @lru_cache(maxsize=EmbeddingConfig.KEYWORD_CACHE_SIZE)
     def _extract_keywords(self, text: str) -> Set[str]:
         """
         Extract important keywords from text.
@@ -460,7 +461,7 @@ class TwoStageRetrieval:
         # Batch encode all event titles
         self.embeddings = self.similarity.model.encode(
             titles,
-            batch_size=32,
+            batch_size=EmbeddingConfig.FAISS_BATCH_SIZE,
             convert_to_numpy=True,
             show_progress_bar=show_progress
         )
@@ -653,8 +654,8 @@ class ProductionSimilaritySearch:
         if use_cache and cache_key:
             self._cache[cache_key] = results
 
-            # Simple cache size limit (keep last 1000 queries)
-            if len(self._cache) > 1000:
+            # Simple cache size limit
+            if len(self._cache) > EmbeddingConfig.QUERY_CACHE_SIZE_LIMIT:
                 # Remove oldest (first) item
                 oldest_key = next(iter(self._cache))
                 del self._cache[oldest_key]
@@ -937,8 +938,8 @@ def get_embedding_model() -> SentenceTransformer:
     global _global_model
     if _global_model is None:
         print("Loading global sentence transformer model...")
-        _global_model = SentenceTransformer('all-MiniLM-L6-v2')
-        _global_model.max_seq_length = 128
+        _global_model = SentenceTransformer(EmbeddingConfig.MODEL_NAME)
+        _global_model.max_seq_length = EmbeddingConfig.MAX_SEQ_LENGTH
         print("✓ Global model loaded")
     return _global_model
 

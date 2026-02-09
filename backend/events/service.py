@@ -9,6 +9,7 @@ import numpy as np
 
 from database.models import Event, Session
 from preferences.similarity import compute_embedding
+from config.database import QueryLimits
 
 
 class EventService:
@@ -201,7 +202,7 @@ class EventService:
     @staticmethod
     def get_historical_events(
         user_id: str,
-        limit: int = 500
+        limit: int = QueryLimits.DEFAULT_HISTORICAL_EVENTS_LIMIT
     ) -> List[Dict[str, Any]]:
         """
         Get historical events for pattern learning (provider events only).
@@ -218,7 +219,7 @@ class EventService:
     @staticmethod
     def get_historical_events_with_embeddings(
         user_id: str,
-        limit: int = 200
+        limit: int = QueryLimits.DEFAULT_EVENTS_WITH_EMBEDDINGS_LIMIT
     ) -> List[Dict[str, Any]]:
         """
         Get historical events that have embeddings (for similarity search).
@@ -247,7 +248,7 @@ class EventService:
     def find_similar_events(
         user_id: str,
         query_text: str,
-        limit: int = 10
+        limit: int = QueryLimits.DEFAULT_SIMILAR_EVENTS_LIMIT
     ) -> List[Dict[str, Any]]:
         """
         Find similar events using semantic search.
@@ -457,7 +458,7 @@ class EventService:
         return response.data
 
     @staticmethod
-    def compute_missing_embeddings(batch_size: int = 100) -> int:
+    def compute_missing_embeddings(batch_size: int = QueryLimits.EMBEDDING_BATCH_SIZE) -> int:
         """
         Background job: Compute embeddings for events that don't have them.
 

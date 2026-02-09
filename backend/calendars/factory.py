@@ -8,6 +8,7 @@ Provides a unified interface for calendar operations across all providers.
 from typing import Any, Dict, List, Optional, Tuple
 from database.models import User, Event, Session as DBSession
 from events.service import EventService
+from config.calendar import CollectionConfig
 
 
 def get_provider_modules(provider: str) -> tuple:
@@ -106,7 +107,7 @@ def list_calendars(
 
 def list_events(
     user_id: str,
-    max_results: int = 100,
+    max_results: int = CollectionConfig.DEFAULT_LIST_EVENTS_LIMIT,
     time_min: Optional[str] = None,
     provider: Optional[str] = None
 ) -> List[Dict]:

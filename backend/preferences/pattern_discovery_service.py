@@ -18,6 +18,7 @@ import json
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
 from config.posthog import get_invoke_config
+from config.similarity import PatternDiscoveryConfig
 
 
 class PatternDiscoveryService:
@@ -243,7 +244,7 @@ class PatternDiscoveryService:
 
             # Sample events for analysis with recency weighting
             # 60% from recent events, 30% mid-term, 10% historical
-            sampled = self._smart_sample_weighted(cal_events, target=100, recency_bias=0.6)
+            sampled = self._smart_sample_weighted(cal_events, target=PatternDiscoveryConfig.TARGET_SAMPLE_SIZE, recency_bias=PatternDiscoveryConfig.RECENCY_BIAS_DEFAULT)
 
             # Call LLM to analyze this category
             summary = self._analyze_category_with_llm(
@@ -282,11 +283,11 @@ class PatternDiscoveryService:
 
         # Prepare event summaries (exclude colorId - not relevant for patterns)
         event_summaries = []
-        for e in events[:50]:  # Show first 50 to LLM
+        for e in events[:PatternDiscoveryConfig.LLM_MAX_EVENTS]:
             event_summaries.append({
                 'title': e.get('summary', ''),
                 'date': self._extract_date(e),
-                'location': e.get('location', '')[:50] if e.get('location') else None
+                'location': e.get('location', '')[:PatternDiscoveryConfig.LOCATION_DISPLAY_MAX_LENGTH] if e.get('location') else None
             })
 
         prompt = f"""Analyze this category to understand when/why the user uses it.
@@ -410,8 +411,8 @@ Return structured JSON."""
         # Recent: Last 25% of events (roughly last 3 months)
         # Mid: Middle 35% of events (roughly 3-9 months ago)
         # Old: First 40% of events (roughly 9+ months ago)
-        recent_start = int(total * 0.75)  # Last 25% of list
-        mid_start = int(total * 0.40)     # Middle 35% of list
+        recent_start = int(total * PatternDiscoveryConfig.RECENT_TIER_BOUNDARY)
+        mid_start = int(total * PatternDiscoveryConfig.MID_TIER_BOUNDARY)
 
         old_events = items[:mid_start]
         mid_events = items[mid_start:recent_start]
@@ -419,10 +420,10 @@ Return structured JSON."""
 
         # Allocate samples based on recency bias
         # Ensure we always get at least a few from each tier
-        min_per_tier = max(1, int(target * 0.05))  # At least 5% from each tier
+        min_per_tier = max(1, int(target * PatternDiscoveryConfig.MIN_SAMPLE_PER_TIER))
 
         recent_count = max(min_per_tier, int(target * recency_bias))
-        mid_count = max(min_per_tier, int(target * (1 - recency_bias) * 0.75))
+        mid_count = max(min_per_tier, int(target * (1 - recency_bias) * PatternDiscoveryConfig.MID_TIER_ALLOCATION_WEIGHT))
         old_count = max(min_per_tier, target - recent_count - mid_count)
 
         # Adjust if we over-allocated
@@ -513,7 +514,7 @@ Return structured JSON."""
         for i in range(len(items)):
             # Normalize position to 0-1, then apply exponential
             # decay_rate = 2 means recent items are ~7x more likely than oldest
-            decay_rate = 2.0
+            decay_rate = PatternDiscoveryConfig.EXPONENTIAL_DECAY_RATE
             normalized_pos = i / len(items)
             weight = math.exp(decay_rate * normalized_pos)
             weights.append(weight)

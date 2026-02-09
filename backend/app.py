@@ -95,7 +95,7 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     storage_uri=RateLimitConfig.get_storage_uri(),
-    default_limits=["2000 per day", "500 per hour"],
+    default_limits=RateLimitConfig.AUTHENTICATED_LIMITS,
     default_limits_exempt_when=lambda: request.method == 'OPTIONS'
 )
 
@@ -704,9 +704,10 @@ def apply_preferences_endpoint():
 
         if patterns:
             try:
+                from config.database import QueryLimits
                 historical_events = EventService.get_historical_events_with_embeddings(
                     user_id=user_id,
-                    limit=200
+                    limit=QueryLimits.PERSONALIZATION_HISTORICAL_LIMIT
                 )
             except Exception as e:
                 print(f"Warning: Could not fetch historical events: {e}")
@@ -1170,7 +1171,8 @@ def get_user_sessions():
     try:
         # Get user_id from auth middleware (set by @require_auth)
         user_id = request.user_id
-        limit = int(request.args.get('limit', 50))
+        from config.database import QueryLimits
+        limit = int(request.args.get('limit', QueryLimits.DEFAULT_SESSION_LIMIT))
 
         sessions = DBSession.get_by_user(user_id, limit=limit)
 

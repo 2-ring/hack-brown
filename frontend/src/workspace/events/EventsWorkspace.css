@@ -977,52 +977,35 @@
   box-shadow: var(--shadow-medium);
 }
 
-/* Swipeable Event */
-.swipeable-event-container {
-  position: relative;
-  overflow: hidden;
+/* Swipeable Event (react-swipeable-list) */
+.swipeable-list {
+  overflow: visible;
+}
+
+.swipeable-list-item {
   border-radius: 16px;
 }
 
-.swipeable-event-card {
-  position: relative;
-  z-index: 2;
-  touch-action: pan-y;
-}
-
-.swipe-action {
-  position: absolute;
-  top: 0;
-  bottom: 0;
+.swipe-action-panel {
   display: flex;
   align-items: center;
-  border-radius: 16px;
-  z-index: 1;
-}
-
-.swipe-action-add {
-  left: 0;
-  width: 120px;
-  background-color: #10B981;
   justify-content: center;
-}
-
-.swipe-action-remove {
-  right: 0;
-  width: 120px;
-  background-color: #EF4444;
-  justify-content: center;
-}
-
-.swipe-action-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 0 1.5rem;
   color: #ffffff;
   font-size: 0.8125rem;
   font-weight: 700;
-  width: 100%;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.swipe-action-panel.swipe-action-add {
+  background-color: #10B981;
+}
+
+.swipe-action-panel.swipe-action-remove {
+  background-color: #EF4444;
 }
 
 /* Responsive Design */

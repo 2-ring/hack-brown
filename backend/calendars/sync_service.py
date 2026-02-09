@@ -7,6 +7,7 @@ from typing import Dict, Optional
 from datetime import datetime, timedelta
 from database.models import Event, User
 from events.service import EventService
+from config.calendar import SyncConfig
 
 
 class SmartSyncService:
@@ -115,8 +116,8 @@ class SmartSyncService:
         - 'fast_incremental': Quick check for recent changes
         """
 
-        # Skip if synced within last 2 minutes (avoid hammering API)
-        if state['minutes_since_last_sync'] and state['minutes_since_last_sync'] < 2:
+        # Skip if synced very recently (avoid hammering API)
+        if state['minutes_since_last_sync'] and state['minutes_since_last_sync'] < SyncConfig.SKIP_IF_SYNCED_WITHIN_MINUTES:
             return 'skip'
 
         # First sync: full sync (last 1 year)
@@ -128,7 +129,7 @@ class SmartSyncService:
             return 'incremental'
 
         # No token but synced recently: fast incremental
-        if state['minutes_since_last_sync'] and state['minutes_since_last_sync'] < 60:
+        if state['minutes_since_last_sync'] and state['minutes_since_last_sync'] < SyncConfig.FAST_INCREMENTAL_THRESHOLD_MINUTES:
             return 'fast_incremental'
 
         # Default: full sync
@@ -255,7 +256,7 @@ class SmartSyncService:
         response = service.events().list(
             calendarId=calendar_id,
             updatedMin=updated_min,
-            maxResults=250,
+            maxResults=SyncConfig.MAX_RESULTS_INCREMENTAL,
             showDeleted=True
         ).execute()
 
@@ -303,7 +304,7 @@ class SmartSyncService:
             response = service.events().list(
                 calendarId=calendar_id,
                 timeMin=time_min,
-                maxResults=2500,
+                maxResults=SyncConfig.MAX_RESULTS_FULL,
                 pageToken=page_token,
                 showDeleted=True,
                 singleEvents=True

@@ -22,10 +22,11 @@ class CorrectionStorageService:
     """
 
     def __init__(self):
+        from config.similarity import EmbeddingConfig
         self.analyzer = CorrectionAnalyzer()
         # Reuse existing embedding model (same as similarity search)
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.embedding_model.max_seq_length = 256  # Longer for facts
+        self.embedding_model = SentenceTransformer(EmbeddingConfig.MODEL_NAME)
+        self.embedding_model.max_seq_length = EmbeddingConfig.CORRECTION_MAX_SEQ_LENGTH
         self.supabase = get_supabase()
 
     def store_correction(

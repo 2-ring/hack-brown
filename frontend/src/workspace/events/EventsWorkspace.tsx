@@ -175,10 +175,14 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
   const handleEventSave = (updatedEvent: CalendarEvent) => {
     if (editingEventIndex === null) return
 
-    // Optimistic local update
+    // Optimistic local update — bump version so sync badge immediately shows "Apply edits"
+    const optimisticEvent = {
+      ...updatedEvent,
+      version: (updatedEvent.version ?? 1) + 1,
+    }
     setEditedEvents(prev => {
       const updated = [...prev]
-      updated[editingEventIndex] = updatedEvent
+      updated[editingEventIndex] = optimisticEvent
       return updated
     })
 

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import time
 from calendars.service import CalendarService
+from config.calendar import CollectionConfig
 
 
 class DataCollectionService:
@@ -67,15 +68,15 @@ class DataCollectionService:
 
         time_min = self._calculate_date_ago(months=3)
         events = self.calendar_service.list_events(
-            max_results=250,
+            max_results=CollectionConfig.QUICK_MAX_EVENTS,
             time_min=time_min
         )
 
         # If calendar is sparse, extend time range
-        if len(events) < 30:
+        if len(events) < CollectionConfig.QUICK_MIN_EVENTS_THRESHOLD:
             time_min = self._calculate_date_ago(months=12)
             events = self.calendar_service.list_events(
-                max_results=250,
+                max_results=CollectionConfig.QUICK_MAX_EVENTS,
                 time_min=time_min
             )
 
@@ -97,16 +98,16 @@ class DataCollectionService:
         # Tier 1: Recent events (last 3 months, full fetch)
         recent = self._fetch_range(
             months_back=3,
-            max_events=200
+            max_events=CollectionConfig.DEEP_RECENT_MAX
         )
         all_events.extend(recent)
 
         # Tier 2: Historical sample (3-12 months ago)
-        if len(recent) >= 20:  # Only if calendar is reasonably active
+        if len(recent) >= CollectionConfig.DEEP_MIN_RECENT_FOR_HISTORICAL:
             historical = self._fetch_sampled_range(
                 start_months_back=12,
                 end_months_back=3,
-                sample_size=150
+                sample_size=CollectionConfig.DEEP_HISTORICAL_SAMPLE_SIZE
             )
             all_events.extend(historical)
 
@@ -144,7 +145,7 @@ class DataCollectionService:
                 # Fetch events from this calendar
                 calendar_events = self._fetch_all_with_pagination(
                     time_min=time_min,
-                    max_total=10000,  # Safety cap per calendar
+                    max_total=CollectionConfig.COMPREHENSIVE_MAX_PER_CALENDAR,
                     calendar_id=cal_id
                 )
 
@@ -160,7 +161,7 @@ class DataCollectionService:
 
         return all_events
 
-    def _fetch_all_with_pagination(self, time_min: str, max_total: int = 10000, calendar_id: str = 'primary') -> List[Dict]:
+    def _fetch_all_with_pagination(self, time_min: str, max_total: int = CollectionConfig.COMPREHENSIVE_MAX_PER_CALENDAR, calendar_id: str = 'primary') -> List[Dict]:
         """
         Fetch all events with automatic pagination.
         Keeps requesting pages until no more results or max_total reached.
@@ -181,7 +182,7 @@ class DataCollectionService:
             try:
                 # Fetch page using full response mode
                 response = self.calendar_service.list_events(
-                    max_results=250,  # Default page size
+                    max_results=CollectionConfig.API_PAGE_SIZE,
                     time_min=time_min,
                     page_token=page_token,
                     return_full_response=True,
@@ -201,7 +202,7 @@ class DataCollectionService:
                 page_num += 1
 
                 # Small delay to respect rate limits
-                time.sleep(0.1)
+                time.sleep(CollectionConfig.API_RATE_LIMIT_DELAY_SECONDS)
 
             except Exception as e:
                 break
@@ -254,7 +255,7 @@ class DataCollectionService:
         time_max_str = self._calculate_date_ago(months=end_months_back)
 
         months_in_range = start_months_back - end_months_back
-        per_month = max(sample_size // months_in_range, 5)  # At least 5 per month
+        per_month = max(sample_size // months_in_range, CollectionConfig.MIN_EVENTS_PER_MONTH_SAMPLED)
 
         sampled = []
 
@@ -281,7 +282,7 @@ class DataCollectionService:
                 sampled.extend(month_events)
 
                 # Small delay to respect rate limits
-                time.sleep(0.1)
+                time.sleep(CollectionConfig.API_RATE_LIMIT_DELAY_SECONDS)
 
             except Exception as e:
                 continue

@@ -55,11 +55,12 @@ def stream_session_updates(session_id: str):
         # Poll for updates (title generation usually takes 50-400ms)
         last_title = session.get('title')
         last_status = session.get('status')
-        max_polls = 100  # Max 10 seconds (100 * 100ms)
+        from config.database import StreamConfig
+        max_polls = StreamConfig.MAX_POLLS
         polls = 0
 
         while polls < max_polls:
-            time.sleep(0.1)  # Check every 100ms
+            time.sleep(StreamConfig.POLL_INTERVAL_SECONDS)
             polls += 1
 
             # Check for updates

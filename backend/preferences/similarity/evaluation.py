@@ -13,6 +13,7 @@ Based on information retrieval and few-shot learning evaluation practices.
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Set, Callable
 from collections import defaultdict
+from config.similarity import EvaluationConfig
 
 
 class SimilarityEvaluator:
@@ -36,7 +37,7 @@ class SimilarityEvaluator:
         self,
         test_events: List[Dict],
         historical_events: List[Dict],
-        k: int = 10
+        k: int = EvaluationConfig.DEFAULT_K
     ) -> Dict[str, float]:
         """
         Evaluate retrieval quality on held-out test set.
@@ -158,7 +159,7 @@ class SimilarityEvaluator:
             overlap = len(query_words & candidate_words) / len(query_words | candidate_words)
 
             # At least 30% word overlap = similar formatting expected
-            if overlap > 0.3:
+            if overlap > EvaluationConfig.SAME_FORMAT_SIMILARITY_THRESHOLD:
                 same_format.append(candidate_id)
 
         return same_format
@@ -219,27 +220,27 @@ def run_evaluation_report(
     print(f"  Avg Score:      {metrics['avg_score']:.3f}  (similarity scores)")
     print()
     print("TARGET METRICS:")
-    print(f"  Precision@{k}:  ≥80%")
-    print(f"  Recall@{k}:     ≥60%")
-    print(f"  MRR:            ≥0.70")
+    print(f"  Precision@{k}:  ≥{EvaluationConfig.TARGET_PRECISION:.0%}")
+    print(f"  Recall@{k}:     ≥{EvaluationConfig.TARGET_RECALL:.0%}")
+    print(f"  MRR:            ≥{EvaluationConfig.TARGET_MRR}")
     print()
 
     # Check if targets met
     targets_met = (
-        metrics['precision@k'] >= 0.80 and
-        metrics['recall@k'] >= 0.60 and
-        metrics['mrr'] >= 0.70
+        metrics['precision@k'] >= EvaluationConfig.TARGET_PRECISION and
+        metrics['recall@k'] >= EvaluationConfig.TARGET_RECALL and
+        metrics['mrr'] >= EvaluationConfig.TARGET_MRR
     )
 
     if targets_met:
         print("✅ ALL TARGETS MET")
     else:
         print("❌ TARGETS NOT MET - Consider:")
-        if metrics['precision@k'] < 0.80:
+        if metrics['precision@k'] < EvaluationConfig.TARGET_PRECISION:
             print("   - Tune similarity weights")
-        if metrics['recall@k'] < 0.60:
+        if metrics['recall@k'] < EvaluationConfig.TARGET_RECALL:
             print("   - Increase rerank_factor")
-        if metrics['mrr'] < 0.70:
+        if metrics['mrr'] < EvaluationConfig.TARGET_MRR:
             print("   - Improve semantic model or add more signals")
 
     print("=" * 70)

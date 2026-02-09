@@ -258,7 +258,8 @@ def list_calendar_events():
             }), 401
 
         # Get query parameters
-        max_results = request.args.get('max_results', 10, type=int)
+        from config.calendar import CollectionConfig
+        max_results = request.args.get('max_results', CollectionConfig.DEFAULT_CALENDAR_LIST_LIMIT, type=int)
         time_min = request.args.get('time_min', None)
 
         # List events

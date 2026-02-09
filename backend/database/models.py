@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from .supabase_client import get_supabase
 from utils.encryption import encrypt_token, decrypt_token
+from config.database import QueryLimits
 
 
 class User:
@@ -682,7 +683,7 @@ class Session:
 
         # Generate secure access token for guest sessions
         if guest_mode:
-            data["access_token"] = secrets.token_hex(32)  # 64-char hex string
+            data["access_token"] = secrets.token_hex(QueryLimits.GUEST_TOKEN_BYTES)
 
         response = supabase.table("sessions").insert(data).execute()
         return response.data[0]
@@ -703,7 +704,7 @@ class Session:
         return response.data[0] if response.data else None
 
     @staticmethod
-    def get_by_user(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_by_user(user_id: str, limit: int = QueryLimits.DEFAULT_SESSION_LIMIT) -> List[Dict[str, Any]]:
         """
         Get all sessions for a user.
 
@@ -1066,7 +1067,7 @@ class Event:
         user_id: str,
         provider: Optional[str] = None,
         is_draft: Optional[bool] = None,
-        limit: int = 500
+        limit: int = QueryLimits.DEFAULT_EVENT_LIMIT
     ) -> List[Dict[str, Any]]:
         """
         Get events for a user.
@@ -1095,7 +1096,7 @@ class Event:
     @staticmethod
     def get_historical_events(
         user_id: str,
-        limit: int = 500
+        limit: int = QueryLimits.DEFAULT_HISTORICAL_EVENTS_LIMIT
     ) -> List[Dict[str, Any]]:
         """Get historical events (from providers, not dropcal) for pattern learning."""
         supabase = get_supabase()
@@ -1237,7 +1238,7 @@ class Event:
     def find_similar_events(
         user_id: str,
         query_embedding: List[float],
-        limit: int = 10
+        limit: int = QueryLimits.DEFAULT_SIMILAR_EVENTS_LIMIT
     ) -> List[Dict[str, Any]]:
         """
         Find similar events using vector similarity search.
