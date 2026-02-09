@@ -38,6 +38,6 @@ icalendar==5.0.11
 pytz==2023.3
 python-dateutil==2.8.2
 # Document text extraction (docx, pptx, xlsx, html, csv, epub, etc.)
-markitdown>=0.1.4
+markitdown[pdf]>=0.1.4
 # Analytics & LLM Observability
 posthog[langchain]>=4.0.0
