@@ -154,13 +154,13 @@ def validate_rrule_basic(rrule: str) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def truncate_title(title: str, max_length: int = 100) -> str:
+def truncate_title(title: str, max_length: int | None = None) -> str:
     """
     Truncate title to max length with ellipsis.
 
     Args:
         title: Title string to truncate
-        max_length: Maximum length (default: 100)
+        max_length: Maximum length (default from TextLimits.EVENT_TITLE_MAX_LENGTH)
 
     Returns:
         Truncated title string
@@ -171,6 +171,9 @@ def truncate_title(title: str, max_length: int = 100) -> str:
         >>> truncate_title("A" * 150)
         "A...A..." # 100 chars total
     """
+    if max_length is None:
+        from config.limits import TextLimits
+        max_length = TextLimits.EVENT_TITLE_MAX_LENGTH
     if len(title) <= max_length:
         return title
     return title[:max_length-3] + "..."

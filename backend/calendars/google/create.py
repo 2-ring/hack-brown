@@ -54,6 +54,48 @@ def create_event(
         return None
 
 
+def update_event(
+    user_id: str,
+    provider_event_id: str,
+    event_data: Dict,
+    calendar_id: str = 'primary'
+) -> Optional[Dict]:
+    """
+    Update an existing event in Google Calendar.
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: Google Calendar event ID to update
+        event_data: Updated event data in universal format
+        calendar_id: Target calendar ID (default: 'primary')
+
+    Returns:
+        Updated event data, or None if failed
+    """
+    credentials = auth.load_credentials(user_id)
+
+    if not credentials:
+        raise Exception("Not authenticated with Google Calendar")
+
+    if not auth.refresh_if_needed(user_id, credentials):
+        raise Exception("Failed to refresh Google Calendar credentials")
+
+    try:
+        service = build('calendar', 'v3', credentials=credentials)
+
+        event = service.events().patch(
+            calendarId=calendar_id,
+            eventId=provider_event_id,
+            body=event_data
+        ).execute()
+
+        return event
+
+    except HttpError as error:
+        print(f"Error updating Google Calendar event: {error}")
+        return None
+
+
 def create_events_from_session(
     user_id: str,
     session_id: str,

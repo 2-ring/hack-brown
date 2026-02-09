@@ -57,7 +57,7 @@ class TitleGenerator:
     def generate(
         self,
         text: str,
-        max_words: int = 3,
+        max_words: int | None = None,
         vision_metadata: Optional[dict] = None
     ) -> str:
         """
@@ -78,6 +78,9 @@ class TitleGenerator:
             >>> generate("Team standup meeting tomorrow at 10am with Sarah")
             'Team Standup Meeting'
         """
+        if max_words is None:
+            from config.limits import TextLimits
+            max_words = TextLimits.SESSION_TITLE_MAX_WORDS
         if not text or len(text.strip()) == 0:
             return "Untitled Event"
 

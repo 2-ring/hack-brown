@@ -4,6 +4,7 @@ Creates events in Apple Calendar from universal format using CalDAV.
 """
 
 from typing import Dict, Any, List, Tuple, Optional
+import uuid
 
 from . import auth, fetch, transform
 from database.models import Session, Event
@@ -18,41 +19,88 @@ def create_event(
     """
     Create a single event in Apple Calendar.
 
+    Generates a stable UUID as the iCal UID so the event can be updated later.
+
     Args:
         user_id: User's UUID
         event_data: Event dict in universal (Google Calendar) format
         calendar_id: Calendar ID (default 'primary')
 
     Returns:
-        Created event in universal format, or None if creation failed
+        Created event with 'id' set to the iCal UID, or None if failed
 
     Raises:
         ValueError: If user not authenticated or CalDAV operation fails
     """
-    # Get CalDAV client
     client = auth.get_caldav_client(user_id)
     if not client:
         raise ValueError(f"User {user_id} not authenticated with Apple Calendar")
 
     try:
-        # Get default calendar
         calendar = auth.get_default_calendar(client)
 
-        # Convert to iCalendar format
-        ical_calendar = transform.from_universal(event_data)
+        # Generate a stable UID so we can update this event later via CalDAV
+        event_uid = str(uuid.uuid4())
+        event_data_with_id = {**event_data, 'id': event_uid}
 
-        # Get the iCalendar string
+        ical_calendar = transform.from_universal(event_data_with_id)
         ical_string = ical_calendar.to_ical().decode('utf-8')
 
-        # Save event to calendar
         calendar.save_event(ical_string)
 
-        # Return the event data (Apple CalDAV doesn't return created event immediately)
-        # So we return the original event data with a generated ID
-        return event_data
+        # Return with the generated UID as the event ID
+        return event_data_with_id
 
     except Exception as e:
         print(f"Failed to create Apple Calendar event: {str(e)}")
+        return None
+
+
+def update_event(
+    user_id: str,
+    provider_event_id: str,
+    event_data: Dict[str, Any],
+    calendar_id: str = 'primary'
+) -> Optional[Dict[str, Any]]:
+    """
+    Update an existing event in Apple Calendar via CalDAV.
+
+    Uses the iCal UID to find and replace the event.
+    Falls back to create if the UID is a legacy placeholder (apple-event-N).
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: iCal UID of the event to update
+        event_data: Updated event data in universal format
+        calendar_id: Calendar ID (default 'primary')
+
+    Returns:
+        Updated event data with id, or None if failed
+    """
+    # Legacy placeholder IDs can't be updated — fall back to create
+    if provider_event_id.startswith('apple-event-'):
+        print(f"Legacy Apple event ID '{provider_event_id}', falling back to create")
+        return create_event(user_id, event_data, calendar_id)
+
+    client = auth.get_caldav_client(user_id)
+    if not client:
+        raise ValueError(f"User {user_id} not authenticated with Apple Calendar")
+
+    try:
+        calendar = auth.get_default_calendar(client)
+
+        # Inject the existing UID so CalDAV overwrites the event
+        event_data_with_id = {**event_data, 'id': provider_event_id}
+        ical_calendar = transform.from_universal(event_data_with_id)
+        ical_string = ical_calendar.to_ical().decode('utf-8')
+
+        # CalDAV save_event with same UID performs an upsert
+        calendar.save_event(ical_string)
+
+        return event_data_with_id
+
+    except Exception as e:
+        print(f"Failed to update Apple Calendar event: {str(e)}")
         return None
 
 

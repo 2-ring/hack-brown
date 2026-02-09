@@ -18,6 +18,8 @@ import {
   onAuthStateChange,
 } from './supabase';
 import { syncUserProfile, getUserProfile, storeGoogleCalendarTokens } from '../api/backend-client';
+import { sessionCache } from '../sessions/cache';
+import { GuestSessionManager } from './GuestSessionManager';
 
 export interface UserPreferences {
   theme_mode?: 'light' | 'dark';
@@ -190,9 +192,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // 1. Sign out from Supabase (clears JWT from storage)
       await authSignOut();
+
+      // 2. Clear all local auth state
       setSession(null);
       setUser(null);
+      setPreferences({});
+      setPrimaryCalendarProvider(null);
+      setCalendarReady(false);
+
+      // 3. Reset analytics identity
+      posthog.reset();
+
+      // 4. Clear session cache (in-memory + localStorage)
+      sessionCache.clear();
+
+      // 5. Clear guest session data
+      GuestSessionManager.clearGuestSessions();
+      localStorage.removeItem('dropcal_guest_toast_dismissed');
+
+      // 6. Hard reload to wipe all in-memory state
+      window.location.replace('/');
     } catch (error) {
       console.error('Sign out failed:', error);
       throw error;

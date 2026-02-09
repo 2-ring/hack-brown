@@ -355,10 +355,12 @@ export async function checkGoogleCalendarStatus(): Promise<{
 }
 
 /**
- * Add a session's processed events to Google Calendar.
+ * Smart sync a session's events to the user's calendar.
+ * Creates new events, updates edited ones, skips unchanged ones.
  *
  * @param sessionId - The session ID
  * @param events - Optional: User's edited events (for correction logging)
+ * @param eventIds - Optional: subset of event IDs to sync
  */
 export async function addSessionToCalendar(
   sessionId: string,
@@ -368,6 +370,11 @@ export async function addSessionToCalendar(
   success: boolean;
   calendar_event_ids: string[];
   num_events_created: number;
+  num_events_updated: number;
+  num_events_skipped: number;
+  created: string[];
+  updated: string[];
+  skipped: string[];
   conflicts: any[];
   has_conflicts: boolean;
   message: string;

@@ -1032,10 +1032,6 @@
     --dock-border-radius: 28px;
   }
 
-  .event-confirmation {
-    padding-right: 0;
-  }
-
   .event-confirmation-header-content {
     position: relative;
     height: var(--dock-height);

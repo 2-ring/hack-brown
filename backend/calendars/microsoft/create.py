@@ -67,6 +67,55 @@ def create_event(
         return None
 
 
+def update_event(
+    user_id: str,
+    provider_event_id: str,
+    event_data: Dict[str, Any],
+    calendar_id: str = 'primary'
+) -> Optional[Dict[str, Any]]:
+    """
+    Update an existing event in Microsoft Calendar.
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: Microsoft Calendar event ID to update
+        event_data: Updated event data in universal format
+        calendar_id: Calendar ID (default 'primary')
+
+    Returns:
+        Updated event in universal format, or None if failed
+    """
+    credentials = auth.load_credentials(user_id)
+    if not credentials:
+        raise ValueError(f"User {user_id} not authenticated with Microsoft Calendar")
+
+    if not auth.refresh_if_needed(user_id, credentials):
+        raise ValueError(f"Failed to refresh Microsoft Calendar credentials for user {user_id}")
+
+    credentials = auth.load_credentials(user_id)
+    access_token = credentials['access_token']
+
+    ms_event = transform.from_universal(event_data)
+
+    url = f'https://graph.microsoft.com/v1.0/me/events/{provider_event_id}'
+
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.patch(url, headers=headers, json=ms_event)
+        response.raise_for_status()
+        updated_event = response.json()
+
+        return transform.to_universal(updated_event)
+
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to update Microsoft Calendar event: {str(e)}")
+        return None
+
+
 def create_events_from_session(
     user_id: str,
     session_id: str,

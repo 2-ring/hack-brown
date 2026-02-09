@@ -16,7 +16,7 @@ import {
 } from './animations'
 import { useAuth } from '../../auth/AuthContext'
 import { getAccessToken } from '../../auth/supabase'
-import { updateEvent, deleteEvent, addSessionToCalendar, checkEventConflicts } from '../../api/backend-client'
+import { updateEvent, deleteEvent, addSessionToCalendar, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
 import {
   useNotificationQueue,
@@ -303,19 +303,28 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       setIsAddingToCalendar(true)
       try {
         const result = await onConfirm(validEditedEvents)
-        // Show success/warning based on result from parent
+
+        // Build notification from sync result
         if (result?.has_conflicts) {
           addNotification(createWarningNotification(
-            `Added ${result.num_events_created} event(s), but found ${result.conflicts.length} scheduling conflict(s).`
+            `${result.message}`
           ))
-        } else if (result?.num_events_created != null) {
-          addNotification(createSuccessNotification(
-            `Successfully added ${result.num_events_created} event(s) to calendar!`
-          ))
+        } else if (result?.message) {
+          addNotification(createSuccessNotification(result.message))
+        }
+
+        // Re-fetch events to get updated provider_syncs/version (badges update)
+        if (sessionId) {
+          try {
+            const freshEvents = await getSessionEvents(sessionId)
+            setEditedEvents(freshEvents)
+          } catch {
+            // Non-critical — local state is still usable
+          }
         }
       } catch (error) {
         addNotification(createErrorNotification(
-          error instanceof Error ? error.message : 'Failed to add to calendar'
+          error instanceof Error ? error.message : 'Failed to sync to calendar'
         ))
       } finally {
         setIsAddingToCalendar(false)
@@ -323,19 +332,30 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     }
   }
 
-  // Swipe right: add single event to calendar
+  // Swipe right: sync single event to calendar (create or update)
   const handleSwipeAdd = async (event: CalendarEvent) => {
     if (!event.id || !sessionId) return
     try {
       const result = await addSessionToCalendar(sessionId, undefined, [event.id])
       if (result?.has_conflicts) {
-        addNotification(createWarningNotification(`Added "${event.summary}" with scheduling conflicts`))
+        addNotification(createWarningNotification(`Synced "${event.summary}" with scheduling conflicts`))
+      } else if (result?.num_events_updated > 0) {
+        addNotification(createSuccessNotification(`"${event.summary}" updated in calendar`))
+      } else if (result?.num_events_skipped > 0) {
+        addNotification(createSuccessNotification(`"${event.summary}" already up to date`))
       } else {
         addNotification(createSuccessNotification(`"${event.summary}" added to calendar`))
       }
+      // Re-fetch to update sync badges
+      try {
+        const freshEvents = await getSessionEvents(sessionId)
+        setEditedEvents(freshEvents)
+      } catch {
+        // Non-critical
+      }
     } catch (error) {
       addNotification(createErrorNotification(
-        error instanceof Error ? error.message : 'Failed to add event'
+        error instanceof Error ? error.message : 'Failed to sync event'
       ))
     }
   }

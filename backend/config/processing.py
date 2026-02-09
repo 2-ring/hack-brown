@@ -48,6 +48,10 @@ class ProcessingConfig:
     # Minimum SequenceMatcher ratio to consider two events duplicates
     DEDUP_SIMILARITY_THRESHOLD: float = 0.85
 
+    # Chunking window boundaries (as multipliers of CHUNK_TARGET_SIZE)
+    CHUNK_WINDOW_MIN_RATIO: float = 0.5   # Window starts at 50% of target
+    CHUNK_WINDOW_MAX_RATIO: float = 1.3   # Window ends at 130% of target
+
     @classmethod
     def get_text_limit_error_message(cls, actual_length: int) -> str:
         return (

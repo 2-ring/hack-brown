@@ -126,7 +126,7 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
   const handleLogout = async () => {
     try {
       await signOut();
-      onClose();
+      // signOut does a full page reload, so onClose() is not needed
     } catch (error) {
       console.error('Failed to sign out:', error);
     }

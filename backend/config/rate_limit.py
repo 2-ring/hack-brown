@@ -14,6 +14,9 @@ class RateLimitConfig:
     REDIS_URL: Optional[str] = os.getenv('REDIS_URL')
     USE_REDIS: bool = REDIS_URL is not None
 
+    # Authenticated user defaults (applied globally by Flask-Limiter)
+    AUTHENTICATED_LIMITS = ["2000 per day", "500 per hour"]
+
     # Rate limits for guest endpoints
     GUEST_CREATE_LIMIT = "10 per hour"  # Creating guest sessions
     GUEST_FETCH_LIMIT = "50 per hour"   # Fetching guest sessions

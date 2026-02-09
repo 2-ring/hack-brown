@@ -122,6 +122,6 @@ export const LOADING_MESSAGES = {
     icon: Calendar,
   }),
 
-  // Adding to calendar
-  ADDING_TO_CALENDAR: { message: 'Adding to calendar...', icon: CalendarCheck },
+  // Syncing to calendar
+  ADDING_TO_CALENDAR: { message: 'Syncing to calendar...', icon: CalendarCheck },
 } as const

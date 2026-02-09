@@ -316,31 +316,30 @@ def list_calendars():
 @require_auth
 def add_session_to_calendar(session_id):
     """
-    Create Google Calendar events from a session's processed_events.
+    Smart sync: create, update, or skip events based on their sync status.
 
-    Requires authentication. User must have Google Calendar connected.
+    Per-event behavior:
+    - Never synced → CREATE in external calendar
+    - Synced but edited since → UPDATE existing external event
+    - Synced and up to date → SKIP (no changes needed)
 
-    Path parameters:
-    - session_id: UUID of the session to add to calendar
+    Requires authentication. User must have a calendar connected.
 
     Optional request body:
     {
-        "events": [...],  // User's edited events (for correction logging)
-        "extracted_facts": [...]  // Optional: ExtractedFacts from Agent 2
-        "event_ids": [...]  // Optional: subset of event IDs to add (omit for all)
+        "events": [...],       // User's edited events (for correction logging)
+        "extracted_facts": [...] // Optional: ExtractedFacts from Agent 2
+        "event_ids": [...]     // Optional: subset of event IDs to sync (omit for all)
     }
 
     Returns:
-        - success: Whether all events were created successfully
-        - calendar_event_ids: List of Google Calendar event IDs
-        - conflicts: List of detected scheduling conflicts
-        - message: Summary message
+        - success, created, updated, skipped, num_created, num_updated, num_skipped
+        - calendar_event_ids (backward compat: all created + updated IDs)
+        - conflicts, has_conflicts, message
     """
     try:
-        # Get authenticated user
         user_id = request.user_id
 
-        # Check if user has connected calendar provider
         if not factory.is_authenticated(user_id):
             return jsonify({
                 'error': 'Calendar not connected',
@@ -348,12 +347,11 @@ def add_session_to_calendar(session_id):
                 'authenticated': False
             }), 401
 
-        # Get user-submitted events if provided (for correction logging)
+        # Log corrections if user provided edited events
         request_data = request.get_json() or {}
         user_submitted_events = request_data.get('events')
         extracted_facts_list = request_data.get('extracted_facts')
 
-        # Log corrections if user provided edited events
         if user_submitted_events:
             from feedback.correction_service import CorrectionStorageService
             correction_service = CorrectionStorageService()
@@ -367,26 +365,42 @@ def add_session_to_calendar(session_id):
                 )
                 print(f"Stored {len(correction_ids)} corrections for user {user_id}")
             except Exception as e:
-                # Don't fail the request if correction logging fails
                 print(f"Warning: Failed to log corrections: {e}")
 
-        # Optional: only create a subset of events
         event_ids = request_data.get('event_ids')
 
-        # Create events from session (uses primary provider)
-        calendar_event_ids, conflicts = factory.create_events_from_session(user_id, session_id, event_ids=event_ids)
+        # Smart sync: create/update/skip per event
+        result = factory.sync_events_from_session(user_id, session_id, event_ids=event_ids)
 
-        # Prepare response
+        # Build response
+        conflicts = result['conflicts']
         has_conflicts = len(conflicts) > 0
-        message = f"Created {len(calendar_event_ids)} event(s) successfully"
+
+        # Build human-readable message
+        parts = []
+        if result['num_created']:
+            parts.append(f"Created {result['num_created']}")
+        if result['num_updated']:
+            parts.append(f"updated {result['num_updated']}")
+        if result['num_skipped']:
+            parts.append(f"{result['num_skipped']} already up to date")
+        message = ', '.join(parts) if parts else 'No events to sync'
 
         if has_conflicts:
-            message += f", but found {len(conflicts)} scheduling conflict(s)"
+            message += f" ({len(conflicts)} conflict(s))"
 
         return jsonify({
             'success': True,
-            'calendar_event_ids': calendar_event_ids,
-            'num_events_created': len(calendar_event_ids),
+            # New fields
+            'created': result['created'],
+            'updated': result['updated'],
+            'skipped': result['skipped'],
+            'num_created': result['num_created'],
+            'num_updated': result['num_updated'],
+            'num_skipped': result['num_skipped'],
+            # Backward-compatible fields
+            'calendar_event_ids': result['created'] + result['updated'],
+            'num_events_created': result['num_created'],
             'conflicts': conflicts,
             'has_conflicts': has_conflicts,
             'message': message
@@ -397,7 +411,7 @@ def add_session_to_calendar(session_id):
     except PermissionError as e:
         return jsonify({'error': str(e)}), 403
     except Exception as e:
-        return jsonify({'error': f'Failed to add events to calendar: {str(e)}'}), 500
+        return jsonify({'error': f'Failed to sync events to calendar: {str(e)}'}), 500
 
 
 @calendar_bp.route('/api/auth/google-calendar/status', methods=['GET'])

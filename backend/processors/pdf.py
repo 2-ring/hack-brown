@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from .factory import BaseInputProcessor, ProcessingResult, InputType
+from config.limits import FileLimits, TextLimits, PDFLimits
 
 
 class PDFProcessor(BaseInputProcessor):
@@ -19,7 +20,6 @@ class PDFProcessor(BaseInputProcessor):
     """
 
     SUPPORTED_FORMATS = {'.pdf'}
-    from config.limits import TextLimits, PDFLimits
     MIN_TEXT_LENGTH = TextLimits.PDF_MIN_TEXT_LENGTH
 
     def __init__(self):
@@ -167,7 +167,6 @@ class PDFProcessor(BaseInputProcessor):
                 error=f"File not found: {file_path}"
             )
 
-        from config.limits import FileLimits, PDFLimits
         # Check file size
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         if file_size_mb > FileLimits.MAX_PDF_SIZE_MB:
