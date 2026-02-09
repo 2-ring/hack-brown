@@ -27,7 +27,7 @@ def init_posthog():
         from posthog import Posthog
 
         host = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
-        _posthog_client = Posthog(api_key, host=host)
+        _posthog_client = Posthog(api_key, host=host, debug=True)
         atexit.register(_posthog_client.shutdown)
         logger.info(f"PostHog: Initialized (host={host})")
     except ImportError:
@@ -97,8 +97,9 @@ def flush_posthog():
     if _posthog_client:
         try:
             _posthog_client.flush()
+            logger.info("PostHog: flushed events")
         except Exception as e:
-            logger.debug(f"PostHog: Flush failed: {e}")
+            logger.warning(f"PostHog: Flush failed: {e}")
 
 
 def get_posthog_client():

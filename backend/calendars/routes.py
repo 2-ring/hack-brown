@@ -296,27 +296,24 @@ def list_calendars():
                 'calendars': []
             }), 401
 
-        # Fast path: serve from stored patterns if available
-        # Ensures edit screen and personalization agent use the same calendar list
-        from preferences.service import PersonalizationService
-        patterns = PersonalizationService().load_patterns(user_id)
-        if patterns and patterns.get('category_patterns'):
-            calendars = []
-            for cal_id, pattern in patterns['category_patterns'].items():
-                calendars.append({
-                    'id': cal_id,
-                    'summary': pattern.get('name', 'Unnamed'),
-                    'backgroundColor': pattern.get('color', '#1170C5'),
-                    'foregroundColor': pattern.get('foreground_color'),
-                    'primary': pattern.get('is_primary', False),
-                })
+        # Primary path: serve from calendars table
+        from database.models import Calendar
+        db_calendars = Calendar.get_by_user(user_id)
+        if db_calendars:
+            calendars = [{
+                'id': cal['provider_cal_id'],
+                'summary': cal['name'],
+                'backgroundColor': cal.get('color', '#1170C5'),
+                'foregroundColor': cal.get('foreground_color'),
+                'primary': cal.get('is_primary', False),
+            } for cal in db_calendars]
             return jsonify({
                 'success': True,
                 'count': len(calendars),
                 'calendars': calendars
             })
 
-        # Fallback: fetch from provider API (guests, new users without patterns)
+        # Fallback: fetch from provider API (guests, new users without discovery)
         calendars = factory.list_calendars(user_id)
 
         return jsonify({

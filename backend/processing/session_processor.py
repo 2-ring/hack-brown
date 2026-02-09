@@ -131,9 +131,32 @@ class SessionProcessor:
             if not patterns:
                 return None, None
 
+            # Load calendars from DB (source of truth)
+            from database.models import Calendar
+            db_calendars = Calendar.get_by_user(user_id)
+
+            if db_calendars:
+                # Build category_patterns from DB rows
+                category_patterns = {}
+                for cal in db_calendars:
+                    category_patterns[cal['provider_cal_id']] = {
+                        'name': cal['name'],
+                        'is_primary': cal.get('is_primary', False),
+                        'color': cal.get('color'),
+                        'foreground_color': cal.get('foreground_color'),
+                        'description': cal.get('description', ''),
+                        'event_types': cal.get('event_types', []),
+                        'examples': cal.get('examples', []),
+                        'never_contains': cal.get('never_contains', []),
+                    }
+                patterns['category_patterns'] = category_patterns
+            elif patterns.get('category_patterns'):
+                # Lazy migration: backfill DB from patterns file
+                self._migrate_patterns_to_db(user_id, patterns)
+
             # Trigger background refresh check (non-blocking)
             if self.pattern_refresh_service:
-                self.pattern_refresh_service.maybe_refresh(user_id, patterns)
+                self.pattern_refresh_service.maybe_refresh(user_id)
 
             from config.database import QueryLimits
             historical_events = EventService.get_historical_events_with_embeddings(
@@ -144,6 +167,38 @@ class SessionProcessor:
         except Exception as e:
             logger.warning(f"Could not load personalization context: {e}")
             return None, None
+
+    def _migrate_patterns_to_db(self, user_id: str, patterns: dict):
+        """Lazy migration: backfill calendars table from patterns file."""
+        try:
+            from database.models import Calendar, User
+            user = User.get_by_id(user_id)
+            provider = (user or {}).get('primary_calendar_provider', 'google')
+
+            category_patterns = patterns.get('category_patterns', {})
+            calendar_metadata = patterns.get('calendar_metadata', {})
+
+            for cal_id, pattern in category_patterns.items():
+                meta = calendar_metadata.get(cal_id, {})
+                Calendar.upsert(
+                    user_id=user_id,
+                    provider=provider,
+                    provider_cal_id=cal_id,
+                    name=pattern.get('name', 'Unnamed'),
+                    color=pattern.get('color'),
+                    foreground_color=pattern.get('foreground_color'),
+                    is_primary=pattern.get('is_primary', False),
+                    description=pattern.get('description'),
+                    event_types=pattern.get('event_types', []),
+                    examples=pattern.get('examples', []),
+                    never_contains=pattern.get('never_contains', []),
+                    events_analyzed=meta.get('events_analyzed', 0),
+                    last_refreshed=meta.get('last_refreshed'),
+                )
+
+            logger.info(f"Migrated {len(category_patterns)} calendars to DB for user {user_id[:8]}")
+        except Exception as e:
+            logger.warning(f"Failed to migrate patterns to DB: {e}")
 
     def _process_events_for_session(
         self,

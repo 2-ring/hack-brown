@@ -12,10 +12,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Set, Tuple
 
 import calendars.factory as calendar_factory
+from database.models import Calendar
 from preferences.pattern_discovery_service import PatternDiscoveryService
-from preferences.service import PersonalizationService
 from config.calendar import RefreshConfig
-from config.posthog import set_tracking_context
+from config.posthog import set_tracking_context, flush_posthog
 from config.similarity import PatternDiscoveryConfig
 
 logger = logging.getLogger(__name__)
@@ -23,19 +23,14 @@ logger = logging.getLogger(__name__)
 
 class PatternRefreshService:
     """
-    Manages incremental background refresh of user patterns.
+    Manages incremental background refresh of user calendars.
 
     Thread-safe per user. Multiple sessions for the same user
     won't trigger concurrent refreshes.
     """
 
-    def __init__(
-        self,
-        pattern_discovery_service: PatternDiscoveryService,
-        personalization_service: PersonalizationService,
-    ):
+    def __init__(self, pattern_discovery_service: PatternDiscoveryService):
         self.pattern_discovery_service = pattern_discovery_service
-        self.personalization_service = personalization_service
 
         # Per-user refresh locks
         self._refresh_locks: Dict[str, threading.Lock] = {}
@@ -47,69 +42,73 @@ class PatternRefreshService:
                 self._refresh_locks[user_id] = threading.Lock()
             return self._refresh_locks[user_id]
 
-    def maybe_refresh(self, user_id: str, patterns: Dict) -> None:
+    def maybe_refresh(self, user_id: str) -> None:
         """
-        Check if patterns need refreshing and spawn background thread if so.
+        Check if calendars need refreshing and spawn background thread if so.
 
         Non-blocking: returns immediately. Refresh happens in background
         and benefits the next session.
 
         Args:
             user_id: User's UUID
-            patterns: Currently loaded patterns dict
         """
         try:
             lock = self._get_user_lock(user_id)
             if lock.locked():
                 return
 
-            # Fetch current calendar list (~100ms)
+            # Fetch current calendar list from provider (~100ms)
             current_calendars = calendar_factory.list_calendars(user_id)
             if not current_calendars:
                 return
 
+            # Load stored calendars from DB
+            stored_calendars = Calendar.get_by_user(user_id)
+            stored_lookup = {
+                cal['provider_cal_id']: cal for cal in stored_calendars
+            }
+
             new_cal_ids, stale_cal_ids = self._determine_refresh_targets(
-                patterns, current_calendars
+                stored_lookup, current_calendars
             )
             removed_cal_ids = self._detect_removed_calendars(
-                patterns, current_calendars
+                stored_lookup, current_calendars
             )
 
             if not new_cal_ids and not stale_cal_ids and not removed_cal_ids:
                 return
 
             logger.info(
-                f"Pattern refresh needed for user {user_id[:8]}: "
+                f"Calendar refresh needed for user {user_id[:8]}: "
                 f"{len(new_cal_ids)} new, {len(stale_cal_ids)} stale, "
                 f"{len(removed_cal_ids)} removed"
             )
 
             thread = threading.Thread(
                 target=self._run_refresh,
-                args=(user_id, patterns, current_calendars,
+                args=(user_id, stored_lookup, current_calendars,
                       new_cal_ids, stale_cal_ids, removed_cal_ids),
                 daemon=True,
-                name=f"pattern-refresh-{user_id[:8]}"
+                name=f"calendar-refresh-{user_id[:8]}"
             )
             thread.start()
 
         except Exception as e:
-            logger.warning(f"Error checking pattern refresh for {user_id[:8]}: {e}")
+            logger.warning(f"Error checking calendar refresh for {user_id[:8]}: {e}")
 
     def _determine_refresh_targets(
         self,
-        patterns: Dict,
+        stored_lookup: Dict[str, Dict],
         current_calendars: List[Dict]
     ) -> Tuple[Set[str], Set[str]]:
         """
-        Compare stored patterns with current calendar list.
+        Compare stored calendars with current provider list.
 
         Returns:
             (new_calendar_ids, stale_calendar_ids)
         """
-        stored_cal_ids = set(patterns.get('category_patterns', {}).keys())
+        stored_cal_ids = set(stored_lookup.keys())
         current_cal_ids = {cal['id'] for cal in current_calendars}
-        calendar_metadata = patterns.get('calendar_metadata', {})
 
         # New calendars
         new_cal_ids = current_cal_ids - stored_cal_ids
@@ -119,18 +118,17 @@ class PatternRefreshService:
         now = datetime.utcnow()
 
         for cal_id in stored_cal_ids & current_cal_ids:
-            meta = calendar_metadata.get(cal_id, {})
+            stored = stored_lookup[cal_id]
 
-            last_refreshed_str = meta.get('last_refreshed')
-            if not last_refreshed_str:
-                # Legacy patterns without metadata — use global last_updated
-                last_refreshed_str = patterns.get('last_updated')
-
+            last_refreshed_str = stored.get('last_refreshed')
             if last_refreshed_str:
                 try:
-                    last_refreshed = datetime.fromisoformat(
-                        last_refreshed_str.replace('Z', '+00:00')
-                    ).replace(tzinfo=None)
+                    if isinstance(last_refreshed_str, str):
+                        last_refreshed = datetime.fromisoformat(
+                            last_refreshed_str.replace('Z', '+00:00')
+                        ).replace(tzinfo=None)
+                    else:
+                        last_refreshed = last_refreshed_str.replace(tzinfo=None)
                     if (now - last_refreshed).days < RefreshConfig.MIN_REFRESH_INTERVAL_DAYS:
                         continue
                 except (ValueError, AttributeError):
@@ -143,23 +141,23 @@ class PatternRefreshService:
 
     def _detect_removed_calendars(
         self,
-        patterns: Dict,
+        stored_lookup: Dict[str, Dict],
         current_calendars: List[Dict]
     ) -> Set[str]:
-        stored_cal_ids = set(patterns.get('category_patterns', {}).keys())
+        stored_cal_ids = set(stored_lookup.keys())
         current_cal_ids = {cal['id'] for cal in current_calendars}
         return stored_cal_ids - current_cal_ids
 
     def _run_refresh(
         self,
         user_id: str,
-        patterns: Dict,
+        stored_lookup: Dict[str, Dict],
         current_calendars: List[Dict],
         new_cal_ids: Set[str],
         stale_cal_ids: Set[str],
         removed_cal_ids: Set[str]
     ) -> None:
-        """Background thread: fetch events, run LLM analysis, merge results."""
+        """Background thread: fetch events, run LLM analysis, write to DB."""
         lock = self._get_user_lock(user_id)
         if not lock.acquire(blocking=False):
             logger.info(f"Refresh already in progress for user {user_id[:8]}")
@@ -171,9 +169,12 @@ class PatternRefreshService:
                 trace_id=f"refresh-{user_id[:8]}"
             )
 
+            # Look up provider
+            from database.models import User
+            user = User.get_by_id(user_id)
+            provider = (user or {}).get('primary_calendar_provider', 'google')
+
             cal_lookup = {cal['id']: cal for cal in current_calendars}
-            category_patterns = dict(patterns.get('category_patterns', {}))
-            calendar_metadata = dict(patterns.get('calendar_metadata', {}))
 
             # Process new calendars
             for cal_id in new_cal_ids:
@@ -181,70 +182,75 @@ class PatternRefreshService:
                 if not cal:
                     continue
                 logger.info(f"Analyzing new calendar: {cal.get('summary', cal_id)}")
-                result = self._analyze_single_calendar(user_id, cal_id, cal)
-                if result:
-                    category_patterns[cal_id] = result['pattern']
-                    calendar_metadata[cal_id] = result['metadata']
+                self._analyze_and_save(user_id, provider, cal_id, cal)
 
             # Process stale calendars (with event count growth check)
             for cal_id in stale_cal_ids:
                 cal = cal_lookup.get(cal_id)
                 if not cal:
                     continue
-                stored_count = calendar_metadata.get(cal_id, {}).get('events_analyzed', 0)
-                result = self._analyze_single_calendar(
-                    user_id, cal_id, cal, stored_event_count=stored_count
+                stored_count = stored_lookup.get(cal_id, {}).get('events_analyzed', 0)
+                self._analyze_and_save(
+                    user_id, provider, cal_id, cal,
+                    stored_event_count=stored_count
                 )
-                if result:
-                    # Empty pattern = growth below threshold, keep existing pattern
-                    if result['pattern']:
-                        category_patterns[cal_id] = result['pattern']
-                    calendar_metadata[cal_id] = result['metadata']
 
             # Remove deleted calendars
             for cal_id in removed_cal_ids:
-                category_patterns.pop(cal_id, None)
-                calendar_metadata.pop(cal_id, None)
-                logger.info(f"Removed calendar from patterns: {cal_id}")
+                Calendar.delete_by_provider_cal_id(user_id, cal_id)
+                logger.info(f"Removed calendar from DB: {cal_id}")
 
-            # Save updated patterns
-            updated_patterns = dict(patterns)
-            updated_patterns['category_patterns'] = category_patterns
-            updated_patterns['calendar_metadata'] = calendar_metadata
-            self.personalization_service.save_patterns(updated_patterns)
+            # Also update metadata (name/color) for calendars that changed in provider
+            for cal in current_calendars:
+                cal_id = cal['id']
+                if cal_id in new_cal_ids or cal_id in removed_cal_ids:
+                    continue
+                stored = stored_lookup.get(cal_id)
+                if not stored:
+                    continue
+                # Check if provider metadata changed
+                if (stored.get('name') != cal.get('summary') or
+                    stored.get('color') != cal.get('backgroundColor') or
+                    stored.get('is_primary') != cal.get('primary', False)):
+                    Calendar.upsert(
+                        user_id=user_id,
+                        provider=provider,
+                        provider_cal_id=cal_id,
+                        name=cal.get('summary', 'Unnamed'),
+                        color=cal.get('backgroundColor'),
+                        foreground_color=cal.get('foregroundColor'),
+                        is_primary=cal.get('primary', False),
+                    )
+                    logger.info(f"Updated metadata for calendar: {cal.get('summary')}")
 
             logger.info(
-                f"Pattern refresh complete for user {user_id[:8]}: "
+                f"Calendar refresh complete for user {user_id[:8]}: "
                 f"{len(new_cal_ids)} added, {len(stale_cal_ids)} refreshed, "
                 f"{len(removed_cal_ids)} removed"
             )
 
         except Exception as e:
-            logger.error(f"Pattern refresh failed for user {user_id[:8]}: {e}", exc_info=True)
+            logger.error(f"Calendar refresh failed for user {user_id[:8]}: {e}", exc_info=True)
         finally:
+            flush_posthog()
             lock.release()
 
-    def _analyze_single_calendar(
+    def _analyze_and_save(
         self,
         user_id: str,
+        provider: str,
         cal_id: str,
         calendar: Dict,
         stored_event_count: int = 0
-    ) -> Optional[Dict]:
+    ) -> None:
         """
-        Fetch events and run LLM analysis for a single calendar.
+        Fetch events, run LLM analysis for a single calendar, write to DB.
 
         For stale calendars, checks event count growth before running
         the LLM. Skips if growth is below threshold.
-
-        Returns:
-            Dict with 'pattern' and 'metadata' keys, or None on failure
         """
         cal_name = calendar.get('summary', 'Unnamed')
         is_primary = calendar.get('primary', False)
-        cal_color = calendar.get('backgroundColor')
-        cal_foreground_color = calendar.get('foregroundColor')
-        now_str = datetime.utcnow().isoformat() + 'Z'
 
         try:
             time_min = (
@@ -259,7 +265,7 @@ class PatternRefreshService:
             )
         except Exception as e:
             logger.warning(f"Failed to fetch events for calendar {cal_name}: {e}")
-            return None
+            return
 
         # Filter noise
         events = [e for e in events if e.get('summary') and e.get('status') != 'cancelled']
@@ -289,35 +295,37 @@ class PatternRefreshService:
                     f"Skipping LLM refresh for {cal_name}: "
                     f"growth {growth} below threshold {growth_threshold:.0f}"
                 )
-                # Update timestamp so we don't re-check too soon
-                return {
-                    'pattern': {},  # signals: keep existing pattern
-                    'metadata': {
-                        'events_analyzed': stored_event_count,
-                        'last_refreshed': now_str
-                    }
-                }
+                # Upsert with just metadata update (no AI fields change)
+                Calendar.upsert(
+                    user_id=user_id,
+                    provider=provider,
+                    provider_cal_id=cal_id,
+                    name=cal_name,
+                    color=calendar.get('backgroundColor'),
+                    foreground_color=calendar.get('foregroundColor'),
+                    is_primary=is_primary,
+                )
+                return
 
-        # Empty calendar
+        # Empty calendar — save with empty description
         if not events:
-            return {
-                'pattern': {
-                    'name': cal_name,
-                    'is_primary': is_primary,
-                    'color': cal_color,
-                    'foreground_color': cal_foreground_color,
-                    'description': 'This category has no events in the analyzed period',
-                    'event_types': [],
-                    'examples': [],
-                    'never_contains': []
-                },
-                'metadata': {
-                    'events_analyzed': 0,
-                    'last_refreshed': now_str
-                }
-            }
+            Calendar.upsert(
+                user_id=user_id,
+                provider=provider,
+                provider_cal_id=cal_id,
+                name=cal_name,
+                color=calendar.get('backgroundColor'),
+                foreground_color=calendar.get('foregroundColor'),
+                is_primary=is_primary,
+                description='This category has no events in the analyzed period',
+                event_types=[],
+                examples=[],
+                never_contains=[],
+                events_analyzed=0,
+            )
+            return
 
-        # Sample and analyze
+        # Sample and analyze with LLM
         sampled = self.pattern_discovery_service._smart_sample_weighted(
             events,
             target=PatternDiscoveryConfig.TARGET_SAMPLE_SIZE,
@@ -331,16 +339,17 @@ class PatternRefreshService:
             total_count=current_count
         )
 
-        return {
-            'pattern': {
-                'name': cal_name,
-                'is_primary': is_primary,
-                'color': cal_color,
-                'foreground_color': cal_foreground_color,
-                **summary
-            },
-            'metadata': {
-                'events_analyzed': current_count,
-                'last_refreshed': now_str
-            }
-        }
+        Calendar.upsert(
+            user_id=user_id,
+            provider=provider,
+            provider_cal_id=cal_id,
+            name=cal_name,
+            color=calendar.get('backgroundColor'),
+            foreground_color=calendar.get('foregroundColor'),
+            is_primary=is_primary,
+            description=summary.get('description'),
+            event_types=summary.get('event_types', []),
+            examples=summary.get('examples', []),
+            never_contains=summary.get('never_contains', []),
+            events_analyzed=current_count,
+        )

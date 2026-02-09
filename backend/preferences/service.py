@@ -237,11 +237,16 @@ class PersonalizationService:
             # Add timestamp
             patterns['last_updated'] = datetime.utcnow().isoformat() + 'Z'
 
+            # Strip calendar data — it lives in the calendars DB table now.
+            # Only style_stats, total_events_analyzed, and metadata stay in the file.
+            file_patterns = {k: v for k, v in patterns.items()
+                            if k not in ('category_patterns', 'calendar_metadata')}
+
             # Save to disk
             with open(patterns_path, 'w') as f:
-                json.dump(patterns, f, indent=2)
+                json.dump(file_patterns, f, indent=2)
 
-            # Update cache
+            # Cache still holds the full dict (with category_patterns if present)
             self._patterns_cache[user_id] = patterns
 
             return True

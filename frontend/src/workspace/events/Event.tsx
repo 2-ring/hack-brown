@@ -48,7 +48,7 @@ export function Event({
   onClick,
 }: EventProps) {
   // Loading skeleton - simple grey box with fade effect like session skeletons
-  if (isLoading && !event) {
+  if (isLoading) {
     return (
       <div key={`skeleton-${index}`} style={{ padding: '0', opacity: skeletonOpacity }}>
         <Skeleton height={140} borderRadius={16} />

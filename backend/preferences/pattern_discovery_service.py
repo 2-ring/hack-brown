@@ -97,6 +97,11 @@ class PatternDiscoveryService:
                 'last_refreshed': now
             }
 
+        # Write calendars to DB (source of truth)
+        self._save_calendars_to_db(
+            user_id, calendars, category_patterns, calendar_metadata
+        )
+
         print(f"\n{'='*60}")
         print(f"PATTERN DISCOVERY COMPLETE")
         print(f"{'='*60}\n")
@@ -108,6 +113,47 @@ class PatternDiscoveryService:
             'total_events_analyzed': len(events),
             'calendar_metadata': calendar_metadata
         }
+
+    def _save_calendars_to_db(
+        self,
+        user_id: str,
+        calendars: List[Dict],
+        category_patterns: Dict,
+        calendar_metadata: Dict
+    ) -> None:
+        """Write discovered calendar data to the calendars table."""
+        from database.models import Calendar
+
+        # Look up provider from user
+        from database.models import User
+        user = User.get_by_id(user_id)
+        provider = (user or {}).get('primary_calendar_provider', 'google')
+
+        # Clear existing calendars so removed ones don't linger
+        Calendar.delete_by_user(user_id)
+
+        for calendar in calendars:
+            cal_id = calendar.get('id')
+            pattern = category_patterns.get(cal_id, {})
+            meta = calendar_metadata.get(cal_id, {})
+
+            Calendar.upsert(
+                user_id=user_id,
+                provider=provider,
+                provider_cal_id=cal_id,
+                name=calendar.get('summary', 'Unnamed'),
+                color=calendar.get('backgroundColor'),
+                foreground_color=calendar.get('foregroundColor'),
+                is_primary=calendar.get('primary', False),
+                description=pattern.get('description'),
+                event_types=pattern.get('event_types', []),
+                examples=pattern.get('examples', []),
+                never_contains=pattern.get('never_contains', []),
+                events_analyzed=meta.get('events_analyzed', 0),
+                last_refreshed=meta.get('last_refreshed'),
+            )
+
+        print(f"✓ {len(calendars)} calendars saved to DB")
 
     # =========================================================================
     # 1. STYLE STATISTICS (Pure Python - No LLM)

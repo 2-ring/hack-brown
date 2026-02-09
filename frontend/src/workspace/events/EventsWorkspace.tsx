@@ -58,6 +58,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
   const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
   const [activeLoading, setActiveLoading] = useState<LoadingStateConfig | null>(null)
+  const [skeletonEventIds, setSkeletonEventIds] = useState<Set<string>>(new Set())
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([])
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(true)
   const [isScrollable, setIsScrollable] = useState(false)
@@ -317,16 +318,43 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
           }
         }
 
-        const updatedEvents = validEvents
-          .map((event, i) => {
-            if (deleteIndices.has(i)) return null
-            if (editMap.has(i)) return editMap.get(i)!
-            return event
-          })
-          .filter((e): e is CalendarEvent => e !== null)
+        // Phase 1: Apply deletes immediately, show skeleton for edited events
+        const affectedIds = new Set<string>()
+        for (const [i] of editMap) {
+          const id = validEvents[i]?.id
+          if (id) affectedIds.add(id)
+        }
 
-        setEditedEvents(updatedEvents)
-        onEventsChanged?.(updatedEvents)
+        // Remove deleted events right away
+        const afterDeletes = validEvents.filter((_, i) => !deleteIndices.has(i))
+        setEditedEvents(afterDeletes)
+        setActiveLoading(null)
+        setIsChatExpanded(false)
+
+        if (affectedIds.size > 0) {
+          // Show skeleton for edited events briefly
+          setSkeletonEventIds(affectedIds)
+
+          // Phase 2: After a short delay, swap in the real edited data
+          setTimeout(() => {
+            setEditedEvents(prev => {
+              const updated = prev.map(event => {
+                if (!event?.id) return event
+                // Find the edited version by matching id
+                for (const [, edited] of editMap) {
+                  if (edited.id === event.id) return edited
+                }
+                return event
+              })
+              const valid = updated.filter((e): e is CalendarEvent => e !== null)
+              onEventsChanged?.(valid)
+              return updated
+            })
+            setSkeletonEventIds(new Set())
+          }, 400)
+        } else {
+          onEventsChanged?.(afterDeletes.filter((e): e is CalendarEvent => e !== null))
+        }
 
         // Persist edits
         for (const [i, edited] of editMap) {
@@ -357,7 +385,6 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
 
         addNotification(createSuccessNotification(result.message || 'Done, changes applied!'))
         runConflictCheck()
-        setIsChatExpanded(false)
       } catch (error) {
         addNotification(createErrorNotification(getFriendlyErrorMessage(error)))
       } finally {
@@ -672,6 +699,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                             <Event
                               event={event}
                               index={originalIndex}
+                              isLoading={!!(event.id && skeletonEventIds.has(event.id))}
                               isLoadingCalendars={isLoadingCalendars}
                               calendars={calendars}
                               formatDate={formatDate}

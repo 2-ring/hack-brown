@@ -1407,3 +1407,101 @@ class Event:
 
         response = query.execute()
         return response.count if response.count else 0
+
+
+class Calendar:
+    """Calendar model for storing user calendar metadata and AI descriptions."""
+
+    @staticmethod
+    def upsert(
+        user_id: str,
+        provider: str,
+        provider_cal_id: str,
+        name: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Insert or update a calendar.
+
+        Args:
+            user_id: User's UUID
+            provider: Calendar provider ('google', 'microsoft', 'apple')
+            provider_cal_id: Provider's calendar ID
+            name: Calendar display name
+            **kwargs: Optional fields (color, foreground_color, is_primary,
+                      description, event_types, examples, never_contains,
+                      events_analyzed, last_refreshed)
+        """
+        supabase = get_supabase()
+
+        data = {
+            "user_id": user_id,
+            "provider": provider,
+            "provider_cal_id": provider_cal_id,
+            "name": name,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        for field in (
+            'color', 'foreground_color', 'is_primary',
+            'description', 'event_types', 'examples', 'never_contains',
+            'events_analyzed', 'last_refreshed',
+        ):
+            if field in kwargs and kwargs[field] is not None:
+                data[field] = kwargs[field]
+
+        response = supabase.table("calendars").upsert(
+            data, on_conflict="user_id,provider_cal_id"
+        ).execute()
+        return response.data[0]
+
+    @staticmethod
+    def get_by_user(user_id: str) -> List[Dict[str, Any]]:
+        """Get all calendars for a user."""
+        supabase = get_supabase()
+        response = supabase.table("calendars").select("*")\
+            .eq("user_id", user_id)\
+            .order("is_primary", desc=True)\
+            .order("name").execute()
+        return response.data
+
+    @staticmethod
+    def update_description(
+        user_id: str,
+        provider_cal_id: str,
+        description: str,
+        event_types: list,
+        examples: list,
+        never_contains: list,
+        events_analyzed: int
+    ) -> Optional[Dict[str, Any]]:
+        """Update AI-generated fields and refresh tracking for a calendar."""
+        supabase = get_supabase()
+        response = supabase.table("calendars").update({
+            "description": description,
+            "event_types": event_types,
+            "examples": examples,
+            "never_contains": never_contains,
+            "events_analyzed": events_analyzed,
+            "last_refreshed": datetime.utcnow().isoformat(),
+            "updated_at": datetime.utcnow().isoformat(),
+        }).eq("user_id", user_id)\
+          .eq("provider_cal_id", provider_cal_id).execute()
+        return response.data[0] if response.data else None
+
+    @staticmethod
+    def delete_by_provider_cal_id(user_id: str, provider_cal_id: str) -> bool:
+        """Delete a single calendar."""
+        supabase = get_supabase()
+        response = supabase.table("calendars").delete()\
+            .eq("user_id", user_id)\
+            .eq("provider_cal_id", provider_cal_id).execute()
+        return len(response.data) > 0
+
+    @staticmethod
+    def delete_by_user(user_id: str) -> int:
+        """Delete all calendars for a user. Returns count deleted."""
+        supabase = get_supabase()
+        response = supabase.table("calendars").delete()\
+            .eq("user_id", user_id).execute()
+        return len(response.data)

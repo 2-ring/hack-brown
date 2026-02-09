@@ -61,7 +61,7 @@ from processing.session_processor import SessionProcessor
 from config.processing import ProcessingConfig
 from processing.parallel import process_events_parallel, EventProcessingResult
 from processing.chunked_identification import identify_events_chunked
-from config.posthog import init_posthog, set_tracking_context
+from config.posthog import init_posthog, set_tracking_context, flush_posthog
 
 # Import rate limit configuration
 from config.rate_limit import RateLimitConfig
@@ -105,6 +105,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@app.after_request
+def after_request_flush_posthog(response):
+    """Flush PostHog events after each request so LLM analytics are sent immediately."""
+    flush_posthog()
+    return response
 
 # Log rate limiting configuration
 if RateLimitConfig.is_production():
@@ -192,7 +199,6 @@ input_processor_factory.register_processor(InputType.DOCUMENT, document_processo
 from preferences.pattern_refresh_service import PatternRefreshService
 pattern_refresh_service = PatternRefreshService(
     pattern_discovery_service=pattern_discovery_service,
-    personalization_service=personalization_service,
 )
 
 # Initialize session processor
@@ -978,10 +984,14 @@ def delete_patterns():
 
         success = personalization_service.delete_patterns(user_id)
 
+        # Also clean up calendar rows in DB
+        from database.models import Calendar
+        Calendar.delete_by_user(user_id)
+
         if success:
             return jsonify({
                 'success': True,
-                'message': f'Patterns deleted for user {user_id}'
+                'message': f'Patterns and calendars deleted for user {user_id}'
             })
         else:
             return jsonify({
