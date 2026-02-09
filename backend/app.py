@@ -478,6 +478,7 @@ def edit_event():
     data = request.get_json()
     events = data.get('events')
     edit_instruction = data.get('instruction')
+    calendar_names = data.get('calendars', [])
 
     if not events or not isinstance(events, list):
         return jsonify({'error': 'No events list provided'}), 400
@@ -490,7 +491,7 @@ def edit_event():
         set_tracking_context(distinct_id='anonymous', trace_id=f"edit-{uuid.uuid4().hex[:8]}")
 
         # Use the Event Modification Agent
-        result = agent_4_modification.execute(events, edit_instruction)
+        result = agent_4_modification.execute(events, edit_instruction, calendar_names=calendar_names)
 
         return jsonify({
             'success': True,

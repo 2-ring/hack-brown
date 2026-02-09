@@ -309,10 +309,12 @@ class SessionProcessor:
 
             # Mark session as complete
             DBSession.update_status(session_id, 'processed')
+            flush_posthog()
 
         except Exception as e:
             error_message = str(e)
             logger.error(f"Error processing session {session_id}: {error_message}")
+            flush_posthog()
             try:
                 DBSession.mark_error(session_id, error_message)
             except Exception as db_err:
@@ -423,10 +425,12 @@ class SessionProcessor:
 
             # Mark session as complete
             DBSession.update_status(session_id, 'processed')
+            flush_posthog()
 
         except Exception as e:
             error_message = str(e)
             logger.error(f"Error processing file session {session_id}: {error_message}")
+            flush_posthog()
             try:
                 DBSession.mark_error(session_id, error_message)
             except Exception as db_err:

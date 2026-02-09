@@ -57,8 +57,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
   const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
-  const [isProcessingEdit, setIsProcessingEdit] = useState(false)
-  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false)
+  const [activeLoading, setActiveLoading] = useState<LoadingStateConfig | null>(null)
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([])
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(true)
   const [isScrollable, setIsScrollable] = useState(false)
@@ -275,18 +274,20 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   }
 
   const handleSendRequest = async () => {
-    if (changeRequest.trim() && !isProcessingEdit) {
+    if (changeRequest.trim() && !activeLoading) {
       const instruction = changeRequest.trim()
       setChangeRequest('')
-      setIsProcessingEdit(true)
+      setActiveLoading(LOADING_MESSAGES.APPLYING_EDITS)
 
       try {
         const validEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
 
+        const calendarNames = calendars.map(c => c.summary)
+
         const response = await fetch(`${API_URL}/api/edit-event`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ events: validEvents, instruction }),
+          body: JSON.stringify({ events: validEvents, instruction, calendars: calendarNames }),
         })
 
         if (!response.ok) {
@@ -360,7 +361,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
       } catch (error) {
         addNotification(createErrorNotification(getFriendlyErrorMessage(error)))
       } finally {
-        setIsProcessingEdit(false)
+        setActiveLoading(null)
       }
     }
   }
@@ -376,7 +377,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const handleConfirm = async () => {
     if (onConfirm) {
       const validEditedEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
-      setIsAddingToCalendar(true)
+      setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
       try {
         const result = await onConfirm(validEditedEvents)
 
@@ -402,7 +403,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
       } catch (error) {
         addNotification(createErrorNotification(getFriendlyErrorMessage(error)))
       } finally {
-        setIsAddingToCalendar(false)
+        setActiveLoading(null)
       }
     }
   }
@@ -410,6 +411,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   // Swipe right: sync single event to calendar (create or update)
   const handleSwipeAdd = async (event: CalendarEvent) => {
     if (!event.id) return
+    setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
     try {
       const result = await syncEvent(event.id)
       const action = result.action
@@ -435,6 +437,8 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
       }
     } catch (error) {
       addNotification(createErrorNotification(getFriendlyErrorMessage(error)))
+    } finally {
+      setActiveLoading(null)
     }
   }
 
@@ -696,14 +700,14 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
       </div>
 
       <BottomBar
-        isLoading={isLoading || isAddingToCalendar}
-        loadingConfig={isAddingToCalendar ? [LOADING_MESSAGES.ADDING_TO_CALENDAR] : loadingConfig}
+        isLoading={isLoading || activeLoading !== null}
+        loadingConfig={activeLoading ? [activeLoading] : loadingConfig}
         notification={currentNotification}
         onDismissNotification={dismissNotification}
         isEditingEvent={editingEventIndex !== null}
         isChatExpanded={isChatExpanded}
         changeRequest={changeRequest}
-        isProcessingEdit={isProcessingEdit}
+        isProcessingEdit={activeLoading !== null}
         onCancel={handleCancel}
         onRequestChanges={() => setIsChatExpanded(true)}
         onChangeRequestChange={setChangeRequest}

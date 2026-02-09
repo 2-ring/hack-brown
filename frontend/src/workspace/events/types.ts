@@ -124,4 +124,7 @@ export const LOADING_MESSAGES = {
 
   // Syncing to calendar
   ADDING_TO_CALENDAR: { message: 'Syncing to calendar...', icon: CalendarCheck },
+
+  // AI edit processing
+  APPLYING_EDITS: { message: 'Applying changes...', icon: Pen },
 } as const

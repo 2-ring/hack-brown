@@ -4,7 +4,7 @@ Applies user edit instructions across a set of calendar events.
 Returns only the events that need to change (edit or delete).
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -27,7 +27,8 @@ class EventModificationAgent(BaseAgent):
     def execute(
         self,
         events: List[Dict[str, Any]],
-        instruction: str
+        instruction: str,
+        calendar_names: Optional[List[str]] = None
     ) -> ModificationResult:
         """
         Apply a natural-language instruction to a list of events.
@@ -35,6 +36,7 @@ class EventModificationAgent(BaseAgent):
         Args:
             events: List of CalendarEvent dicts (the full session)
             instruction: User's edit request
+            calendar_names: Available calendar names the user has
 
         Returns:
             ModificationResult with actions for affected events only
@@ -53,6 +55,11 @@ class EventModificationAgent(BaseAgent):
             event_lines.append(f"[{i}] {event}")
         events_block = "\n\n".join(event_lines)
 
+        # Build calendars context
+        calendars_block = ""
+        if calendar_names:
+            calendars_block = f"\n\nAVAILABLE CALENDARS:\n{', '.join(calendar_names)}\nWhen moving events between calendars, only use these names."
+
         system_prompt = self.prompt_template.format(
             current_date=current_date,
             current_time=current_time
@@ -60,11 +67,12 @@ class EventModificationAgent(BaseAgent):
 
         chain = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
-            ("human", "EVENTS:\n{events}\n\nINSTRUCTION:\n{instruction}")
+            ("human", "EVENTS:\n{events}{calendars}\n\nINSTRUCTION:\n{instruction}")
         ]) | self.llm
 
         result = chain.invoke({
             "events": events_block,
+            "calendars": calendars_block,
             "instruction": instruction
         }, config=get_invoke_config("modification"))
 
