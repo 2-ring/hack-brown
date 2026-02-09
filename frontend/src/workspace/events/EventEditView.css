@@ -40,7 +40,8 @@
 
 /* Allow overflow only when dropdowns are open */
 .event-edit-overlay .editable-content-wrapper:has(.time-dropdown),
-.event-edit-overlay .editable-content-wrapper:has(.date-dropdown) {
+.event-edit-overlay .editable-content-wrapper:has(.date-dropdown),
+.event-edit-overlay .editable-content-wrapper:has(.timezone-dropdown) {
   overflow: visible;
 }
 

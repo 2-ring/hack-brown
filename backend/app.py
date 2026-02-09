@@ -571,6 +571,65 @@ def update_event(event_id):
         return jsonify({'error': f'Failed to update event: {str(e)}'}), 500
 
 
+@app.route('/api/events/check-conflicts', methods=['POST'])
+@require_auth
+def check_event_conflicts():
+    """
+    Batch conflict check: for each event in the request, find overlapping
+    events already in the user's calendar (excluding events from the
+    same session so a session's own events don't conflict with themselves).
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+
+        if not data or 'events' not in data:
+            return jsonify({'error': 'events array is required'}), 400
+
+        events = data['events']
+        session_id = data.get('session_id')
+
+        # Get event IDs belonging to current session to exclude from results
+        exclude_ids = set()
+        if session_id:
+            session = DBSession.get_by_id(session_id)
+            if session:
+                exclude_ids = set(session.get('event_ids') or [])
+
+        conflicts = {}
+        for i, event in enumerate(events):
+            start = event.get('start', {})
+            end = event.get('end', {})
+            start_time = start.get('dateTime')
+            end_time = end.get('dateTime')
+
+            # Skip all-day events (no dateTime)
+            if not start_time or not end_time:
+                continue
+
+            raw_conflicts = EventService.get_conflicting_events(
+                user_id, start_time, end_time
+            )
+
+            filtered = [
+                {
+                    'summary': c.get('summary', 'Untitled'),
+                    'start_time': c.get('start_time', ''),
+                    'end_time': c.get('end_time', ''),
+                }
+                for c in raw_conflicts
+                if c.get('id') not in exclude_ids
+            ]
+
+            if filtered:
+                conflicts[str(i)] = filtered
+
+        return jsonify({'conflicts': conflicts})
+
+    except Exception as e:
+        return jsonify({'error': f'Conflict check failed: {str(e)}'}), 500
+
+
 # ============================================================================
 # Personalization Endpoints
 # ============================================================================

@@ -439,6 +439,44 @@ export async function updateEvent(
 }
 
 // ============================================================================
+// Conflict Detection
+// ============================================================================
+
+export interface ConflictInfo {
+  summary: string;
+  start_time: string;
+  end_time: string;
+}
+
+/**
+ * Batch check conflicts for events against the user's existing calendar.
+ * Returns a map from event index to list of conflicting events.
+ */
+export async function checkEventConflicts(
+  events: CalendarEvent[],
+  sessionId: string
+): Promise<Record<string, ConflictInfo[]>> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/events/check-conflicts`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      events: events.map(e => ({
+        id: e.id,
+        summary: e.summary,
+        start: e.start,
+        end: e.end,
+      })),
+      session_id: sessionId,
+    }),
+  });
+
+  const data = await handleResponse<{ conflicts: Record<string, ConflictInfo[]> }>(response);
+  return data.conflicts;
+}
+
+// ============================================================================
 // Microsoft Calendar Connection
 // ============================================================================
 

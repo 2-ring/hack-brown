@@ -1,8 +1,9 @@
-import { Equals as EqualsIcon, MapPin as LocationIcon, ArrowsClockwise as RepeatIcon, CheckCircle, ArrowsClockwise } from '@phosphor-icons/react'
+import { Equals as EqualsIcon, MapPin as LocationIcon, ArrowsClockwise as RepeatIcon, CheckCircle, ArrowsClockwise, Warning } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import type { CalendarEvent } from './types'
 import { getEventSyncStatus } from './types'
 import { formatRecurrence } from './recurrence'
+import type { ConflictInfo } from '../../api/backend-client'
 
 interface GoogleCalendar {
   id: string
@@ -28,6 +29,7 @@ interface EventProps {
 
   // Sync status
   activeProvider?: string
+  conflictInfo?: ConflictInfo[]
 
   // Event handlers
   onClick?: () => void
@@ -42,6 +44,7 @@ export function Event({
   formatTimeRange,
   getCalendarColor,
   activeProvider,
+  conflictInfo,
   onClick,
 }: EventProps) {
   // Loading skeleton - simple grey box with fade effect like session skeletons
@@ -122,8 +125,21 @@ export function Event({
         </div>
       </div>
 
-      {/* Sync Status Bar */}
+      {/* Status Bar — conflicts take priority */}
       {(() => {
+        if (conflictInfo && conflictInfo.length > 0) {
+          const message = conflictInfo.length === 1
+            ? `Conflict with ${conflictInfo[0].summary} (${formatTimeRange(conflictInfo[0].start_time, conflictInfo[0].end_time)})`
+            : 'Conflict with multiple events'
+
+          return (
+            <div className="event-status-bar status-conflict">
+              <Warning size={14} weight="bold" />
+              <span>{message}</span>
+            </div>
+          )
+        }
+
         const syncStatus = getEventSyncStatus(event, activeProvider)
         if (syncStatus === 'draft') return null
 

@@ -1,0 +1,100 @@
+.timezone-input-container {
+  position: relative;
+  display: inline-block;
+  flex: 1;
+  min-width: 0;
+}
+
+.timezone-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  caret-color: var(--interactive);
+  cursor: text;
+}
+
+.timezone-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -12px;
+  min-width: 280px;
+  max-width: 340px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  animation: timezoneDropdownSlideIn 0.15s ease-out;
+}
+
+@keyframes timezoneDropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.timezone-option {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timezone-option:first-child {
+  border-radius: 12px 12px 0 0;
+}
+
+.timezone-option:last-child {
+  border-radius: 0 0 12px 12px;
+}
+
+.timezone-option:hover {
+  background-color: var(--interactive-light);
+}
+
+.timezone-option:active {
+  background-color: var(--interactive-hover);
+}
+
+.timezone-option.active {
+  color: var(--interactive);
+  font-weight: 500;
+}
+
+.timezone-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timezone-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timezone-dropdown::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 3px;
+}
+
+.timezone-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--border-active);
+}

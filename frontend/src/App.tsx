@@ -573,6 +573,7 @@ function AppContent() {
           onConfirm={handleAddToCalendar}
           onMenuToggle={handleSidebarToggle}
           onNewSession={handleNewSession}
+          sessionId={currentSession?.id}
         />
       </div>
     </div>

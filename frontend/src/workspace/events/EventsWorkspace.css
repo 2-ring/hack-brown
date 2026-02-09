@@ -425,6 +425,11 @@
   color: var(--warning);
 }
 
+.event-status-bar.status-conflict {
+  background-color: var(--error-background);
+  color: var(--error);
+}
+
 /* Skeleton card styling */
 .event-confirmation-card.skeleton-card {
   min-height: 140px;

@@ -14,8 +14,10 @@ import {
   eventItemVariants
 } from './animations'
 import { getAccessToken } from '../../auth/supabase'
-import { updateEvent } from '../../api/backend-client'
+import { updateEvent, checkEventConflicts } from '../../api/backend-client'
+import type { ConflictInfo } from '../../api/backend-client'
 import {
+  NotificationBar,
   useNotificationQueue,
   createSuccessNotification,
   createWarningNotification,
@@ -42,9 +44,10 @@ interface EventsWorkspaceProps {
   inputType?: 'text' | 'image' | 'audio' | 'document' | 'email'
   inputContent?: string
   onBack?: () => void
+  sessionId?: string
 }
 
-export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack }: EventsWorkspaceProps) {
+export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId }: EventsWorkspaceProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
@@ -57,6 +60,19 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
   const contentRef = useRef<HTMLDivElement>(null)
   const pendingEditRef = useRef<CalendarEvent | null>(null)
   const { currentNotification, addNotification, dismissNotification } = useNotificationQueue()
+  const [eventConflicts, setEventConflicts] = useState<Record<string, ConflictInfo[]>>({})
+
+  const runConflictCheck = async () => {
+    if (!sessionId) return
+    const validEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
+    if (validEvents.length === 0) return
+    try {
+      const conflicts = await checkEventConflicts(validEvents, sessionId)
+      setEventConflicts(conflicts)
+    } catch {
+      // Silent failure — conflict checking is non-critical
+    }
+  }
 
   // Fetch calendar list on mount
   useEffect(() => {
@@ -86,6 +102,13 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
   useEffect(() => {
     setEditedEvents(events)
   }, [events])
+
+  // Check for conflicts when events finish loading
+  useEffect(() => {
+    if (!isLoading && editedEvents.some(e => e !== null)) {
+      runConflictCheck()
+    }
+  }, [isLoading])
 
   // Check if content is scrollable
   useEffect(() => {
@@ -139,6 +162,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
     })
 
     addNotification(createSuccessNotification('Your changes have been saved'))
+    runConflictCheck()
 
     // Persist to backend if event has an id (exists in events table)
     if (updatedEvent.id) {
@@ -230,6 +254,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
         }
 
         addNotification(createSuccessNotification('Changes applied!'))
+        runConflictCheck()
 
         // Close chat after successful edit
         setIsChatExpanded(false)
@@ -425,6 +450,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
                       formatTimeRange={formatTimeRange}
                       getCalendarColor={getCalendarColor}
                       activeProvider="google"
+                      conflictInfo={eventConflicts[String(index)]}
                       onClick={() => handleEventClick(index)}
                     />
                   </motion.div>
@@ -487,6 +513,7 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
                             formatTimeRange={formatTimeRange}
                             getCalendarColor={getCalendarColor}
                             activeProvider="google"
+                            conflictInfo={eventConflicts[String(originalIndex)]}
                             onClick={() => handleEventClick(originalIndex)}
                           />
                         </div>
@@ -505,11 +532,19 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
         </AnimatePresence>
       </div>
 
+      <AnimatePresence mode="wait">
+        {currentNotification && (
+          <NotificationBar
+            key={currentNotification.id}
+            notification={currentNotification}
+            onDismiss={dismissNotification}
+          />
+        )}
+      </AnimatePresence>
+
       <BottomBar
         isLoading={isLoading || isAddingToCalendar}
         loadingConfig={isAddingToCalendar ? [LOADING_MESSAGES.ADDING_TO_CALENDAR] : loadingConfig}
-        notification={currentNotification}
-        onDismissNotification={dismissNotification}
         isEditingEvent={editingEventIndex !== null}
         isChatExpanded={isChatExpanded}
         changeRequest={changeRequest}

@@ -36,6 +36,7 @@ interface WorkspaceProps {
   onConfirm?: (editedEvents?: CalendarEvent[]) => Promise<any> | any
   onMenuToggle?: () => void
   onNewSession?: () => void
+  sessionId?: string
 }
 
 export function Workspace({
@@ -56,6 +57,7 @@ export function Workspace({
   onConfirm,
   onMenuToggle,
   onNewSession,
+  sessionId,
 }: WorkspaceProps) {
   const { user } = useAuth()
   const greeting = getGreeting(user?.user_metadata?.full_name || user?.user_metadata?.name)
@@ -127,6 +129,7 @@ export function Workspace({
           inputContent={inputContent}
           onConfirm={onConfirm}
           onBack={onMenuToggle}
+          sessionId={sessionId}
         />
       )}
     </>

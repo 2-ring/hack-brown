@@ -26,7 +26,7 @@ import Skeleton from 'react-loading-skeleton'
 import { Clock as ClockIcon, MapPin as LocationIcon, TextAlignLeft as DescriptionIcon, Globe as GlobeIcon, ArrowsClockwise as RepeatIcon } from '@phosphor-icons/react'
 import type { CalendarEvent } from './types'
 import { editViewVariants, editSectionVariants } from './animations'
-import { TimeInput, DateInput } from './inputs'
+import { TimeInput, DateInput, TimezoneInput } from './inputs'
 import {
   parseRRule, buildRRule, formatConfig, getDefaultConfig,
   type RecurrenceConfig, type RecurrenceFrequency, type DayCode, type EndType,
@@ -325,21 +325,24 @@ export function EventEditView({
               <GlobeIcon size={20} weight="regular" className="row-icon" />
               <div className="row-content">
                 <div className="editable-content-wrapper" onClick={(e) => handleEditClick('timezone', e)}>
-                  {editingField === 'timezone' ? (
-                    <input
-                      ref={inputRef as React.RefObject<HTMLInputElement>}
-                      type="text"
-                      className="date-text editable-input"
-                      value="Eastern Standard Time"
-                      onChange={() => {
-                        // TODO: Implement timezone handling
-                      }}
-                      onBlur={handleEditBlur}
-                      onKeyDown={handleEditKeyDown}
-                    />
-                  ) : (
-                    <span className="date-text">Eastern Standard Time</span>
-                  )}
+                  <TimezoneInput
+                    value={editedEvent.start.timeZone || 'America/New_York'}
+                    onChange={(timezone) => {
+                      setEditedEvent(prev => {
+                        const updated = {
+                          ...prev,
+                          start: { ...prev.start, timeZone: timezone },
+                          end: { ...prev.end, timeZone: timezone },
+                        }
+                        onChange?.(updated)
+                        return updated
+                      })
+                    }}
+                    onFocus={() => setEditingField('timezone')}
+                    onBlur={handleEditBlur}
+                    isEditing={editingField === 'timezone'}
+                    className="date-text"
+                  />
                 </div>
               </div>
             </div>
