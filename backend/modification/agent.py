@@ -71,6 +71,6 @@ class EventModificationAgent(BaseAgent):
         result = chain.invoke({
             "original_event": str(original_event),
             "edit_instruction": edit_instruction
-        }, config=get_invoke_config())
+        }, config=get_invoke_config("modification"))
 
         return result

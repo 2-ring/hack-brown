@@ -321,7 +321,7 @@ Return structured JSON."""
             examples: List[str]
             never_contains: List[str]
 
-        result = self.llm.with_structured_output(CategorySummary).invoke(prompt, config=get_invoke_config())
+        result = self.llm.with_structured_output(CategorySummary).invoke(prompt, config=get_invoke_config("pattern_discovery"))
 
         return result.model_dump()
 

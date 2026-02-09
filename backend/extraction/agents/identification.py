@@ -78,7 +78,7 @@ class EventIdentificationAgent(BaseAgent):
         ])
 
         chain = identification_prompt | self.llm
-        result = chain.invoke({"input": raw_input}, config=get_invoke_config())
+        result = chain.invoke({"input": raw_input}, config=get_invoke_config("identification"))
 
         return result
 
@@ -133,7 +133,7 @@ class EventIdentificationAgent(BaseAgent):
             {"role": "user", "content": content}
         ]
 
-        result = self.llm.invoke(messages, config=get_invoke_config())
+        result = self.llm.invoke(messages, config=get_invoke_config("identification"))
         return result
 
     def _execute_vision_openai(self, metadata: Dict[str, Any], system_prompt: str) -> IdentificationResult:
@@ -173,5 +173,5 @@ class EventIdentificationAgent(BaseAgent):
             {"role": "user", "content": content}
         ]
 
-        result = self.llm.invoke(messages, config=get_invoke_config())
+        result = self.llm.invoke(messages, config=get_invoke_config("identification"))
         return result

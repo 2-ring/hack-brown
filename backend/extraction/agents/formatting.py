@@ -10,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from core.base_agent import BaseAgent
 from extraction.models import ExtractedFacts, CalendarEvent
+from config.posthog import get_invoke_config
 
 
 class CalendarFormattingAgent(BaseAgent):
@@ -66,6 +67,6 @@ class CalendarFormattingAgent(BaseAgent):
 
         # Run calendar formatting
         chain = calendar_formatting_prompt | self.llm
-        result = chain.invoke({"facts": str(facts.model_dump())})
+        result = chain.invoke({"facts": str(facts.model_dump())}, config=get_invoke_config("formatting"))
 
         return result

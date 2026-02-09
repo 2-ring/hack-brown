@@ -65,7 +65,7 @@ class EventExtractionAgent(BaseAgent):
         result = chain.invoke({
             "description": description,
             "text": combined_text
-        }, config=get_invoke_config())
+        }, config=get_invoke_config("extraction"))
 
         return result
 

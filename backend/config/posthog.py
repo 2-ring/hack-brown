@@ -47,13 +47,18 @@ def set_tracking_context(distinct_id=None, trace_id=None):
     _local.trace_id = trace_id
 
 
-def get_invoke_config():
+def get_invoke_config(agent_name=None, properties=None):
     """
     Get LangChain invoke config with PostHog callback.
     Returns empty dict if PostHog is not configured.
 
+    Args:
+        agent_name: Name of the agent making the call (e.g., "identification", "extraction").
+                    Attached as a property for per-agent filtering in the PostHog dashboard.
+        properties: Optional dict of additional properties to attach to the LLM event.
+
     Usage:
-        result = chain.invoke(input, config=get_invoke_config())
+        result = chain.invoke(input, config=get_invoke_config("formatting"))
     """
     if not _posthog_client:
         return {}
@@ -64,10 +69,17 @@ def get_invoke_config():
         distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
         trace_id = getattr(_local, 'trace_id', None)
 
+        merged_properties = {}
+        if agent_name:
+            merged_properties["agent_name"] = agent_name
+        if properties:
+            merged_properties.update(properties)
+
         callback = CallbackHandler(
             client=_posthog_client,
             distinct_id=distinct_id,
             trace_id=trace_id,
+            properties=merged_properties or None,
             privacy_mode=False,
         )
         return {"callbacks": [callback]}

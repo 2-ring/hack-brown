@@ -112,7 +112,7 @@ Return the complete CalendarEvent with all fields preserved.""")
         ])
 
         chain = preference_prompt | self.llm
-        result = chain.invoke({}, config=get_invoke_config())
+        result = chain.invoke({}, config=get_invoke_config("personalization"))
 
         return result
 
