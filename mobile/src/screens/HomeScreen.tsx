@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Logo, Icon, Card, Modal, toast, CalendarEvent } from '../components';
+import { EventsListScreen } from './EventsListScreen';
 import {
   TextInputScreen,
   LinkInputScreen,
@@ -46,6 +47,8 @@ interface HomeScreenProps {
   onTextSubmit: (text: string) => Promise<void>;
   onClearFile: () => void;
   onAddToCalendar: (editedEvents?: CalendarEvent[]) => Promise<void>;
+  onAddSingleEvent?: (event: CalendarEvent) => Promise<void>;
+  onDeleteEvent?: (event: CalendarEvent) => Promise<void>;
   onNewSession: () => void;
 }
 
@@ -75,6 +78,8 @@ export function HomeScreen({
   onTextSubmit,
   onClearFile,
   onAddToCalendar,
+  onAddSingleEvent,
+  onDeleteEvent,
   onNewSession,
 }: HomeScreenProps) {
   const navigation = useNavigation<NavigationProp>();
@@ -253,39 +258,12 @@ export function HomeScreen({
   if (appState === 'review') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.reviewContainer}>
-            <Text style={[styles.reviewTitle, { color: theme.colors.textPrimary }]}>
-              Found {calendarEvents.length} event{calendarEvents.length !== 1 ? 's' : ''}
-            </Text>
-
-            <View style={styles.eventsPlaceholder}>
-              <Text style={[styles.placeholderText, { color: theme.colors.textSecondary }]}>
-                Events list UI coming soon
-              </Text>
-            </View>
-
-            <View style={styles.actionButtons}>
-              <Pressable
-                style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
-                onPress={onClearFile}
-              >
-                <Text style={[styles.actionButtonText, { color: theme.colors.textPrimary }]}>
-                  Start Over
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.actionButton, styles.primaryButton, { backgroundColor: theme.colors.primary }]}
-                onPress={() => onAddToCalendar()}
-              >
-                <Text style={[styles.actionButtonText, { color: '#ffffff' }]}>
-                  Add to Calendar
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </ScrollView>
+        <EventsListScreen
+          events={calendarEvents}
+          onConfirm={() => onAddToCalendar()}
+          onAddEvent={onAddSingleEvent}
+          onDeleteEvent={onDeleteEvent}
+        />
       </SafeAreaView>
     );
   }

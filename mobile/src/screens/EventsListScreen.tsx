@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import {
   EventCard,
+  SwipeableEventCard,
   DateHeader,
   MonthHeader,
   Icon,
@@ -41,6 +42,8 @@ interface EventsListScreenProps {
   isLoading?: boolean;
   onConfirm?: () => void;
   onRefresh?: () => void;
+  onAddEvent?: (event: CalendarEvent) => void;
+  onDeleteEvent?: (event: CalendarEvent) => void;
   loadingConfig?: Array<{
     icon: string;
     message: string;
@@ -158,6 +161,8 @@ export function EventsListScreen({
   isLoading = false,
   onConfirm,
   onRefresh,
+  onAddEvent,
+  onDeleteEvent,
   loadingConfig,
 }: EventsListScreenProps) {
   const navigation = useNavigation();
@@ -328,7 +333,7 @@ export function EventsListScreen({
 
         case 'event':
           return (
-            <EventCard
+            <SwipeableEventCard
               event={item.data}
               index={item.index!}
               isLoading={isLoading}
@@ -336,6 +341,8 @@ export function EventsListScreen({
               formatTimeRange={formatTimeRange}
               getCalendarColor={getCalendarColor}
               onClick={() => handleEventClick(item.data, item.index!)}
+              onSwipeRight={() => onAddEvent?.(item.data)}
+              onSwipeLeft={() => onDeleteEvent?.(item.data)}
             />
           );
 

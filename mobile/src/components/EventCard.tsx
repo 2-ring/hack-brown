@@ -14,6 +14,7 @@ interface CalendarDateTime {
 }
 
 export interface CalendarEvent {
+  id?: string;
   summary: string;
   start: CalendarDateTime;
   end: CalendarDateTime;

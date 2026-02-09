@@ -61,6 +61,8 @@ function NavigationContent(containerProps: AppContainerRenderProps) {
     handleSessionClick,
     handleNewSession,
     handleAddToCalendar,
+    handleAddSingleEvent,
+    handleDeleteEvent,
 
     // Computed
     menuSessions,
@@ -134,6 +136,8 @@ function NavigationContent(containerProps: AppContainerRenderProps) {
                 onTextSubmit={handleTextSubmit}
                 onClearFile={handleClearFile}
                 onAddToCalendar={handleAddToCalendar}
+                onAddSingleEvent={handleAddSingleEvent}
+                onDeleteEvent={handleDeleteEvent}
                 onNewSession={handleNewSession}
               />
             )}
@@ -153,6 +157,8 @@ function NavigationContent(containerProps: AppContainerRenderProps) {
                 onTextSubmit={handleTextSubmit}
                 onClearFile={handleClearFile}
                 onAddToCalendar={handleAddToCalendar}
+                onAddSingleEvent={handleAddSingleEvent}
+                onDeleteEvent={handleDeleteEvent}
                 onNewSession={handleNewSession}
               />
             )}

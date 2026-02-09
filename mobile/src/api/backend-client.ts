@@ -335,7 +335,8 @@ export async function checkGoogleCalendarStatus(): Promise<{
  */
 export async function addSessionToCalendar(
   sessionId: string,
-  events?: any[]
+  events?: any[],
+  eventIds?: string[]
 ): Promise<{
   success: boolean;
   calendar_event_ids: string[];
@@ -346,13 +347,14 @@ export async function addSessionToCalendar(
 }> {
   const headers = await getAuthHeaders();
 
-  // Prepare request body if events are provided (for correction logging)
-  const body = events ? JSON.stringify({ events }) : undefined;
+  const body: Record<string, any> = {};
+  if (events) body.events = events;
+  if (eventIds) body.event_ids = eventIds;
 
   const response = await fetch(`${API_URL}/api/sessions/${sessionId}/add-to-calendar`, {
     method: 'POST',
     headers,
-    body,
+    body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
   });
 
   return handleResponse(response);
@@ -447,6 +449,27 @@ export async function getUserPreferences(): Promise<{
   if (response.status === 404) {
     return { exists: false };
   }
+
+  return handleResponse(response);
+}
+
+// ============================================================================
+// Event Management
+// ============================================================================
+
+/**
+ * Soft-delete an event by ID.
+ */
+export async function deleteEvent(eventId: string): Promise<{
+  success: boolean;
+  event_id: string;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/api/events/${eventId}`, {
+    method: 'DELETE',
+    headers,
+  });
 
   return handleResponse(response);
 }

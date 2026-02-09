@@ -57,6 +57,26 @@ export const syncCalendar = async (): Promise<SyncResult> => {
     body: JSON.stringify({}),
   });
 
+  // Calendar not connected yet (tokens not stored or expired) — not an error,
+  // just means token storage hasn't completed. Return a skip result silently.
+  if (response.status === 401 || response.status === 400) {
+    return {
+      success: true,
+      strategy: 'skip' as const,
+      synced_at: new Date().toISOString(),
+      total_events_in_db: 0,
+      is_first_sync: false,
+      has_sync_token: false,
+      provider: 'google',
+      calendar_id: 'primary',
+      events_added: 0,
+      events_updated: 0,
+      events_deleted: 0,
+      skipped: true,
+      reason: 'Calendar not connected yet',
+    };
+  }
+
   if (!response.ok) {
     throw new Error(`Sync failed: ${response.statusText}`);
   }

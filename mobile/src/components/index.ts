@@ -12,6 +12,7 @@ export { Icon } from './Icon';
 export type { IconProps, PhosphorIconName } from './Icon';
 export { EventCard } from './EventCard';
 export type { EventCardProps, CalendarEvent } from './EventCard';
+export { SwipeableEventCard } from './SwipeableEventCard';
 export { DateHeader, MonthHeader } from './DateHeader';
 
 // Toast Notifications (Agent 4 - Task 15)

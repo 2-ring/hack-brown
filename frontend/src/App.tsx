@@ -519,8 +519,12 @@ function AppContent() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
-      if (errorMessage.includes('not connected') || errorMessage.includes('not authenticated')) {
-        throw new Error('Google Calendar not connected. Please sign in with Google to use calendar integration.')
+      if (errorMessage.includes('not connected') || errorMessage.includes('not authenticated') || errorMessage.includes('401')) {
+        // Calendar tokens missing or expired. From the user's perspective this
+        // is the same as not being signed in — show the sign-in prompt which
+        // re-triggers the Google OAuth flow (with calendar scopes) to fix it.
+        setAuthModalHeading('Sign in to add events to your calendar.')
+        return
       }
       throw error
     }

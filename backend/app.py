@@ -571,6 +571,31 @@ def update_event(event_id):
         return jsonify({'error': f'Failed to update event: {str(e)}'}), 500
 
 
+@app.route('/api/events/<event_id>', methods=['DELETE'])
+@require_auth
+def delete_event(event_id):
+    """
+    Soft-delete a single event. Sets deleted_at so it's excluded from future queries.
+
+    Requires authentication. Only allows deleting events owned by the user.
+    """
+    try:
+        user_id = request.user_id
+
+        event = Event.get_by_id(event_id)
+        if not event:
+            return jsonify({'error': 'Event not found'}), 404
+        if event.get('user_id') != user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        Event.soft_delete(event_id)
+
+        return jsonify({'success': True, 'event_id': event_id})
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete event: {str(e)}'}), 500
+
+
 @app.route('/api/events/check-conflicts', methods=['POST'])
 @require_auth
 def check_event_conflicts():

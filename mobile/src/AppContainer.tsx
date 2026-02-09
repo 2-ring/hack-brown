@@ -14,6 +14,7 @@ import {
   getSession,
   pollSession,
   addSessionToCalendar,
+  deleteEvent as apiDeleteEvent,
 } from './api/backend-client';
 import { syncCalendar } from './api/sync';
 
@@ -80,6 +81,8 @@ export interface AppContainerRenderProps {
   handleSessionClick: (sessionId: string) => void;
   handleNewSession: () => void;
   handleAddToCalendar: (editedEvents?: CalendarEvent[]) => Promise<void>;
+  handleAddSingleEvent: (event: CalendarEvent) => Promise<void>;
+  handleDeleteEvent: (event: CalendarEvent) => Promise<void>;
 
   // Computed
   menuSessions: SessionListItem[];
@@ -424,6 +427,51 @@ export function AppContainer({
     }
   }, [user, currentSession]);
 
+  // Handle adding a single event to calendar (swipe right)
+  const handleAddSingleEvent = useCallback(async (event: CalendarEvent) => {
+    if (!user || !currentSession || !event.id) return;
+
+    try {
+      toast.loading('Adding event...', { id: 'single-add' });
+
+      await addSessionToCalendar(currentSession.id, undefined, [event.id]);
+
+      toast.dismiss('single-add');
+      toast.success('Event added!', {
+        description: event.summary,
+        duration: 3000,
+      });
+    } catch (error) {
+      toast.dismiss('single-add');
+      toast.error('Failed to add event', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+        duration: 4000,
+      });
+    }
+  }, [user, currentSession]);
+
+  // Handle deleting a single event (swipe left)
+  const handleDeleteEvent = useCallback(async (event: CalendarEvent) => {
+    if (!event.id) return;
+
+    try {
+      await apiDeleteEvent(event.id);
+
+      // Remove from local state
+      setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+
+      toast.success('Event removed', {
+        description: event.summary,
+        duration: 3000,
+      });
+    } catch (error) {
+      toast.error('Failed to remove event', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+        duration: 4000,
+      });
+    }
+  }, []);
+
   // Convert backend sessions to menu format
   const menuSessions: SessionListItem[] = sessionHistory.map(session => ({
     id: session.id,
@@ -456,6 +504,8 @@ export function AppContainer({
         handleSessionClick,
         handleNewSession,
         handleAddToCalendar,
+        handleAddSingleEvent,
+        handleDeleteEvent,
 
         // Computed
         menuSessions,
