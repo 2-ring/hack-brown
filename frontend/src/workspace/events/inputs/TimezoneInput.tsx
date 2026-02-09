@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { GlobeSimple, ArrowLeft, X as XIcon } from '@phosphor-icons/react'
 import { getTimezoneList, formatTimezoneDisplay, filterTimezones } from '../timezone'
 import { useViewport } from '../../input/shared/hooks/useViewport'
 import { BottomDrawer } from './BottomDrawer'
@@ -19,6 +20,7 @@ export function TimezoneInputDesktop({ value, onChange, onFocus, onBlur, isEditi
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const allTimezones = useMemo(() => getTimezoneList(), [])
@@ -52,13 +54,19 @@ export function TimezoneInputDesktop({ value, onChange, onFocus, onBlur, isEditi
     setSearchQuery('')
   }
 
-  const handleInputBlur = () => {
-    setTimeout(() => {
-      setIsOpen(false)
-      setSearchQuery('')
-      onBlur?.()
-    }, 200)
-  }
+  // Click-outside to close
+  useEffect(() => {
+    if (!isOpen) return
+    const handleMouseDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+        setSearchQuery('')
+        onBlur?.()
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isOpen, onBlur])
 
   const handleInputFocus = () => {
     onFocus?.()
@@ -78,7 +86,7 @@ export function TimezoneInputDesktop({ value, onChange, onFocus, onBlur, isEditi
   }
 
   return (
-    <div className="timezone-input-container">
+    <div className="timezone-input-container" ref={containerRef}>
       <input
         ref={inputRef}
         type="text"
@@ -86,7 +94,6 @@ export function TimezoneInputDesktop({ value, onChange, onFocus, onBlur, isEditi
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onFocus={handleInputFocus}
-        onBlur={handleInputBlur}
         onKeyDown={handleKeyDown}
         placeholder={displayValue}
       />
@@ -133,7 +140,7 @@ export function TimezoneInputMobile({ value, onChange, onBlur, isEditing, classN
     if (isEditing && !searchQuery && listRef.current) {
       const currentIndex = allTimezones.findIndex(tz => tz.iana === value)
       if (currentIndex >= 0) {
-        const optionHeight = 48
+        const optionHeight = 80
         listRef.current.scrollTop = currentIndex * optionHeight - listRef.current.clientHeight / 2
       }
     }
@@ -153,26 +160,39 @@ export function TimezoneInputMobile({ value, onChange, onBlur, isEditing, classN
   return (
     <>
       <span className={className}>{displayValue}</span>
-      <BottomDrawer isOpen={!!isEditing} onClose={handleClose} title="Select Timezone">
-        <div className="timezone-drawer-search">
+      <BottomDrawer isOpen={!!isEditing} onClose={handleClose}>
+        <div className="tz-search-bar">
+          <button type="button" className="tz-search-back" onClick={handleClose}>
+            <ArrowLeft size={20} weight="regular" />
+          </button>
           <input
             ref={inputRef}
             type="text"
-            className="timezone-drawer-input"
+            className="tz-search-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search timezones..."
           />
+          {searchQuery && (
+            <button type="button" className="tz-search-clear" onClick={() => setSearchQuery('')}>
+              <XIcon size={18} weight="regular" />
+            </button>
+          )}
         </div>
-        <div className="timezone-drawer-list" ref={listRef}>
+        <div className="tz-drawer-list" ref={listRef}>
           {filteredTimezones.map((tz) => (
             <button
               key={tz.iana}
-              className={`timezone-drawer-option ${tz.iana === value ? 'active' : ''}`}
+              className="tz-drawer-item"
               onClick={() => handleSelect(tz.iana)}
               type="button"
             >
-              {tz.label}
+              <GlobeSimple size={22} weight="regular" className="tz-item-icon" />
+              <div className="tz-item-info">
+                <span className="tz-item-name">{tz.longName}</span>
+                <span className="tz-item-time">{tz.currentTime}  {tz.shortOffset}</span>
+                <span className="tz-item-region">{tz.region}, {tz.city}</span>
+              </div>
             </button>
           ))}
         </div>

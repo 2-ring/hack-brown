@@ -138,6 +138,19 @@ export function DateInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
     }
   }, [isEditing, selectedDate])
 
+  // Click-outside to close
+  useEffect(() => {
+    if (!isOpen) return
+    const handleMouseDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+        onBlur?.()
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isOpen, onBlur])
+
   const prevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11)
@@ -167,19 +180,12 @@ export function DateInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
     onBlur?.()
   }
 
-  const handleContainerBlur = (e: React.FocusEvent) => {
-    if (containerRef.current && !containerRef.current.contains(e.relatedTarget as Node)) {
-      setIsOpen(false)
-      onBlur?.()
-    }
-  }
-
   if (!isEditing) {
     return <span className={className}>{displayValue}</span>
   }
 
   return (
-    <div className="date-input-container" ref={containerRef} onBlur={handleContainerBlur}>
+    <div className="date-input-container" ref={containerRef}>
       <span
         className={`date-input-display ${className || ''}`}
         onClick={() => {

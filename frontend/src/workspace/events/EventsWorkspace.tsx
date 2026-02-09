@@ -81,7 +81,14 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
       setIsLoadingCalendars(false)
       return
     }
-    const fetchCalendars = async () => {
+    const DEFAULT_CALENDAR: GoogleCalendar = {
+      id: 'primary',
+      summary: 'Primary',
+      backgroundColor: '#1170C5',
+      primary: true,
+    }
+
+    const fetchCalendars = async (retriesLeft = 2): Promise<void> => {
       setIsLoadingCalendars(true)
       try {
         const token = await getAccessToken()
@@ -96,21 +103,26 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
 
           // Ensure primary/default calendar is always present
           if (!fetched.some(cal => cal.primary || cal.id === 'primary')) {
-            fetched.unshift({
-              id: 'primary',
-              summary: 'Primary',
-              backgroundColor: '#1170C5',
-              primary: true,
-            })
+            fetched.unshift(DEFAULT_CALENDAR)
           }
 
           setCalendars(fetched)
           setIsLoadingCalendars(false)
+        } else if (retriesLeft > 0) {
+          // Token storage may still be in progress — retry after delay
+          setTimeout(() => fetchCalendars(retriesLeft - 1), 3000)
+        } else {
+          setCalendars([DEFAULT_CALENDAR])
+          setIsLoadingCalendars(false)
         }
-        // Non-ok (401, etc.): keep loading state — never show empty list
       } catch (error) {
         console.error('Failed to fetch calendars:', error)
-        // Network error: keep loading state — never show empty list
+        if (retriesLeft > 0) {
+          setTimeout(() => fetchCalendars(retriesLeft - 1), 3000)
+        } else {
+          setCalendars([DEFAULT_CALENDAR])
+          setIsLoadingCalendars(false)
+        }
       }
     }
     fetchCalendars()

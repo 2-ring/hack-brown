@@ -14,6 +14,16 @@ export interface TimezoneOption {
   offsetMinutes: number
   /** Formatted label, e.g., "(GMT-05:00) New York" */
   label: string
+  /** Long timezone name, e.g., "Eastern Standard Time" */
+  longName: string
+  /** Current time in this timezone, e.g., "1 PM" */
+  currentTime: string
+  /** Short offset label, e.g., "GMT-5" */
+  shortOffset: string
+  /** City extracted from IANA, e.g., "New York" */
+  city: string
+  /** Region from IANA path, e.g., "America" */
+  region: string
   /** Lowercase searchable terms */
   searchTerms: string
 }
@@ -81,6 +91,46 @@ function getCityName(iana: string): string {
   return city
 }
 
+function getRegion(iana: string): string {
+  const parts = iana.split('/')
+  return parts[0].replace(/_/g, ' ')
+}
+
+function getLongTimezoneName(iana: string, date: Date): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: iana,
+      timeZoneName: 'long',
+    })
+    const parts = formatter.formatToParts(date)
+    return parts.find(p => p.type === 'timeZoneName')?.value || getCityName(iana)
+  } catch {
+    return getCityName(iana)
+  }
+}
+
+function getCurrentTime(iana: string, date: Date): string {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: iana,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date)
+  } catch {
+    return ''
+  }
+}
+
+function formatShortOffset(offsetMinutes: number): string {
+  if (offsetMinutes === 0) return 'GMT+0'
+  const sign = offsetMinutes >= 0 ? '+' : '-'
+  const abs = Math.abs(offsetMinutes)
+  const hours = Math.floor(abs / 60)
+  const mins = abs % 60
+  return mins === 0 ? `GMT${sign}${hours}` : `GMT${sign}${hours}:${mins.toString().padStart(2, '0')}`
+}
+
 function buildSearchTerms(iana: string): string {
   const parts = iana.toLowerCase().replace(/\//g, ' ').replace(/_/g, ' ')
   const abbreviations = COMMON_ABBREVIATIONS[iana]?.join(' ') || ''
@@ -109,8 +159,12 @@ export function getTimezoneList(): TimezoneOption[] {
     const offsetStr = formatOffsetString(offsetMinutes)
     const city = getCityName(iana)
     const label = `(${offsetStr}) ${city}`
+    const longName = getLongTimezoneName(iana, now)
+    const currentTime = getCurrentTime(iana, now)
+    const shortOffset = formatShortOffset(offsetMinutes)
+    const region = getRegion(iana)
     const searchTerms = buildSearchTerms(iana)
-    return { iana, offsetMinutes, label, searchTerms }
+    return { iana, offsetMinutes, label, longName, currentTime, shortOffset, city, region, searchTerms }
   })
 
   options.sort((a, b) => a.offsetMinutes - b.offsetMinutes || a.iana.localeCompare(b.iana))

@@ -95,6 +95,7 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -128,12 +129,18 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
     setIsOpen(false)
   }
 
-  const handleInputBlur = () => {
-    setTimeout(() => {
-      setIsOpen(false)
-      onBlur?.()
-    }, 200)
-  }
+  // Click-outside to close
+  useEffect(() => {
+    if (!isOpen) return
+    const handleMouseDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+        onBlur?.()
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isOpen, onBlur])
 
   const handleInputFocus = () => {
     onFocus?.()
@@ -161,7 +168,7 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
     : timeSuggestions
 
   return (
-    <div className="time-input-container">
+    <div className="time-input-container" ref={containerRef}>
       <input
         ref={inputRef}
         type="text"
@@ -169,7 +176,6 @@ export function TimeInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
         value={inputValue}
         onChange={handleInputChange}
         onFocus={handleInputFocus}
-        onBlur={handleInputBlur}
         placeholder={placeholder || 'Enter time'}
         readOnly={!isEditing}
       />

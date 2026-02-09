@@ -210,7 +210,7 @@ export function EventEditView({
                     onClick={() => handleCalendarSelect(calendar.id)}
                     style={{
                       backgroundColor: calendar.id === editedEvent.calendar ? calendar.backgroundColor : 'transparent',
-                      color: calendar.id === editedEvent.calendar ? '#ffffff' : '#666',
+                      color: calendar.id === editedEvent.calendar ? '#ffffff' : 'var(--text-primary)',
                       borderColor: calendar.backgroundColor
                     }}
                   >
