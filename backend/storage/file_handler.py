@@ -67,9 +67,10 @@ class FileStorage:
         ext = os.path.splitext(filename)[1]
         unique_filename = f"{user_id}/{uuid4()}{ext}"
 
-        # Upload to Supabase Storage
+        # Upload to Supabase Storage (read bytes from file-like objects)
+        file_data = file.read() if hasattr(file, 'read') else file
         response = supabase.storage.from_(FileStorage.BUCKET_NAME)\
-            .upload(unique_filename, file)
+            .upload(unique_filename, file_data)
 
         # Return the path (we'll construct URLs in the app)
         return unique_filename

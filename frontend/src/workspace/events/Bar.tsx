@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon, CaretLeft, Images, Files, Microphone, Pen, CalendarDots } from '@phosphor-icons/react'
+import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon, Images, Files, Microphone, Pen, CalendarDots } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
 import type { LoadingStateConfig } from './types'
 import { Tooltip } from '../../components/Tooltip'
@@ -74,7 +74,7 @@ export function TopBar({
   isScrollable = true,
   inputType,
   inputContent,
-  onBack
+  onBack: _onBack
 }: TopBarProps) {
   const input: InputInfo | null = inputType
     ? { type: inputType, content: inputContent || '' }

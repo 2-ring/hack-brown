@@ -16,7 +16,7 @@ import {
 } from './animations'
 import { useAuth } from '../../auth/AuthContext'
 import { getAccessToken } from '../../auth/supabase'
-import { updateEvent, deleteEvent, syncEvent, addSessionToCalendar, getSessionEvents, checkEventConflicts, refreshGoogleCalendarTokens } from '../../api/backend-client'
+import { updateEvent, deleteEvent, syncEvent, getSessionEvents, checkEventConflicts, refreshGoogleCalendarTokens } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
 import {
   useNotificationQueue,
@@ -50,7 +50,7 @@ interface EventsWorkspaceProps {
 }
 
 export function EventsWorkspace({ events, onConfirm, onEventDeleted, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId }: EventsWorkspaceProps) {
-  const { user, calendarReady } = useAuth()
+  const { calendarReady } = useAuth()
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)

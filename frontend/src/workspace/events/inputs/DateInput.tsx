@@ -214,7 +214,7 @@ export function DateInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
 
 /* ─── Mobile: bottom drawer ─── */
 
-export function DateInputMobile({ value, onChange, onFocus, onBlur, isEditing, className }: DateInputProps) {
+export function DateInputMobile({ value, onChange, onFocus: _onFocus, onBlur, isEditing, className }: DateInputProps) {
   const selectedDate = useMemo(() => new Date(value), [value])
   const [viewYear, setViewYear] = useState(selectedDate.getFullYear())
   const [viewMonth, setViewMonth] = useState(selectedDate.getMonth())
