@@ -39,6 +39,7 @@ interface EventsWorkspaceProps {
   events: (CalendarEvent | null)[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onConfirm?: (editedEvents?: CalendarEvent[]) => Promise<any> | any
+  onEventDeleted?: (eventId: string, sessionId?: string, remainingCount?: number) => void
   isLoading?: boolean
   loadingConfig?: LoadingStateConfig[]
   expectedEventCount?: number
@@ -48,7 +49,7 @@ interface EventsWorkspaceProps {
   sessionId?: string
 }
 
-export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId }: EventsWorkspaceProps) {
+export function EventsWorkspace({ events, onConfirm, onEventDeleted, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId }: EventsWorkspaceProps) {
   const { user, calendarReady } = useAuth()
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
@@ -403,7 +404,8 @@ export function EventsWorkspace({ events, onConfirm, isLoading = false, loadingC
 
     if (event.id) {
       try {
-        await deleteEvent(event.id)
+        const result = await deleteEvent(event.id)
+        onEventDeleted?.(event.id, result.session_id, result.remaining_event_count)
       } catch (error) {
         // Re-add on failure
         setEditedEvents(prev => [...prev, event])

@@ -711,6 +711,8 @@ class Session:
         """
         Get all sessions for a user.
 
+        Excludes error sessions and sessions with no events (empty or failed processing).
+
         Args:
             user_id: User's UUID
             limit: Maximum number of sessions to return (default 50)
@@ -721,9 +723,16 @@ class Session:
         supabase = get_supabase()
         response = supabase.table("sessions").select("*")\
             .eq("user_id", user_id)\
+            .neq("status", "error")\
             .order("created_at", desc=True)\
             .limit(limit).execute()
-        return response.data
+
+        # Filter out sessions with no events (e.g. all events were deleted)
+        return [
+            s for s in response.data
+            if s.get('status') in ('pending', 'processing')
+            or len(s.get('event_ids') or s.get('processed_events') or []) > 0
+        ]
 
     @staticmethod
     def update_status(
@@ -952,6 +961,33 @@ class Session:
         event_ids = session.get('event_ids', [])
         if event_id not in event_ids:
             event_ids.append(event_id)
+
+        response = supabase.table("sessions").update({
+            "event_ids": event_ids
+        }).eq("id", session_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def remove_event(session_id: str, event_id: str) -> Dict[str, Any]:
+        """
+        Remove an event ID from session's event_ids array.
+
+        Args:
+            session_id: Session's UUID
+            event_id: Event UUID to remove
+
+        Returns:
+            Dict containing updated session data
+        """
+        supabase = get_supabase()
+
+        session = Session.get_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session {session_id} not found")
+
+        event_ids = session.get('event_ids', [])
+        if event_id in event_ids:
+            event_ids.remove(event_id)
 
         response = supabase.table("sessions").update({
             "event_ids": event_ids

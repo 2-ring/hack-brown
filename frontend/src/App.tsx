@@ -536,9 +536,36 @@ function AppContent() {
     }
   }, [user, currentSession])
 
-  // Convert backend sessions to menu format (filter out error sessions)
+  // Handle event deletion: update sessionHistory so sidebar reflects the change
+  const handleEventDeleted = useCallback((eventId: string, sessionId?: string, remainingCount?: number) => {
+    if (!sessionId) return
+
+    setSessionHistory(prev => prev.map(s => {
+      if (s.id !== sessionId) return s
+      // Update event_ids to reflect the removal
+      const updatedEventIds = (s.event_ids || []).filter((id: string) => id !== eventId)
+      return { ...s, event_ids: updatedEventIds }
+    }))
+
+    // If no events remain, navigate back to input
+    if (remainingCount === 0) {
+      setCalendarEvents([])
+      setCurrentSession(null)
+      setAppState('input')
+      navigate('/')
+    }
+  }, [navigate])
+
+  // Convert backend sessions to menu format (filter out error and empty sessions)
   const menuSessions: SessionListItem[] = sessionHistory
-    .filter(session => session.status !== 'error')
+    .filter(session => {
+      if (session.status === 'error') return false
+      // Allow pending/processing sessions through (still in progress)
+      if (session.status === 'pending' || session.status === 'processing') return true
+      // For completed sessions, require at least one event
+      const eventCount = session.event_ids?.length || session.processed_events?.length || 0
+      return eventCount > 0
+    })
     .map(session => ({
       id: session.id,
       title: session.title || session.input_content.substring(0, 50) + (session.input_content.length > 50 ? '...' : ''),
@@ -581,6 +608,7 @@ function AppContent() {
           onTextSubmit={handleTextSubmit}
           onClearFile={handleClearFile}
           onConfirm={handleAddToCalendar}
+          onEventDeleted={handleEventDeleted}
           onMenuToggle={handleSidebarToggle}
           onNewSession={handleNewSession}
           sessionId={currentSession?.id}

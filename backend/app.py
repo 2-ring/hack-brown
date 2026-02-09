@@ -582,6 +582,7 @@ def update_event(event_id):
 def delete_event(event_id):
     """
     Soft-delete a single event. Sets deleted_at so it's excluded from future queries.
+    Also removes the event ID from its parent session's event_ids array.
 
     Requires authentication. Only allows deleting events owned by the user.
     """
@@ -596,7 +597,22 @@ def delete_event(event_id):
 
         Event.soft_delete(event_id)
 
-        return jsonify({'success': True, 'event_id': event_id})
+        # Remove from parent session's event_ids
+        session_id = event.get('session_id')
+        remaining_event_count = None
+        if session_id:
+            try:
+                updated_session = DBSession.remove_event(session_id, event_id)
+                remaining_event_count = len(updated_session.get('event_ids') or [])
+            except Exception:
+                pass  # Non-critical — session list will self-correct on next fetch
+
+        return jsonify({
+            'success': True,
+            'event_id': event_id,
+            'session_id': session_id,
+            'remaining_event_count': remaining_event_count,
+        })
 
     except Exception as e:
         return jsonify({'error': f'Failed to delete event: {str(e)}'}), 500
@@ -1067,12 +1083,17 @@ def upload_file_endpoint():
             file_type=file_type
         )
 
-        # Create session in database
-        session = DBSession.create(
-            user_id=user_id,
-            input_type=file_type,
-            input_content=file_path
-        )
+        try:
+            # Create session in database
+            session = DBSession.create(
+                user_id=user_id,
+                input_type=file_type,
+                input_content=file_path
+            )
+        except Exception:
+            # Clean up orphaned file if session creation fails
+            FileStorage.delete_file(file_path)
+            raise
 
         # Start processing in background thread
         thread = threading.Thread(
@@ -1299,13 +1320,17 @@ def upload_guest_file():
             file_type=file_type
         )
 
-        # Create session in database with guest_mode=True
-        session = DBSession.create(
-            user_id=guest_id,
-            input_type=file_type,
-            input_content=file_path,
-            guest_mode=True
-        )
+        try:
+            # Create session in database with guest_mode=True
+            session = DBSession.create(
+                user_id=guest_id,
+                input_type=file_type,
+                input_content=file_path,
+                guest_mode=True
+            )
+        except Exception:
+            FileStorage.delete_file(file_path)
+            raise
 
         # Start processing in background thread
         thread = threading.Thread(

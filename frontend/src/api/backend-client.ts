@@ -503,7 +503,7 @@ export async function updateEvent(
  */
 export async function deleteEvent(
   eventId: string
-): Promise<{ success: boolean; event_id: string }> {
+): Promise<{ success: boolean; event_id: string; session_id?: string; remaining_event_count?: number }> {
   const headers = await getAuthHeaders();
 
   const response = await fetch(`${API_URL}/api/events/${eventId}`, {

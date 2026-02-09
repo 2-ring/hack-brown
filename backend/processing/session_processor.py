@@ -277,8 +277,8 @@ class SessionProcessor:
 
             # Check if any events were found
             if not identification_result.has_events:
-                # No events found - mark as processed with empty events
-                DBSession.update_processed_events(session_id, [])
+                logger.warning(f"No events found in session {session_id}")
+                DBSession.mark_error(session_id, "No events found in the provided input")
                 return
 
             # Save extracted events
@@ -309,10 +309,15 @@ class SessionProcessor:
             DBSession.update_status(session_id, 'processed')
 
         except Exception as e:
-            # Mark session as error
             error_message = str(e)
-            print(f"Error processing session {session_id}: {error_message}")
-            DBSession.mark_error(session_id, error_message)
+            logger.error(f"Error processing session {session_id}: {error_message}")
+            try:
+                DBSession.mark_error(session_id, error_message)
+            except Exception as db_err:
+                logger.critical(
+                    f"Failed to mark session {session_id} as error "
+                    f"(original: {error_message}): {db_err}"
+                )
 
     def process_file_session(
         self,
@@ -348,6 +353,9 @@ class SessionProcessor:
             elif file_type == 'image':
                 text = f"[Image file at {file_path}]"
                 metadata = {'source': 'image', 'file_path': file_path, 'requires_vision': True}
+            elif file_type == 'pdf':
+                text = self._convert_document(file_path)
+                metadata = {'source': 'pdf', 'file_path': file_path}
             elif file_type == 'document':
                 text = self._convert_document(file_path)
                 metadata = {'source': 'document', 'file_path': file_path}
@@ -359,8 +367,7 @@ class SessionProcessor:
                     raise ValueError("File is empty or contains no readable text")
                 metadata = {'source': file_type, 'file_path': file_path}
             else:
-                text = file_path
-                metadata = {'source': file_type, 'file_path': file_path}
+                raise ValueError(f"Unsupported file type: {file_type}")
 
             # Launch title generation in background (runs in parallel with pipeline)
             title_thread = threading.Thread(
@@ -384,8 +391,8 @@ class SessionProcessor:
 
             # Check if any events were found
             if not identification_result.has_events:
-                # No events found
-                DBSession.update_processed_events(session_id, [])
+                logger.warning(f"No events found in file session {session_id}")
+                DBSession.mark_error(session_id, "No events found in the provided input")
                 return
 
             # Save extracted events
@@ -416,7 +423,12 @@ class SessionProcessor:
             DBSession.update_status(session_id, 'processed')
 
         except Exception as e:
-            # Mark session as error
             error_message = str(e)
-            print(f"Error processing file session {session_id}: {error_message}")
-            DBSession.mark_error(session_id, error_message)
+            logger.error(f"Error processing file session {session_id}: {error_message}")
+            try:
+                DBSession.mark_error(session_id, error_message)
+            except Exception as db_err:
+                logger.critical(
+                    f"Failed to mark session {session_id} as error "
+                    f"(original: {error_message}): {db_err}"
+                )
