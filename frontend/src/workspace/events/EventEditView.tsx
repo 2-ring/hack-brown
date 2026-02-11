@@ -33,19 +33,12 @@ import {
   type RecurrenceConfig, type RecurrenceFrequency, type DayCode, type EndType,
   ALL_DAYS, DAY_SHORT, FREQUENCY_LABELS,
 } from './recurrence'
+import type { SyncCalendar } from '../../api/sync'
 import './EventEditView.css'
-
-interface GoogleCalendar {
-  id: string
-  summary: string
-  backgroundColor: string
-  foregroundColor?: string
-  primary?: boolean
-}
 
 interface EventEditViewProps {
   event: CalendarEvent
-  calendars: GoogleCalendar[]
+  calendars: SyncCalendar[]
   isLoadingCalendars?: boolean
   onClose: () => void
   onSave: (event: CalendarEvent) => void

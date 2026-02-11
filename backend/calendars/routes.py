@@ -58,7 +58,7 @@ def resolve_calendar_to_id(calendar_value: str, calendar_service: CalendarServic
 # OAuth Endpoints
 # ============================================================================
 
-@calendar_bp.route('/api/oauth/authorize', methods=['GET'])
+@calendar_bp.route('/oauth/authorize', methods=['GET'])
 def oauth_authorize():
     """
     Start OAuth 2.0 authorization flow.
@@ -76,7 +76,7 @@ def oauth_authorize():
         return jsonify({'error': f'Authorization failed: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/oauth/callback', methods=['GET'])
+@calendar_bp.route('/oauth/callback', methods=['GET'])
 def oauth_callback():
     """
     Handle OAuth 2.0 callback from Google.
@@ -105,7 +105,7 @@ def oauth_callback():
         return jsonify({'error': f'OAuth callback failed: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/oauth/status', methods=['GET'])
+@calendar_bp.route('/oauth/status', methods=['GET'])
 def oauth_status():
     """
     Check OAuth authentication status.
@@ -125,7 +125,7 @@ def oauth_status():
 # Calendar Event Operations
 # ============================================================================
 
-@calendar_bp.route('/api/calendar/create-event', methods=['POST'])
+@calendar_bp.route('/calendar/create-event', methods=['POST'])
 def create_calendar_event():
     """
     Create a new event in Google Calendar.
@@ -196,7 +196,7 @@ def create_calendar_event():
         return jsonify({'error': f'Event creation failed: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/calendar/check-conflicts', methods=['POST'])
+@calendar_bp.route('/calendar/check-conflicts', methods=['POST'])
 def check_calendar_conflicts():
     """
     Check for scheduling conflicts using Google Calendar's Freebusy API.
@@ -240,7 +240,7 @@ def check_calendar_conflicts():
         return jsonify({'error': f'Conflict check failed: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/calendar/list-events', methods=['GET'])
+@calendar_bp.route('/calendar/list-events', methods=['GET'])
 def list_calendar_events():
     """
     List upcoming events from Google Calendar.
@@ -276,208 +276,7 @@ def list_calendar_events():
         return jsonify({'error': f'Failed to list events: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/calendar/list-calendars', methods=['GET'])
-@require_auth
-def list_calendars():
-    """
-    List all calendars the user has access to with their colors.
-
-    Requires authentication. Uses per-user calendar provider.
-
-    Returns list of calendars with id, summary (name), backgroundColor, etc.
-    """
-    try:
-        user_id = request.user_id
-
-        # Check if user has a connected calendar provider
-        if not factory.is_authenticated(user_id):
-            return jsonify({
-                'error': 'Calendar not connected',
-                'authenticated': False,
-                'calendars': []
-            }), 401
-
-        # Primary path: serve from calendars table
-        from database.models import Calendar
-        db_calendars = Calendar.get_by_user(user_id)
-        if db_calendars:
-            calendars = [{
-                'id': cal['provider_cal_id'],
-                'summary': cal['name'],
-                'backgroundColor': cal.get('color', '#1170C5'),
-                'foregroundColor': cal.get('foreground_color'),
-                'primary': cal.get('is_primary', False),
-            } for cal in db_calendars]
-            return jsonify({
-                'success': True,
-                'count': len(calendars),
-                'calendars': calendars
-            })
-
-        # Fallback: fetch from provider API (guests, new users without discovery)
-        calendars = factory.list_calendars(user_id)
-
-        return jsonify({
-            'success': True,
-            'count': len(calendars),
-            'calendars': calendars
-        })
-
-    except Exception as e:
-        return jsonify({'error': f'Failed to list calendars: {str(e)}'}), 500
-
-
-# ============================================================================
-# Session Calendar Integration (Supabase Auth)
-# ============================================================================
-
-@calendar_bp.route('/api/sessions/<session_id>/add-to-calendar', methods=['POST'])
-@require_auth
-def add_session_to_calendar(session_id):
-    """
-    Smart sync: create, update, or skip events based on their sync status.
-
-    Per-event behavior:
-    - Never synced → CREATE in external calendar
-    - Synced but edited since → UPDATE existing external event
-    - Synced and up to date → SKIP (no changes needed)
-
-    Requires authentication. User must have a calendar connected.
-
-    Optional request body:
-    {
-        "events": [...],       // User's edited events (for correction logging)
-        "extracted_facts": [...] // Optional: ExtractedFacts from Agent 2
-        "event_ids": [...]     // Optional: subset of event IDs to sync (omit for all)
-    }
-
-    Returns:
-        - success, created, updated, skipped, num_created, num_updated, num_skipped
-        - calendar_event_ids (backward compat: all created + updated IDs)
-        - conflicts, has_conflicts, message
-    """
-    try:
-        user_id = request.user_id
-
-        if not factory.is_authenticated(user_id):
-            return jsonify({
-                'error': 'Calendar not connected',
-                'message': 'Please connect your calendar account first',
-                'authenticated': False
-            }), 401
-
-        # Log corrections if user provided edited events
-        request_data = request.get_json() or {}
-        user_submitted_events = request_data.get('events')
-        extracted_facts_list = request_data.get('extracted_facts')
-
-        if user_submitted_events:
-            from feedback.correction_service import CorrectionStorageService
-            correction_service = CorrectionStorageService()
-
-            try:
-                correction_ids = correction_service.store_corrections_from_session(
-                    user_id=user_id,
-                    session_id=session_id,
-                    user_submitted_events=user_submitted_events,
-                    extracted_facts_list=extracted_facts_list
-                )
-                print(f"Stored {len(correction_ids)} corrections for user {user_id}")
-            except Exception as e:
-                print(f"Warning: Failed to log corrections: {e}")
-
-        event_ids = request_data.get('event_ids')
-
-        # Smart sync: create/update/skip per event
-        result = factory.sync_events_from_session(user_id, session_id, event_ids=event_ids)
-
-        # Build response
-        conflicts = result['conflicts']
-        has_conflicts = len(conflicts) > 0
-
-        # Build human-readable message
-        parts = []
-        if result['num_created']:
-            parts.append(f"Created {result['num_created']}")
-        if result['num_updated']:
-            parts.append(f"updated {result['num_updated']}")
-        if result['num_skipped']:
-            parts.append(f"{result['num_skipped']} already up to date")
-        message = ', '.join(parts) if parts else 'No events to sync'
-
-        if has_conflicts:
-            message += f" ({len(conflicts)} conflict(s))"
-
-        return jsonify({
-            'success': True,
-            # New fields
-            'created': result['created'],
-            'updated': result['updated'],
-            'skipped': result['skipped'],
-            'num_created': result['num_created'],
-            'num_updated': result['num_updated'],
-            'num_skipped': result['num_skipped'],
-            # Backward-compatible fields
-            'calendar_event_ids': result['created'] + result['updated'],
-            'num_events_created': result['num_created'],
-            'conflicts': conflicts,
-            'has_conflicts': has_conflicts,
-            'message': message
-        })
-
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except PermissionError as e:
-        return jsonify({'error': str(e)}), 403
-    except Exception as e:
-        return jsonify({'error': f'Failed to sync events to calendar: {str(e)}'}), 500
-
-
-@calendar_bp.route('/api/events/<event_id>/sync', methods=['POST'])
-@require_auth
-def sync_single_event(event_id):
-    """
-    Sync a single event to the user's calendar provider.
-
-    Backend decides everything from the database:
-    - Provider from user's primary_calendar_provider
-    - Create vs update vs skip from provider_syncs + version
-    - Target calendar from the event's calendar field
-
-    Returns the sync result with action taken and updated event.
-    """
-    try:
-        user_id = request.user_id
-
-        if not factory.is_authenticated(user_id):
-            return jsonify({
-                'error': 'Calendar not connected',
-                'authenticated': False
-            }), 401
-
-        result = factory.sync_event(user_id, event_id)
-
-        # Return the updated event so frontend can refresh its state
-        from events.service import EventService
-        from database.models import Event
-        updated_row = Event.get_by_id(event_id)
-        updated_event = EventService.event_row_to_calendar_event(updated_row) if updated_row else None
-
-        return jsonify({
-            'success': True,
-            **result,
-            'event': updated_event,
-        })
-
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except PermissionError as e:
-        return jsonify({'error': str(e)}), 403
-    except Exception as e:
-        return jsonify({'error': f'Failed to sync event: {str(e)}'}), 500
-
-
-@calendar_bp.route('/api/auth/google-calendar/status', methods=['GET'])
+@calendar_bp.route('/auth/google-calendar/status', methods=['GET'])
 @require_auth
 def check_google_calendar_status():
     """
@@ -506,7 +305,7 @@ def check_google_calendar_status():
         return jsonify({'error': f'Failed to check status: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/auth/google-calendar/refresh-tokens', methods=['POST'])
+@calendar_bp.route('/auth/google-calendar/refresh-tokens', methods=['POST'])
 @require_auth
 def refresh_google_calendar_tokens():
     """
@@ -550,7 +349,7 @@ def refresh_google_calendar_tokens():
         })
 
 
-@calendar_bp.route('/api/auth/google-calendar/store-tokens', methods=['POST'])
+@calendar_bp.route('/auth/google-calendar/store-tokens', methods=['POST'])
 @require_auth
 def store_google_calendar_tokens():
     """
@@ -602,7 +401,7 @@ def store_google_calendar_tokens():
 # Calendar Provider Management
 # ============================================================================
 
-@calendar_bp.route('/api/calendar/providers', methods=['GET'])
+@calendar_bp.route('/calendar/provider/list', methods=['GET'])
 @require_auth
 def list_calendar_providers():
     """
@@ -668,7 +467,7 @@ def list_calendar_providers():
         return jsonify({'error': f'Failed to list calendar providers: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/calendar/set-primary-provider', methods=['POST'])
+@calendar_bp.route('/calendar/provider/set-primary', methods=['POST'])
 @require_auth
 def set_primary_calendar_provider():
     """
@@ -719,7 +518,7 @@ def set_primary_calendar_provider():
         return jsonify({'error': f'Failed to set primary provider: {str(e)}'}), 500
 
 
-@calendar_bp.route('/api/calendar/disconnect-provider', methods=['POST'])
+@calendar_bp.route('/calendar/provider/disconnect', methods=['POST'])
 @require_auth
 def disconnect_calendar_provider():
     """
@@ -789,7 +588,7 @@ def disconnect_calendar_provider():
 # Smart Sync Endpoint
 # ============================================================================
 
-@calendar_bp.route('/api/calendar/sync', methods=['POST'])
+@calendar_bp.route('/calendar/sync', methods=['POST'])
 @require_auth
 def sync_calendar():
     """
@@ -836,3 +635,130 @@ def sync_calendar():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Sync failed: {str(e)}'}), 500
+
+
+# ============================================================================
+# Push Events to Provider
+# ============================================================================
+
+@calendar_bp.route('/events/push', methods=['POST'])
+@require_auth
+def push_events():
+    """
+    Push event(s) to the user's calendar provider.
+
+    Unified endpoint replacing both single-event sync and batch add-to-calendar.
+    Backend decides create vs update vs skip per event based on provider_syncs + version.
+
+    Expects JSON body:
+    {
+        "event_ids": ["id1", "id2", ...],
+        "events": [...],            // Optional: user's edited events (for correction logging)
+        "extracted_facts": [...],   // Optional: for correction logging
+        "session_id": "..."         // Optional: session context for correction logging
+    }
+
+    Returns:
+        {
+            "success": true,
+            "created": ["id1"],
+            "updated": ["id2"],
+            "skipped": [],
+            "num_created": 1,
+            "num_updated": 1,
+            "num_skipped": 0,
+            "message": "Created 1, updated 1"
+        }
+    """
+    try:
+        user_id = request.user_id
+
+        if not factory.is_authenticated(user_id):
+            return jsonify({
+                'error': 'Calendar not connected',
+                'authenticated': False
+            }), 401
+
+        request_data = request.get_json() or {}
+        event_ids = request_data.get('event_ids')
+
+        if not event_ids or not isinstance(event_ids, list):
+            return jsonify({'error': 'event_ids array is required'}), 400
+
+        # Log corrections if user provided edited events
+        session_id = request_data.get('session_id')
+        user_submitted_events = request_data.get('events')
+        extracted_facts_list = request_data.get('extracted_facts')
+
+        if user_submitted_events and session_id:
+            from feedback.correction_service import CorrectionStorageService
+            correction_service = CorrectionStorageService()
+            try:
+                correction_ids = correction_service.store_corrections_from_session(
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_submitted_events=user_submitted_events,
+                    extracted_facts_list=extracted_facts_list
+                )
+                print(f"Stored {len(correction_ids)} corrections for user {user_id}")
+            except Exception as e:
+                print(f"Warning: Failed to log corrections: {e}")
+
+        # Push each event
+        created = []
+        updated = []
+        skipped = []
+
+        for eid in event_ids:
+            try:
+                result = factory.sync_event(user_id, eid)
+                action = result['action']
+                if action == 'created':
+                    created.append(eid)
+                elif action == 'updated':
+                    updated.append(eid)
+                elif action == 'skipped':
+                    skipped.append(eid)
+            except Exception as e:
+                print(f"[push] ERROR event={eid}: {e}")
+
+        # Mark session if provided
+        if session_id and created:
+            from database.models import Session as DBSession
+            try:
+                DBSession.mark_added_to_calendar(session_id, created + updated)
+            except Exception:
+                pass
+
+        # Build message
+        parts = []
+        if created:
+            parts.append(f"Created {len(created)}")
+        if updated:
+            parts.append(f"updated {len(updated)}")
+        if skipped:
+            parts.append(f"{len(skipped)} already up to date")
+        message = ', '.join(parts) if parts else 'No events to sync'
+
+        return jsonify({
+            'success': True,
+            'created': created,
+            'updated': updated,
+            'skipped': skipped,
+            'num_created': len(created),
+            'num_updated': len(updated),
+            'num_skipped': len(skipped),
+            # Backward compat
+            'calendar_event_ids': created + updated,
+            'num_events_created': len(created),
+            'conflicts': [],
+            'has_conflicts': False,
+            'message': message
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except PermissionError as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        return jsonify({'error': f'Failed to push events: {str(e)}'}), 500

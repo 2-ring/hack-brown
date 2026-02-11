@@ -166,7 +166,8 @@ class PatternRefreshService:
         try:
             set_tracking_context(
                 distinct_id=user_id,
-                trace_id=f"refresh-{user_id[:8]}"
+                trace_id=f"refresh-{user_id[:8]}",
+                pipeline="Pattern refresh",
             )
 
             # Look up provider

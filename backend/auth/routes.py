@@ -36,7 +36,7 @@ def extract_google_profile_from_metadata(user_metadata: Dict[str, Any]) -> Dict[
 # Authentication Endpoints
 # ============================================================================
 
-@auth_bp.route('/api/auth/sync-profile', methods=['POST'])
+@auth_bp.route('/auth/sync-profile', methods=['POST'])
 @require_auth
 def sync_user_profile():
     """
@@ -159,7 +159,7 @@ def sync_user_profile():
         return jsonify({'error': f'Profile sync failed: {str(e)}'}), 500
 
 
-@auth_bp.route('/api/auth/profile', methods=['GET'])
+@auth_bp.route('/auth/profile', methods=['GET'])
 @require_auth
 def get_user_profile():
     """
@@ -201,7 +201,7 @@ def get_user_profile():
         return jsonify({'error': f'Failed to get profile: {str(e)}'}), 500
 
 
-@auth_bp.route('/api/auth/profile', methods=['PUT'])
+@auth_bp.route('/auth/profile', methods=['PUT'])
 @require_auth
 def update_user_profile():
     """
@@ -256,7 +256,7 @@ def update_user_profile():
         return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
 
 
-@auth_bp.route('/api/auth/preferences', methods=['PUT'])
+@auth_bp.route('/auth/preferences', methods=['PUT'])
 @require_auth
 def update_user_preferences():
     """
@@ -310,7 +310,7 @@ def update_user_preferences():
 # Provider Management Endpoints
 # ============================================================================
 
-@auth_bp.route('/api/auth/providers', methods=['GET'])
+@auth_bp.route('/auth/providers', methods=['GET'])
 @require_auth
 def list_auth_providers():
     """
@@ -341,7 +341,7 @@ def list_auth_providers():
 # Calendar Provider Connection Endpoints
 # ============================================================================
 
-@auth_bp.route('/api/auth/microsoft/connect', methods=['POST'])
+@auth_bp.route('/auth/microsoft/connect', methods=['POST'])
 @require_auth
 def connect_microsoft_calendar():
     """
@@ -383,7 +383,7 @@ def connect_microsoft_calendar():
         return jsonify({'error': f'Failed to connect Microsoft Calendar: {str(e)}'}), 500
 
 
-@auth_bp.route('/api/auth/microsoft/status', methods=['GET'])
+@auth_bp.route('/auth/microsoft/status', methods=['GET'])
 @require_auth
 def check_microsoft_calendar_status():
     """
@@ -418,7 +418,7 @@ def check_microsoft_calendar_status():
         })
 
 
-@auth_bp.route('/api/auth/apple/connect', methods=['POST'])
+@auth_bp.route('/auth/apple/connect', methods=['POST'])
 @require_auth
 def connect_apple_calendar():
     """
@@ -461,7 +461,7 @@ def connect_apple_calendar():
         return jsonify({'error': f'Failed to connect Apple Calendar: {str(e)}'}), 500
 
 
-@auth_bp.route('/api/auth/apple/status', methods=['GET'])
+@auth_bp.route('/auth/apple/status', methods=['GET'])
 @require_auth
 def check_apple_calendar_status():
     """

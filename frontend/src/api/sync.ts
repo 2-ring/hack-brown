@@ -7,6 +7,15 @@ import { getAccessToken } from '../auth/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+export interface SyncCalendar {
+  id: string;
+  summary: string;
+  backgroundColor: string;
+  foregroundColor?: string;
+  primary?: boolean;
+  description?: string;
+}
+
 export interface SyncResult {
   success: boolean;
   strategy: 'incremental' | 'full' | 'skip' | 'fast_incremental';
@@ -19,6 +28,7 @@ export interface SyncResult {
   has_sync_token: boolean;
   provider: string;
   calendar_id: string;
+  calendars?: SyncCalendar[];
   events_added: number;
   events_updated: number;
   events_deleted: number;
@@ -51,7 +61,7 @@ export const syncCalendar = async (): Promise<SyncResult> => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}/api/calendar/sync`, {
+  const response = await fetch(`${API_URL}/calendar/sync`, {
     method: 'POST',
     headers,
     body: JSON.stringify({}),

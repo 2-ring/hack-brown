@@ -14,10 +14,9 @@ import {
   listContainerVariants,
   eventItemVariants
 } from './animations'
-import { useAuth } from '../../auth/AuthContext'
-import { getAccessToken } from '../../auth/supabase'
-import { updateEvent, deleteEvent, syncEvent, getSessionEvents, checkEventConflicts, refreshGoogleCalendarTokens } from '../../api/backend-client'
+import { updateEvent, deleteEvent, pushEvents, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
+import type { SyncCalendar } from '../../api/sync'
 import {
   useNotificationQueue,
   createSuccessNotification,
@@ -28,13 +27,12 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-interface GoogleCalendar {
-  id: string
-  summary: string
-  backgroundColor: string
-  foregroundColor?: string
-  primary?: boolean
-}
+const DEFAULT_CALENDARS: SyncCalendar[] = [{
+  id: 'primary',
+  summary: 'Primary',
+  backgroundColor: '#1170C5',
+  primary: true,
+}]
 
 interface EventsWorkspaceProps {
   events: (CalendarEvent | null)[]
@@ -49,23 +47,23 @@ interface EventsWorkspaceProps {
   inputContent?: string
   onBack?: () => void
   sessionId?: string
+  calendars?: SyncCalendar[]
 }
 
-export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsChanged, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId }: EventsWorkspaceProps) {
-  const { calendarReady } = useAuth()
+export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsChanged, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId, calendars: propCalendars }: EventsWorkspaceProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
   const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
   const [activeLoading, setActiveLoading] = useState<LoadingStateConfig | null>(null)
   const [skeletonEventIds, setSkeletonEventIds] = useState<Set<string>>(new Set())
-  const [calendars, setCalendars] = useState<GoogleCalendar[]>([])
-  const [isLoadingCalendars, setIsLoadingCalendars] = useState(true)
   const [isScrollable, setIsScrollable] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const pendingEditRef = useRef<CalendarEvent | null>(null)
   const { currentNotification, addNotification, dismissNotification } = useNotificationQueue()
   const [eventConflicts, setEventConflicts] = useState<Record<string, ConflictInfo[]>>({})
+
+  const calendars = propCalendars && propCalendars.length > 0 ? propCalendars : DEFAULT_CALENDARS
 
   const runConflictCheck = async () => {
     if (!sessionId) return
@@ -78,72 +76,6 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
       // Silent failure — conflict checking is non-critical
     }
   }
-
-  // Fetch calendar list once calendar tokens are ready
-  useEffect(() => {
-    if (!calendarReady) return
-
-    const DEFAULT_CALENDAR: GoogleCalendar = {
-      id: 'primary',
-      summary: 'Primary',
-      backgroundColor: '#1170C5',
-      primary: true,
-    }
-
-    const fetchCalendarList = async (): Promise<GoogleCalendar[] | null> => {
-      const token = await getAccessToken()
-      const headers: HeadersInit = {}
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-      const response = await fetch(`${API_URL}/api/calendar/list-calendars`, { headers })
-      if (response.ok) {
-        const data = await response.json()
-        const fetched: GoogleCalendar[] = data.calendars || []
-        if (!fetched.some(cal => cal.primary || cal.id === 'primary')) {
-          fetched.unshift(DEFAULT_CALENDAR)
-        }
-        return fetched
-      }
-      if (response.status === 401) return null // signal to retry
-      return [DEFAULT_CALENDAR]
-    }
-
-    const fetchCalendars = async () => {
-      setIsLoadingCalendars(true)
-      try {
-        let result = await fetchCalendarList()
-
-        // 401 — attempt silent token refresh then retry once
-        if (result === null) {
-          try {
-            const refreshResult = await refreshGoogleCalendarTokens()
-            if (refreshResult.refreshed) {
-              result = await fetchCalendarList()
-            }
-          } catch {
-            // Refresh attempt itself failed
-          }
-
-          // Still null after refresh attempt — notify user
-          if (result === null) {
-            addNotification(createWarningNotification(
-              'Your calendar session expired. Sign in again to reconnect!'
-            ))
-            result = [DEFAULT_CALENDAR]
-          }
-        }
-
-        setCalendars(result)
-      } catch (error) {
-        console.error('Failed to fetch calendars:', error)
-        setCalendars([DEFAULT_CALENDAR])
-      } finally {
-        setIsLoadingCalendars(false)
-      }
-    }
-    fetchCalendars()
-  }, [calendarReady])
 
   // Sync editedEvents from prop only when session changes or events first arrive
   const prevSessionIdRef = useRef(sessionId)
@@ -285,7 +217,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
 
         const calendarList = calendars.map(c => ({ id: c.id, name: c.summary }))
 
-        const response = await fetch(`${API_URL}/api/edit-event`, {
+        const response = await fetch(`${API_URL}/edit-event`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ events: validEvents, instruction, calendars: calendarList }),
@@ -435,32 +367,30 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
     }
   }
 
-  // Swipe right: sync single event to calendar (create or update)
+  // Swipe right: push single event to calendar (create or update)
   const handleSwipeAdd = async (event: CalendarEvent) => {
     if (!event.id) return
     setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
     try {
-      const result = await syncEvent(event.id)
-      const action = result.action
-      if (action === 'updated') {
-        addNotification(createSuccessNotification(`"${event.summary}" updated in your calendar!`))
-      } else if (action === 'skipped') {
-        addNotification(createSuccessNotification(`"${event.summary}" is already up to date!`))
-      } else if (action === 'created') {
+      const result = await pushEvents([event.id])
+      if (result.created.includes(event.id)) {
         addNotification(createSuccessNotification(`"${event.summary}" added to your calendar!`))
+      } else if (result.updated.includes(event.id)) {
+        addNotification(createSuccessNotification(`"${event.summary}" updated in your calendar!`))
+      } else if (result.skipped.includes(event.id)) {
+        addNotification(createSuccessNotification(`"${event.summary}" is already up to date!`))
       } else {
         addNotification(createErrorNotification(`Hmm, couldn't sync "${event.summary}". Give it another try!`))
       }
-      // Update local state with the fresh event from server (has updated provider_syncs)
-      if (result.event) {
-        setEditedEvents(prev => {
-          const updated = prev.map(e =>
-            e?.id === event.id ? result.event : e
-          )
-          const validEvents = updated.filter((e): e is CalendarEvent => e !== null)
-          onEventsChanged?.(validEvents)
-          return updated
-        })
+      // Re-fetch events to get updated provider_syncs (badges update)
+      if (sessionId) {
+        try {
+          const freshEvents = await getSessionEvents(sessionId)
+          setEditedEvents(freshEvents)
+          onEventsChanged?.(freshEvents)
+        } catch {
+          // Non-critical — local state is still usable
+        }
       }
     } catch (error) {
       addNotification(createErrorNotification(getFriendlyErrorMessage(error)))
@@ -554,6 +484,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
     events.forEach(event => {
       const dateStr = getEffectiveDateTime(event.start)
       const date = new Date(dateStr)
+      if (isNaN(date.getTime())) return
       // Use date string as key (YYYY-MM-DD)
       const dateKey = date.toISOString().split('T')[0]
 
@@ -592,7 +523,6 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
               key="edit-view"
               event={editedEvents[editingEventIndex]!}
               calendars={calendars}
-              isLoadingCalendars={isLoadingCalendars}
               onClose={handleCloseEdit}
               onSave={handleEventSave}
               onChange={handleEditChange}
@@ -626,7 +556,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                       event={editedEvent}
                       index={index}
                       isLoading={!event}
-                      isLoadingCalendars={isLoadingCalendars}
+
                       skeletonOpacity={skeletonOpacity}
                       calendars={calendars}
                       formatDate={formatDate}
@@ -697,7 +627,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                               event={event}
                               index={originalIndex}
                               isLoading={!!(event.id && skeletonEventIds.has(event.id))}
-                              isLoadingCalendars={isLoadingCalendars}
+        
                               calendars={calendars}
                               formatDate={formatDate}
                               formatTime={formatTime}

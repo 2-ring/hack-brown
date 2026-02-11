@@ -8,7 +8,7 @@ from database.models import Session as DBSession
 import json
 import time
 
-sessions_bp = Blueprint('sessions', __name__, url_prefix='/api/sessions')
+sessions_bp = Blueprint('sessions', __name__, url_prefix='/sessions')
 
 
 @sessions_bp.route('/<session_id>/stream', methods=['GET'])

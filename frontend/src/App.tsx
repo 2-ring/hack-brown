@@ -29,7 +29,7 @@ import {
   getUserSessions,
   getSession,
   pollSession,
-  addSessionToCalendar,
+  pushEvents,
   getSessionEvents,
   createGuestTextSession,
   uploadGuestFile,
@@ -37,6 +37,7 @@ import {
   migrateGuestSessions
 } from './api/backend-client'
 import { syncCalendar } from './api/sync'
+import type { SyncCalendar } from './api/sync'
 import './App.css'
 
 type AppState = 'input' | 'loading' | 'review'
@@ -70,6 +71,9 @@ function AppContent() {
   const [currentSession, setCurrentSession] = useState<BackendSession | null>(null)
   const [sessionHistory, setSessionHistory] = useState<BackendSession[]>([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
+
+  // Calendars from sync response (passed to EventsWorkspace)
+  const [syncedCalendars, setSyncedCalendars] = useState<SyncCalendar[]>([])
 
   // Tracks the session the user is currently viewing (prevents stale processing from hijacking UI)
   const activeViewSessionRef = useRef<string | null>(null)
@@ -216,6 +220,9 @@ function AppContent() {
               `+${result.events_added} ~${result.events_updated} -${result.events_deleted} ` +
               `(Total: ${result.total_events_in_db} events)`
             )
+          }
+          if (result.calendars && result.calendars.length > 0) {
+            setSyncedCalendars(result.calendars)
           }
         })
         .catch(error => {
@@ -509,8 +516,18 @@ function AppContent() {
     }
 
     try {
-      // Pass edited events for correction logging
-      const result = await addSessionToCalendar(currentSession.id, editedEvents)
+      const eventIds = (editedEvents || [])
+        .map(e => e.id)
+        .filter((id): id is string => !!id)
+
+      if (eventIds.length === 0) {
+        throw new Error('No events to add to calendar.')
+      }
+
+      const result = await pushEvents(eventIds, {
+        sessionId: currentSession.id,
+        events: editedEvents,
+      })
 
       // Reload the session to get updated calendar_event_ids
       const updatedSession = await getSession(currentSession.id)
@@ -521,9 +538,6 @@ function AppContent() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
       if (errorMessage.includes('not connected') || errorMessage.includes('not authenticated') || errorMessage.includes('401')) {
-        // Calendar tokens missing or expired. From the user's perspective this
-        // is the same as not being signed in — show the sign-in prompt which
-        // re-triggers the Google OAuth flow (with calendar scopes) to fix it.
         setAuthModalHeading('Sign in to add events to your calendar.')
         return
       }
@@ -600,6 +614,7 @@ function AppContent() {
           feedbackMessage={feedbackMessage}
           isGuestMode={isGuestMode}
           calendarEvents={calendarEvents}
+          calendars={syncedCalendars}
           expectedEventCount={calendarEvents.length}
           inputType={currentSession?.input_type}
           inputContent={currentSession?.input_content}

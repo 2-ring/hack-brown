@@ -1,6 +1,13 @@
 """
 PostHog Analytics Configuration
 LLM observability, cost tracking, and product analytics.
+
+IMPORTANT: The PostHog client is lazily initialized on first use, NOT at
+import time. This is critical for Gunicorn with --preload: the app module
+loads in the master process which then forks workers. The PostHog SDK's
+internal consumer thread does not survive fork, so creating the client
+before fork means events are queued but never sent. Lazy init ensures the
+client (and its consumer thread) are created inside the worker process.
 """
 
 import os
@@ -11,32 +18,57 @@ import threading
 logger = logging.getLogger(__name__)
 
 _posthog_client = None
+_posthog_initialized = False
+_init_lock = threading.Lock()
 _local = threading.local()
 
 
+def _ensure_client():
+    """
+    Lazily initialize the PostHog client on first use.
+    Thread-safe via lock. Returns the client or None.
+    """
+    global _posthog_client, _posthog_initialized
+
+    if _posthog_initialized:
+        return _posthog_client
+
+    with _init_lock:
+        # Double-check after acquiring lock
+        if _posthog_initialized:
+            return _posthog_client
+
+        api_key = os.getenv('POSTHOG_API_KEY')
+        if not api_key:
+            logger.info("PostHog: POSTHOG_API_KEY not set, analytics disabled")
+            _posthog_initialized = True
+            return None
+
+        try:
+            from posthog import Posthog
+
+            host = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
+            _posthog_client = Posthog(api_key, host=host)
+            atexit.register(_posthog_client.shutdown)
+            logger.info(f"PostHog: Initialized in pid {os.getpid()} (host={host})")
+        except ImportError:
+            logger.warning("PostHog: posthog package not installed, analytics disabled")
+        except Exception as e:
+            logger.warning(f"PostHog: Failed to initialize: {e}")
+
+        _posthog_initialized = True
+        return _posthog_client
+
+
 def init_posthog():
-    """Initialize the PostHog client. Call once at app startup."""
-    global _posthog_client
-
-    api_key = os.getenv('POSTHOG_API_KEY')
-    if not api_key:
-        logger.info("PostHog: POSTHOG_API_KEY not set, analytics disabled")
-        return
-
-    try:
-        from posthog import Posthog
-
-        host = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
-        _posthog_client = Posthog(api_key, host=host, debug=True)
-        atexit.register(_posthog_client.shutdown)
-        logger.info(f"PostHog: Initialized (host={host})")
-    except ImportError:
-        logger.warning("PostHog: posthog package not installed, analytics disabled")
-    except Exception as e:
-        logger.warning(f"PostHog: Failed to initialize: {e}")
+    """
+    No-op kept for backwards compatibility.
+    The client is lazily initialized on first use inside the worker process.
+    """
+    pass
 
 
-def set_tracking_context(distinct_id=None, trace_id=None):
+def set_tracking_context(distinct_id=None, trace_id=None, pipeline=None):
     """
     Set the tracking context for the current thread.
     Call this before running agents so LLM calls are attributed correctly.
@@ -44,9 +76,23 @@ def set_tracking_context(distinct_id=None, trace_id=None):
     Args:
         distinct_id: User ID (for per-user cost tracking)
         trace_id: Groups related LLM calls (e.g., session ID)
+        pipeline: Pipeline label (e.g., "Session: text", "Edit event")
     """
     _local.distinct_id = distinct_id
     _local.trace_id = trace_id
+    _local.pipeline = pipeline
+
+
+# Human-readable labels for each agent, used as run_name in PostHog UI.
+_AGENT_LABELS = {
+    'identification': 'Agent 1: Identification',
+    'extraction': 'Agent 2: Extraction',
+    'personalization': 'Agent 3: Personalization',
+    'formatting': 'Agent 3: Formatting',
+    'modification': 'Agent 4: Modification',
+    'pattern_discovery': 'Pattern Discovery',
+    'pattern_analysis': 'Pattern Analysis',
+}
 
 
 def get_invoke_config(agent_name=None, properties=None):
@@ -62,7 +108,8 @@ def get_invoke_config(agent_name=None, properties=None):
     Usage:
         result = chain.invoke(input, config=get_invoke_config("formatting"))
     """
-    if not _posthog_client:
+    client = _ensure_client()
+    if not client:
         return {}
 
     try:
@@ -70,21 +117,31 @@ def get_invoke_config(agent_name=None, properties=None):
 
         distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
         trace_id = getattr(_local, 'trace_id', None)
+        pipeline = getattr(_local, 'pipeline', None)
 
         merged_properties = {}
         if agent_name:
             merged_properties["agent_name"] = agent_name
+        if pipeline:
+            merged_properties["pipeline"] = pipeline
         if properties:
             merged_properties.update(properties)
 
         callback = CallbackHandler(
-            client=_posthog_client,
+            client=client,
             distinct_id=distinct_id,
             trace_id=trace_id,
             properties=merged_properties or None,
             privacy_mode=False,
         )
-        return {"callbacks": [callback]}
+
+        config = {"callbacks": [callback]}
+
+        # Set run_name so PostHog shows a descriptive label instead of "RunnableSequence"
+        if agent_name:
+            config["run_name"] = _AGENT_LABELS.get(agent_name, agent_name)
+
+        return config
     except ImportError:
         return {}
     except Exception as e:
@@ -94,10 +151,10 @@ def get_invoke_config(agent_name=None, properties=None):
 
 def flush_posthog():
     """Flush buffered PostHog events. Call after a pipeline run completes."""
-    if _posthog_client:
+    client = _ensure_client()
+    if client:
         try:
-            _posthog_client.flush()
-            logger.info("PostHog: flushed events")
+            client.flush()
         except Exception as e:
             logger.warning(f"PostHog: Flush failed: {e}")
 
@@ -112,7 +169,8 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
         error: The exception that occurred
         extra: Optional dict of additional properties (session_id, event_index, etc.)
     """
-    if not _posthog_client:
+    client = _ensure_client()
+    if not client:
         return
 
     try:
@@ -128,7 +186,7 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
         if extra:
             properties.update(extra)
 
-        _posthog_client.capture(
+        client.capture(
             distinct_id=distinct_id,
             event='$ai_generation',
             properties={
@@ -144,4 +202,4 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
 
 def get_posthog_client():
     """Get the raw PostHog client for custom events (feature flags, etc.)."""
-    return _posthog_client
+    return _ensure_client()

@@ -48,7 +48,7 @@ export function Link({ onClose, onSubmit, submitRef }: LinkProps) {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
       // Call backend endpoint to scrape URL
-      const response = await fetch(`${API_URL}/api/scrape-url`, {
+      const response = await fetch(`${API_URL}/scrape-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

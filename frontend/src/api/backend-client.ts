@@ -55,7 +55,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function createTextSession(text: string): Promise<Session> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/sessions`, {
+  const response = await fetch(`${API_URL}/sessions`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ text }),
@@ -81,7 +81,7 @@ export async function uploadFile(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}/api/upload`, {
+  const response = await fetch(`${API_URL}/upload`, {
     method: 'POST',
     headers,
     body: formData,
@@ -100,7 +100,7 @@ export async function uploadFile(
 export async function getSession(sessionId: string): Promise<Session> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/sessions/${sessionId}`, {
+  const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
     method: 'GET',
     headers,
   });
@@ -115,7 +115,7 @@ export async function getSession(sessionId: string): Promise<Session> {
 export async function getUserSessions(limit: number = 50): Promise<Session[]> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/sessions?limit=${limit}`, {
+  const response = await fetch(`${API_URL}/sessions?limit=${limit}`, {
     method: 'GET',
     headers,
   });
@@ -185,7 +185,7 @@ export async function pollSession(
  * Health check endpoint.
  */
 export async function healthCheck(): Promise<{ status: string; message: string }> {
-  const response = await fetch(`${API_URL}/api/health`, {
+  const response = await fetch(`${API_URL}/health`, {
     method: 'GET',
   });
 
@@ -226,7 +226,7 @@ export async function syncUserProfile(): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/sync-profile`, {
+  const response = await fetch(`${API_URL}/auth/sync-profile`, {
     method: 'POST',
     headers,
     body: JSON.stringify({}),
@@ -263,7 +263,7 @@ export async function getUserProfile(): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/profile`, {
+  const response = await fetch(`${API_URL}/auth/profile`, {
     method: 'GET',
     headers,
   });
@@ -289,7 +289,7 @@ export async function updateUserProfile(updates: {
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/profile`, {
+  const response = await fetch(`${API_URL}/auth/profile`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(updates),
@@ -315,7 +315,7 @@ export async function updateUserPreferences(prefs: {
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/preferences`, {
+  const response = await fetch(`${API_URL}/auth/preferences`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(prefs),
@@ -334,7 +334,7 @@ export async function updateUserPreferences(prefs: {
 export async function storeGoogleCalendarTokens(providerToken: any): Promise<void> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/google-calendar/store-tokens`, {
+  const response = await fetch(`${API_URL}/auth/google-calendar/store-tokens`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ provider_token: providerToken }),
@@ -353,7 +353,7 @@ export async function checkGoogleCalendarStatus(): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/google-calendar/status`, {
+  const response = await fetch(`${API_URL}/auth/google-calendar/status`, {
     method: 'GET',
     headers,
   });
@@ -372,7 +372,7 @@ export async function refreshGoogleCalendarTokens(): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/google-calendar/refresh-tokens`, {
+  const response = await fetch(`${API_URL}/auth/google-calendar/refresh-tokens`, {
     method: 'POST',
     headers,
   });
@@ -381,65 +381,44 @@ export async function refreshGoogleCalendarTokens(): Promise<{
 }
 
 /**
- * Smart sync a session's events to the user's calendar.
- * Creates new events, updates edited ones, skips unchanged ones.
+ * Push event(s) to the user's calendar provider.
+ * Backend decides create vs update vs skip per event.
  *
- * @param sessionId - The session ID
- * @param events - Optional: User's edited events (for correction logging)
- * @param eventIds - Optional: subset of event IDs to sync
+ * @param eventIds - Array of event IDs to push
+ * @param options - Optional: session context and correction data
  */
-export async function addSessionToCalendar(
-  sessionId: string,
-  events?: any[],
-  eventIds?: string[]
+export async function pushEvents(
+  eventIds: string[],
+  options?: {
+    sessionId?: string;
+    events?: any[];
+    extractedFacts?: any[];
+  }
 ): Promise<{
   success: boolean;
-  calendar_event_ids: string[];
-  num_events_created: number;
-  num_events_updated: number;
-  num_events_skipped: number;
   created: string[];
   updated: string[];
   skipped: string[];
+  num_created: number;
+  num_updated: number;
+  num_skipped: number;
+  calendar_event_ids: string[];
+  num_events_created: number;
   conflicts: any[];
   has_conflicts: boolean;
   message: string;
 }> {
   const headers = await getAuthHeaders();
 
-  const bodyObj: Record<string, any> = {};
-  if (events) bodyObj.events = events;
-  if (eventIds) bodyObj.event_ids = eventIds;
+  const bodyObj: Record<string, any> = { event_ids: eventIds };
+  if (options?.sessionId) bodyObj.session_id = options.sessionId;
+  if (options?.events) bodyObj.events = options.events;
+  if (options?.extractedFacts) bodyObj.extracted_facts = options.extractedFacts;
 
-  const body = Object.keys(bodyObj).length > 0 ? JSON.stringify(bodyObj) : undefined;
-
-  const response = await fetch(`${API_URL}/api/sessions/${sessionId}/add-to-calendar`, {
+  const response = await fetch(`${API_URL}/events/push`, {
     method: 'POST',
     headers,
-    body,
-  });
-
-  return handleResponse(response);
-}
-
-/**
- * Sync a single event to the user's calendar. Backend decides everything:
- * provider from user table, create vs update from provider_syncs, calendar from event.
- */
-export async function syncEvent(
-  eventId: string
-): Promise<{
-  success: boolean;
-  action: 'created' | 'updated' | 'skipped' | 'failed';
-  event_id: string;
-  provider_event_id?: string;
-  event: CalendarEvent;
-}> {
-  const headers = await getAuthHeaders();
-
-  const response = await fetch(`${API_URL}/api/events/${eventId}/sync`, {
-    method: 'POST',
-    headers,
+    body: JSON.stringify(bodyObj),
   });
 
   return handleResponse(response);
@@ -463,7 +442,7 @@ export async function getSessionEvents(
       throw new Error('Access token not found for guest session.');
     }
     const response = await fetch(
-      `${API_URL}/api/sessions/guest/${sessionId}/events?access_token=${encodeURIComponent(accessToken)}`,
+      `${API_URL}/sessions/guest/${sessionId}/events?access_token=${encodeURIComponent(accessToken)}`,
       { method: 'GET', headers: { 'Content-Type': 'application/json' } }
     );
     const data = await handleResponse<{ events: CalendarEvent[] }>(response);
@@ -471,7 +450,7 @@ export async function getSessionEvents(
   }
 
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/api/sessions/${sessionId}/events`, {
+  const response = await fetch(`${API_URL}/sessions/${sessionId}/events`, {
     method: 'GET',
     headers,
   });
@@ -488,7 +467,7 @@ export async function updateEvent(
 ): Promise<CalendarEvent> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/events/${eventId}`, {
+  const response = await fetch(`${API_URL}/events/${eventId}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(updates),
@@ -506,7 +485,7 @@ export async function deleteEvent(
 ): Promise<{ success: boolean; event_id: string; session_id?: string; remaining_event_count?: number }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/events/${eventId}`, {
+  const response = await fetch(`${API_URL}/events/${eventId}`, {
     method: 'DELETE',
     headers,
   });
@@ -534,7 +513,7 @@ export async function checkEventConflicts(
 ): Promise<Record<string, ConflictInfo[]>> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/events/check-conflicts`, {
+  const response = await fetch(`${API_URL}/events/check-conflicts`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -567,7 +546,7 @@ export async function sendMicrosoftTokens(tokenData: {
 }): Promise<{ success: boolean; message: string; provider: string }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/microsoft/connect`, {
+  const response = await fetch(`${API_URL}/auth/microsoft/connect`, {
     method: 'POST',
     headers,
     body: JSON.stringify(tokenData),
@@ -590,7 +569,7 @@ export async function sendAppleCredentials(appleId: string, appPassword: string)
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/auth/apple/connect`, {
+  const response = await fetch(`${API_URL}/auth/apple/connect`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ apple_id: appleId, app_password: appPassword }),
@@ -619,7 +598,7 @@ export async function getCalendarProviders(): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/calendar/providers`, {
+  const response = await fetch(`${API_URL}/calendar/provider/list`, {
     method: 'GET',
     headers,
   });
@@ -636,7 +615,7 @@ export async function setPrimaryCalendarProvider(provider: string): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/calendar/set-primary-provider`, {
+  const response = await fetch(`${API_URL}/calendar/provider/set-primary`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ provider }),
@@ -654,7 +633,7 @@ export async function disconnectCalendarProvider(provider: string): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/calendar/disconnect-provider`, {
+  const response = await fetch(`${API_URL}/calendar/provider/disconnect`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ provider }),
@@ -679,7 +658,7 @@ export async function getUserPreferences(): Promise<{
 }> {
   const headers = await getAuthHeaders();
 
-  const response = await fetch(`${API_URL}/api/personalization/preferences`, {
+  const response = await fetch(`${API_URL}/personalization/preferences`, {
     method: 'GET',
     headers,
   });
@@ -695,7 +674,7 @@ export async function getUserPreferences(): Promise<{
  * Create guest text session (no auth).
  */
 export async function createGuestTextSession(text: string): Promise<Session> {
-  const response = await fetch(`${API_URL}/api/sessions/guest`, {
+  const response = await fetch(`${API_URL}/sessions/guest`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -717,7 +696,7 @@ export async function uploadGuestFile(
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/api/upload/guest`, {
+  const response = await fetch(`${API_URL}/upload/guest`, {
     method: 'POST',
     body: formData,
   });
@@ -742,7 +721,7 @@ export async function getGuestSession(sessionId: string): Promise<Session> {
   }
 
   const response = await fetch(
-    `${API_URL}/api/sessions/guest/${sessionId}?access_token=${encodeURIComponent(accessToken)}`,
+    `${API_URL}/sessions/guest/${sessionId}?access_token=${encodeURIComponent(accessToken)}`,
     {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
@@ -760,7 +739,7 @@ export async function getGuestSession(sessionId: string): Promise<Session> {
 export async function migrateGuestSessions(sessionIds: string[]): Promise<void> {
   const headers = await getAuthHeaders();
 
-  await fetch(`${API_URL}/api/auth/sync-profile`, {
+  await fetch(`${API_URL}/auth/sync-profile`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ guest_session_ids: sessionIds }),

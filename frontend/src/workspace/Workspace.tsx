@@ -4,6 +4,7 @@ import { InputWorkspace } from './input'
 import { EventsWorkspace } from './events/EventsWorkspace'
 import type { CalendarEvent } from './events/types'
 import type { LoadingStateConfig } from './events/types'
+import type { SyncCalendar } from '../api/sync'
 import { getGreeting } from '../utils/greetings'
 import { useAuth } from '../auth/AuthContext'
 import { Logo } from '../components/Logo'
@@ -23,6 +24,7 @@ interface WorkspaceProps {
 
   // Events state props
   calendarEvents: (CalendarEvent | null)[]
+  calendars?: SyncCalendar[]
   expectedEventCount?: number
   inputType?: 'text' | 'image' | 'audio' | 'document' | 'pdf' | 'email'
   inputContent?: string
@@ -49,6 +51,7 @@ export function Workspace({
   feedbackMessage,
   isGuestMode,
   calendarEvents,
+  calendars,
   expectedEventCount,
   inputType,
   inputContent,
@@ -136,6 +139,7 @@ export function Workspace({
           onEventsChanged={onEventsChanged}
           onBack={onMenuToggle}
           sessionId={sessionId}
+          calendars={calendars}
         />
       )}
     </>

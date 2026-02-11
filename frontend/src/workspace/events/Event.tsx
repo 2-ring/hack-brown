@@ -4,22 +4,14 @@ import type { CalendarEvent } from './types'
 import { getEventSyncStatus, isAllDay } from './types'
 import { formatRecurrence } from './recurrence'
 import type { ConflictInfo } from '../../api/backend-client'
-
-interface GoogleCalendar {
-  id: string
-  summary: string
-  backgroundColor: string
-  foregroundColor?: string
-  primary?: boolean
-}
+import type { SyncCalendar } from '../../api/sync'
 
 interface EventProps {
   event: CalendarEvent | null
   index: number
   isLoading?: boolean
-  isLoadingCalendars?: boolean
   skeletonOpacity?: number
-  calendars?: GoogleCalendar[]
+  calendars?: SyncCalendar[]
 
   // Display helpers
   formatDate: (dateTime: string, endDateTime?: string) => string

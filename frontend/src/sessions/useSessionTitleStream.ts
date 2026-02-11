@@ -49,7 +49,7 @@ export function useSessionTitleStream(
     setError(null)
 
     // Create EventSource connection
-    const eventSource = new EventSource(`${API_BASE_URL}/api/sessions/${sessionId}/stream`)
+    const eventSource = new EventSource(`${API_BASE_URL}/sessions/${sessionId}/stream`)
     eventSourceRef.current = eventSource
 
     // Handle initialization

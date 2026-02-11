@@ -1,13 +1,20 @@
 """
 Smart Sync Service - Intelligent calendar synchronization.
 Automatically chooses the best sync strategy based on current state.
+Also syncs the calendar list and triggers background pattern enrichment.
 """
 
-from typing import Dict, Optional
+import logging
+import threading
+from typing import Dict, List, Optional, Set
+
 from datetime import datetime, timedelta
-from database.models import Event, User
+from database.models import Event, User, Calendar
 from events.service import EventService
-from config.calendar import SyncConfig
+from config.calendar import SyncConfig, RefreshConfig
+from config.limits import EventLimits
+
+logger = logging.getLogger(__name__)
 
 
 class SmartSyncService:
@@ -24,11 +31,14 @@ class SmartSyncService:
         Single smart sync endpoint.
         Backend decides what to do based on current state.
 
+        Syncs events from provider, then syncs the calendar list (metadata +
+        background pattern enrichment for new calendars).
+
         Args:
             user_id: User's UUID
 
         Returns:
-            Sync results with metadata about what happened
+            Sync results with metadata, event counts, and calendar list
         """
 
         # Get current state
@@ -37,13 +47,17 @@ class SmartSyncService:
         # Decide strategy
         strategy = self._choose_strategy(state)
 
-        # Execute sync
+        # Execute event sync
         results = self._execute_sync(user_id, state, strategy)
+
+        # Sync calendar list (metadata + background enrichment)
+        calendars = self._sync_calendars(user_id, state['provider'])
 
         return {
             'success': True,
             'strategy': strategy,
             'synced_at': datetime.utcnow().isoformat(),
+            'calendars': calendars,
             **state,
             **results
         }
@@ -380,6 +394,198 @@ class SmartSyncService:
                 **event_data
             )
             return 'added'
+
+    # ========================================================================
+    # Calendar List Sync + Pattern Enrichment
+    # ========================================================================
+
+    def _sync_calendars(self, user_id: str, provider: str) -> List[Dict]:
+        """
+        Sync the calendar list from the provider to the DB.
+
+        1. Fetch current calendars from provider API
+        2. Diff against stored calendars — upsert new/changed, delete removed
+        3. For calendars missing an AI description, spawn a background thread
+           to run LLM enrichment (non-blocking)
+        4. Return the calendar list for the response
+
+        Returns:
+            List of calendar dicts for the frontend
+        """
+        import calendars.factory as calendar_factory
+
+        try:
+            current_calendars = calendar_factory.list_calendars(user_id)
+        except Exception as e:
+            logger.warning(f"Failed to fetch calendar list for {user_id[:8]}: {e}")
+            # Fall back to DB calendars
+            return self._calendars_from_db(user_id)
+
+        if not current_calendars:
+            return self._calendars_from_db(user_id)
+
+        stored_calendars = Calendar.get_by_user(user_id)
+        stored_lookup = {cal['provider_cal_id']: cal for cal in stored_calendars}
+        current_cal_ids = {cal['id'] for cal in current_calendars}
+        stored_cal_ids = set(stored_lookup.keys())
+
+        # Detect removed calendars
+        removed_cal_ids = stored_cal_ids - current_cal_ids
+        for cal_id in removed_cal_ids:
+            Calendar.delete_by_provider_cal_id(user_id, cal_id)
+
+        # Upsert all current calendars (metadata: name, color, primary)
+        needs_enrichment: List[Dict] = []
+        for cal in current_calendars:
+            cal_id = cal['id']
+            stored = stored_lookup.get(cal_id)
+
+            Calendar.upsert(
+                user_id=user_id,
+                provider=provider,
+                provider_cal_id=cal_id,
+                name=cal.get('summary', 'Unnamed'),
+                color=cal.get('backgroundColor'),
+                foreground_color=cal.get('foregroundColor'),
+                is_primary=cal.get('primary', False),
+            )
+
+            # Track calendars that need LLM enrichment (no description yet)
+            if not stored or not stored.get('description'):
+                needs_enrichment.append(cal)
+
+        # Background pattern enrichment for calendars missing descriptions
+        if needs_enrichment:
+            total_events = Event.count_user_events(user_id)
+            if total_events >= EventLimits.MIN_EVENTS_FOR_PATTERN_DISCOVERY:
+                logger.info(
+                    f"Spawning background enrichment for {len(needs_enrichment)} "
+                    f"calendar(s) for user {user_id[:8]}"
+                )
+                thread = threading.Thread(
+                    target=self._enrich_calendars_background,
+                    args=(user_id, provider, needs_enrichment),
+                    daemon=True,
+                    name=f"cal-enrich-{user_id[:8]}"
+                )
+                thread.start()
+
+        # Return calendar list from DB (now has updated metadata)
+        return self._calendars_from_db(user_id)
+
+    def _calendars_from_db(self, user_id: str) -> List[Dict]:
+        """Read calendars from DB and format for API response."""
+        db_calendars = Calendar.get_by_user(user_id)
+        return [{
+            'id': cal['provider_cal_id'],
+            'summary': cal['name'],
+            'backgroundColor': cal.get('color', '#1170C5'),
+            'foregroundColor': cal.get('foreground_color'),
+            'primary': cal.get('is_primary', False),
+            'description': cal.get('description'),
+        } for cal in db_calendars]
+
+    def _enrich_calendars_background(
+        self,
+        user_id: str,
+        provider: str,
+        calendars_to_enrich: List[Dict]
+    ) -> None:
+        """
+        Background thread: run LLM analysis on calendars missing descriptions.
+        Reuses PatternDiscoveryService._analyze_category_with_llm().
+        """
+        try:
+            from config.posthog import set_tracking_context, flush_posthog
+            from config.similarity import PatternDiscoveryConfig
+            import calendars.factory as calendar_factory
+
+            set_tracking_context(
+                distinct_id=user_id,
+                trace_id=f"enrich-{user_id[:8]}",
+                pipeline="Sync enrichment",
+            )
+
+            # Lazy import — the LLM and service are initialized in app.py
+            from app import pattern_discovery_service
+
+            for cal in calendars_to_enrich:
+                cal_id = cal['id']
+                cal_name = cal.get('summary', 'Unnamed')
+                is_primary = cal.get('primary', False)
+
+                try:
+                    time_min = (
+                        datetime.utcnow() - timedelta(days=RefreshConfig.EVENT_LOOKBACK_DAYS)
+                    ).isoformat() + 'Z'
+
+                    events = calendar_factory.list_events(
+                        user_id=user_id,
+                        max_results=RefreshConfig.MAX_EVENTS_PER_CALENDAR,
+                        time_min=time_min,
+                        calendar_id=cal_id
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to fetch events for calendar {cal_name}: {e}")
+                    continue
+
+                # Filter noise
+                events = [e for e in events if e.get('summary') and e.get('status') != 'cancelled']
+
+                if not events:
+                    Calendar.upsert(
+                        user_id=user_id,
+                        provider=provider,
+                        provider_cal_id=cal_id,
+                        name=cal_name,
+                        description='This category has no events in the analyzed period',
+                        event_types=[],
+                        examples=[],
+                        never_contains=[],
+                        events_analyzed=0,
+                    )
+                    continue
+
+                # Sample and analyze with LLM
+                sampled = pattern_discovery_service._smart_sample_weighted(
+                    events,
+                    target=PatternDiscoveryConfig.TARGET_SAMPLE_SIZE,
+                    recency_bias=PatternDiscoveryConfig.RECENCY_BIAS_DEFAULT
+                )
+
+                summary = pattern_discovery_service._analyze_category_with_llm(
+                    category_name=cal_name,
+                    is_primary=is_primary,
+                    events=sampled,
+                    total_count=len(events)
+                )
+
+                Calendar.upsert(
+                    user_id=user_id,
+                    provider=provider,
+                    provider_cal_id=cal_id,
+                    name=cal_name,
+                    color=cal.get('backgroundColor'),
+                    foreground_color=cal.get('foregroundColor'),
+                    is_primary=is_primary,
+                    description=summary.get('description'),
+                    event_types=summary.get('event_types', []),
+                    examples=summary.get('examples', []),
+                    never_contains=summary.get('never_contains', []),
+                    events_analyzed=len(events),
+                )
+
+                logger.info(f"Enriched calendar: {cal_name}")
+
+            logger.info(f"Background enrichment complete for user {user_id[:8]}")
+            flush_posthog()
+
+        except Exception as e:
+            logger.error(f"Background enrichment failed for user {user_id[:8]}: {e}", exc_info=True)
+
+    # ========================================================================
+    # Sync State Management
+    # ========================================================================
 
     def _get_sync_state(self, user_id: str, provider: str, calendar_id: str) -> Dict:
         """Get sync state from provider connection in users table."""

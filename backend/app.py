@@ -271,11 +271,11 @@ def get_suggestion_for_stage(stage: str) -> str:
 # Flask Endpoints
 # ============================================================================
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'message': 'Backend is running'})
 
-@app.route('/api/process', methods=['POST'])
+@app.route('/process', methods=['POST'])
 def process_input():
     """
     Unified endpoint for processing all input types and extracting calendar events.
@@ -367,7 +367,8 @@ def process_input():
     # Set PostHog tracking context for this request
     set_tracking_context(
         distinct_id=locals().get('user_id', 'guest'),
-        trace_id=f"process-{uuid.uuid4().hex[:8]}"
+        trace_id=f"process-{uuid.uuid4().hex[:8]}",
+        pipeline="Guest processing",
     )
 
     # Step 3: Run full agent pipeline with validation error handling
@@ -489,7 +490,7 @@ def process_input():
 # Event Management
 # ============================================================================
 
-@app.route('/api/edit-event', methods=['POST'])
+@app.route('/edit-event', methods=['POST'])
 def edit_event():
     """
     Agent 4: Event Modification
@@ -509,7 +510,7 @@ def edit_event():
 
     try:
         # Set PostHog tracking context
-        set_tracking_context(distinct_id='anonymous', trace_id=f"edit-{uuid.uuid4().hex[:8]}")
+        set_tracking_context(distinct_id='anonymous', trace_id=f"edit-{uuid.uuid4().hex[:8]}", pipeline="Edit event")
 
         # Use the Event Modification Agent
         result = agent_4_modification.execute(events, edit_instruction, calendars=calendars)
@@ -526,7 +527,7 @@ def edit_event():
         return jsonify({'error': f'Event modification failed: {str(e)}'}), 500
 
 
-@app.route('/api/events/<event_id>', methods=['PATCH'])
+@app.route('/events/<event_id>', methods=['PATCH'])
 @require_auth
 def update_event(event_id):
     """
@@ -601,7 +602,7 @@ def update_event(event_id):
         return jsonify({'error': f'Failed to update event: {str(e)}'}), 500
 
 
-@app.route('/api/events/<event_id>', methods=['DELETE'])
+@app.route('/events/<event_id>', methods=['DELETE'])
 @require_auth
 def delete_event(event_id):
     """
@@ -642,7 +643,7 @@ def delete_event(event_id):
         return jsonify({'error': f'Failed to delete event: {str(e)}'}), 500
 
 
-@app.route('/api/events/check-conflicts', methods=['POST'])
+@app.route('/events/check-conflicts', methods=['POST'])
 @require_auth
 def check_event_conflicts():
     """
@@ -708,7 +709,7 @@ def check_event_conflicts():
 # Personalization Endpoints
 # ============================================================================
 
-@app.route('/api/personalization/apply', methods=['POST'])
+@app.route('/personalization/apply', methods=['POST'])
 @require_auth
 def apply_preferences_endpoint():
     """
@@ -741,7 +742,7 @@ def apply_preferences_endpoint():
         event = CalendarEvent(**event_dict)
 
         # Set PostHog tracking context
-        set_tracking_context(distinct_id=user_id, trace_id=f"prefs-{uuid.uuid4().hex[:8]}")
+        set_tracking_context(distinct_id=user_id, trace_id=f"prefs-{uuid.uuid4().hex[:8]}", pipeline="Apply preferences")
 
         # Try to load new patterns first (preferred)
         patterns = personalization_service.load_patterns(user_id)
@@ -803,7 +804,7 @@ def apply_preferences_endpoint():
         return jsonify({'error': f'Preference application failed: {str(e)}'}), 500
 
 
-@app.route('/api/personalization/preferences', methods=['GET'])
+@app.route('/personalization/preferences', methods=['GET'])
 @require_auth
 def get_preferences():
     """
@@ -836,7 +837,7 @@ def get_preferences():
         return jsonify({'error': f'Failed to get preferences: {str(e)}'}), 500
 
 
-@app.route('/api/personalization/preferences', methods=['DELETE'])
+@app.route('/personalization/preferences', methods=['DELETE'])
 @require_auth
 def delete_preferences():
     """
@@ -865,117 +866,7 @@ def delete_preferences():
         return jsonify({'error': f'Failed to delete preferences: {str(e)}'}), 500
 
 
-@app.route('/api/personalization/discover', methods=['POST'])
-@require_auth
-def discover_patterns():
-    """
-    Discover user's formatting patterns from calendar history.
-
-    Uses the new simplified approach:
-    - Statistical analysis for style patterns
-    - LLM-based calendar and color pattern summaries
-    - Stores patterns for use by Agent 3
-
-    Requires authentication. User ID is extracted from JWT token.
-
-    Expects JSON body:
-    {
-        "max_events": 500  # Optional, default 500
-    }
-
-    Returns discovered patterns.
-    """
-    try:
-        # Get user_id from auth middleware (set by @require_auth)
-        user_id = request.user_id
-
-        from config.limits import EventLimits
-        data = request.get_json() or {}
-        max_events = data.get('max_events', EventLimits.MAX_EVENTS_FOR_PATTERN_DISCOVERY)
-
-        # Step 1: Collect comprehensive calendar data
-        print(f"\n{'='*60}")
-        print(f"PATTERN DISCOVERY for user {user_id}")
-        print(f"{'='*60}")
-
-        # Set PostHog tracking context
-        set_tracking_context(distinct_id=user_id, trace_id=f"discover-{uuid.uuid4().hex[:8]}")
-
-        comprehensive_data = data_collection_service.collect_comprehensive_data(
-            user_id=user_id,
-            max_events=max_events
-        )
-
-        events_count = len(comprehensive_data.get('events', []))
-
-        if events_count < EventLimits.MIN_EVENTS_FOR_PATTERN_DISCOVERY:
-            return jsonify({
-                'success': False,
-                'error': f'Need at least {EventLimits.MIN_EVENTS_FOR_PATTERN_DISCOVERY} events to discover patterns. Found {events_count}.'
-            }), 400
-
-        # Step 2: Discover patterns
-        patterns = pattern_discovery_service.discover_patterns(
-            comprehensive_data=comprehensive_data,
-            user_id=user_id
-        )
-
-        # Step 3: Save patterns
-        success = personalization_service.save_patterns(patterns)
-
-        if not success:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to save patterns'
-            }), 500
-
-        return jsonify({
-            'success': True,
-            'patterns': patterns,
-            'events_analyzed': patterns['total_events_analyzed'],
-            'message': f'Successfully discovered patterns from {events_count} events'
-        })
-
-    except Exception as e:
-        logger.error(f"Error in pattern discovery: {e}\n{traceback.format_exc()}")
-        capture_agent_error("pattern_discovery", e)
-        return jsonify({'error': f'Pattern discovery failed: {str(e)}'}), 500
-
-
-@app.route('/api/personalization/patterns', methods=['GET'])
-@require_auth
-def get_patterns():
-    """
-    Get the authenticated user's discovered patterns.
-
-    Requires authentication. User ID is extracted from JWT token.
-
-    Returns discovered patterns if they exist.
-    """
-    try:
-        # Get user_id from auth middleware (set by @require_auth)
-        user_id = request.user_id
-
-        patterns = personalization_service.load_patterns(user_id)
-
-        if not patterns:
-            return jsonify({
-                'exists': False,
-                'message': f'No patterns found for user {user_id}. Run pattern discovery first.'
-            }), 404
-
-        return jsonify({
-            'exists': True,
-            'patterns': patterns,
-            'last_updated': patterns.get('last_updated'),
-            'events_analyzed': patterns.get('total_events_analyzed', 0)
-        })
-
-    except Exception as e:
-        return jsonify({'error': f'Failed to get patterns: {str(e)}'}), 500
-
-
-@app.route('/api/personalization/patterns', methods=['DELETE'])
+@app.route('/personalization/patterns', methods=['DELETE'])
 @require_auth
 def delete_patterns():
     """
@@ -1012,7 +903,7 @@ def delete_patterns():
 # Database-backed Session Management Endpoints
 # ============================================================================
 
-@app.route('/api/sessions', methods=['POST'])
+@app.route('/sessions', methods=['POST'])
 @require_auth
 def create_text_session():
     """
@@ -1068,7 +959,7 @@ def create_text_session():
         return jsonify({'error': f'Failed to create session: {str(e)}'}), 500
 
 
-@app.route('/api/upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])
 @require_auth
 def upload_file_endpoint():
     """
@@ -1140,7 +1031,7 @@ def upload_file_endpoint():
         return jsonify({'error': f'File upload failed: {str(e)}'}), 500
 
 
-@app.route('/api/sessions/<session_id>', methods=['GET'])
+@app.route('/sessions/<session_id>', methods=['GET'])
 @require_auth
 def get_session_by_id(session_id):
     """
@@ -1170,7 +1061,7 @@ def get_session_by_id(session_id):
         return jsonify({'error': f'Failed to get session: {str(e)}'}), 500
 
 
-@app.route('/api/sessions/<session_id>/events', methods=['GET'])
+@app.route('/sessions/<session_id>/events', methods=['GET'])
 @require_auth
 def get_session_events(session_id):
     """
@@ -1207,7 +1098,7 @@ def get_session_events(session_id):
         return jsonify({'error': f'Failed to get events: {str(e)}'}), 500
 
 
-@app.route('/api/sessions', methods=['GET'])
+@app.route('/sessions', methods=['GET'])
 @require_auth
 def get_user_sessions():
     """
@@ -1242,7 +1133,7 @@ def get_user_sessions():
 # Guest Mode Endpoints (No Authentication Required)
 # ============================================================================
 
-@app.route('/api/sessions/guest', methods=['POST'])
+@app.route('/sessions/guest', methods=['POST'])
 @limiter.limit("10 per hour")
 def create_guest_text_session():
     """
@@ -1304,7 +1195,7 @@ def create_guest_text_session():
         return jsonify({'error': f'Failed to create guest session: {str(e)}'}), 500
 
 
-@app.route('/api/upload/guest', methods=['POST'])
+@app.route('/upload/guest', methods=['POST'])
 @limiter.limit("10 per hour")
 def upload_guest_file():
     """
@@ -1378,7 +1269,7 @@ def upload_guest_file():
         return jsonify({'error': f'Guest file upload failed: {str(e)}'}), 500
 
 
-@app.route('/api/sessions/guest/<session_id>', methods=['GET'])
+@app.route('/sessions/guest/<session_id>', methods=['GET'])
 @limiter.limit("50 per hour")
 def get_guest_session(session_id):
     """
@@ -1423,7 +1314,7 @@ def get_guest_session(session_id):
         return jsonify({'error': f'Failed to get session: {str(e)}'}), 500
 
 
-@app.route('/api/sessions/guest/<session_id>/events', methods=['GET'])
+@app.route('/sessions/guest/<session_id>/events', methods=['GET'])
 @limiter.limit("50 per hour")
 def get_guest_session_events(session_id):
     """
@@ -1464,7 +1355,7 @@ def get_guest_session_events(session_id):
 # Firecrawl Link Scraping Endpoint
 # ============================================================================
 
-@app.route('/api/scrape-url', methods=['POST'])
+@app.route('/scrape-url', methods=['POST'])
 @limiter.limit("20 per hour")
 def scrape_url():
     """

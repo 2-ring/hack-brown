@@ -317,9 +317,11 @@ class SessionProcessor:
 
             # Set PostHog tracking for this background thread
             session = DBSession.get_by_id(session_id)
+            is_guest = session.get('guest_mode', False) if session else False
             set_tracking_context(
                 distinct_id=session.get('user_id', 'anonymous') if session else 'anonymous',
-                trace_id=session_id
+                trace_id=session_id,
+                pipeline=f"Session: text{' (guest)' if is_guest else ''}",
             )
 
             # Launch title generation in background (runs in parallel with pipeline)
@@ -409,9 +411,11 @@ class SessionProcessor:
 
             # Set PostHog tracking for this background thread
             session_data = DBSession.get_by_id(session_id)
+            is_guest = session_data.get('guest_mode', False) if session_data else False
             set_tracking_context(
                 distinct_id=session_data.get('user_id', 'anonymous') if session_data else 'anonymous',
-                trace_id=session_id
+                trace_id=session_id,
+                pipeline=f"Session: {file_type}{' (guest)' if is_guest else ''}",
             )
 
             # Determine if vision is needed (only images; PDFs use text extraction)

@@ -81,7 +81,7 @@ function serializeSessionForBackend(session: Session): Partial<BackendSession> {
  */
 export async function createSessionOnBackend(session: Session): Promise<Session> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sessions`, {
+    const response = await fetch(`${API_BASE_URL}/sessions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export async function createSessionOnBackend(session: Session): Promise<Session>
  */
 export async function updateSessionOnBackend(session: Session): Promise<Session> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sessions/${session.id}`, {
+    const response = await fetch(`${API_BASE_URL}/sessions/${session.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export async function updateSessionOnBackend(session: Session): Promise<Session>
  */
 export async function getSessionFromBackend(sessionId: string): Promise<Session | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`)
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`)
 
     if (response.status === 404) {
       return null
@@ -154,7 +154,7 @@ export async function getSessionFromBackend(sessionId: string): Promise<Session 
  */
 export async function getAllSessionsFromBackend(): Promise<Session[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sessions?user_id=${TEMP_USER_ID}`)
+    const response = await fetch(`${API_BASE_URL}/sessions?user_id=${TEMP_USER_ID}`)
 
     if (!response.ok) {
       throw new Error(`Failed to get sessions: ${response.statusText}`)
@@ -174,7 +174,7 @@ export async function getAllSessionsFromBackend(): Promise<Session[]> {
  */
 export async function deleteSessionFromBackend(sessionId: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`, {
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
       method: 'DELETE'
     })
 

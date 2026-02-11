@@ -10,7 +10,7 @@ from inbound_email.parser import build_email_text
 
 logger = logging.getLogger(__name__)
 
-inbound_email_bp = Blueprint('inbound_email', __name__, url_prefix='/api/webhook')
+inbound_email_bp = Blueprint('inbound_email', __name__, url_prefix='/webhook')
 
 
 def _verify_webhook_secret(req) -> bool:
