@@ -82,6 +82,26 @@ function AppContent() {
   const [isGuestMode, setIsGuestMode] = useState(false)
   const [authModalHeading, setAuthModalHeading] = useState<string | null>(null)
 
+  // Load guest sessions from localStorage into sessionHistory
+  const loadGuestSessionHistory = useCallback(async () => {
+    const guestSessions = GuestSessionManager.getGuestSessions().sessions
+    if (guestSessions.length === 0) {
+      setSessionHistory([])
+      return
+    }
+    setIsLoadingSessions(true)
+    try {
+      const sessions = await Promise.all(
+        guestSessions.map(gs => getGuestSession(gs.id).catch(() => null))
+      )
+      setSessionHistory(sessions.filter((s): s is BackendSession => s !== null))
+    } catch {
+      console.error('Failed to load guest sessions')
+    } finally {
+      setIsLoadingSessions(false)
+    }
+  }, [])
+
   // Check guest mode on mount
   useEffect(() => {
     if (!user) {
@@ -201,8 +221,12 @@ function AppContent() {
         .finally(() => setIsLoadingSessions(false))
     } else if (!user) {
       lastLoadedUserId.current = null
+      // Load guest sessions from localStorage
+      if (!authLoading) {
+        loadGuestSessionHistory()
+      }
     }
-  }, [user])
+  }, [user, authLoading, loadGuestSessionHistory])
 
   // Sync calendar once tokens are stored and ready
   // Separate from session loading because calendarReady may be set after user
@@ -239,16 +263,20 @@ function AppContent() {
     const hasProcessingSessions = sessionHistory.some(
       s => s.status === 'pending' || s.status === 'processing'
     )
-    if (!hasProcessingSessions || !user) return
+    if (!hasProcessingSessions) return
 
     const interval = setInterval(() => {
-      getUserSessions()
-        .then(setSessionHistory)
-        .catch(console.error)
+      if (user) {
+        getUserSessions()
+          .then(setSessionHistory)
+          .catch(console.error)
+      } else {
+        loadGuestSessionHistory()
+      }
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [sessionHistory, user])
+  }, [sessionHistory, user, loadGuestSessionHistory])
 
   const handleSidebarToggle = useCallback(() => {
     setSidebarOpen(prev => !prev)
@@ -290,6 +318,8 @@ function AppContent() {
       // Silently refresh session list so the new session appears as a skeleton
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
+      } else {
+        loadGuestSessionHistory()
       }
 
       // Poll for completion (use guest endpoint if not authenticated)
@@ -311,6 +341,8 @@ function AppContent() {
       // Always refresh session list so sidebar updates
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
+      } else {
+        loadGuestSessionHistory()
       }
 
       // If user navigated away, don't touch UI state
@@ -345,11 +377,13 @@ function AppContent() {
       setAppState('input')
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
+      } else {
+        loadGuestSessionHistory()
       }
     } finally {
       setIsProcessing(false)
     }
-  }, [isProcessing, navigate, user])
+  }, [isProcessing, navigate, user, loadGuestSessionHistory])
 
   // Process file upload
   const processFile = useCallback(async (file: File) => {
@@ -393,6 +427,8 @@ function AppContent() {
       // Silently refresh session list so the new session appears as a skeleton
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
+      } else {
+        loadGuestSessionHistory()
       }
 
       setLoadingConfig(LOADING_MESSAGES.PROCESSING_FILE)
@@ -416,6 +452,8 @@ function AppContent() {
       // Always refresh session list so sidebar updates
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
+      } else {
+        loadGuestSessionHistory()
       }
 
       // If user navigated away, don't touch UI state
@@ -450,11 +488,13 @@ function AppContent() {
       setAppState('input')
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
+      } else {
+        loadGuestSessionHistory()
       }
     } finally {
       setIsProcessing(false)
     }
-  }, [isProcessing, navigate, user])
+  }, [isProcessing, navigate, user, loadGuestSessionHistory])
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {

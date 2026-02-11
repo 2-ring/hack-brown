@@ -18,7 +18,7 @@ from datetime import datetime
 import json
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
-from config.posthog import get_invoke_config
+from config.posthog import get_invoke_config, set_tracking_context
 from config.similarity import PatternDiscoveryConfig
 
 
@@ -288,6 +288,9 @@ class PatternDiscoveryService:
             cal_events = events_by_category.get(cal_id, [])
 
             print(f"  Analyzing: {cal_name} ({len(cal_events)} events)...")
+
+            # Set calendar name in tracking context for the LLM call
+            set_tracking_context(calendar_name=cal_name)
 
             if not cal_events:
                 # Empty category

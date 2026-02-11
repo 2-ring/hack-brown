@@ -112,6 +112,34 @@ TEXT_MODEL_SPECS: Dict[TextProvider, Dict[str, Any]] = {
     }
 }
 
+# Light/cheap models for simple inputs (used by dynamic complexity routing)
+TEXT_MODEL_SPECS_LIGHT: Dict[TextProvider, Dict[str, Any]] = {
+    'grok': {
+        'model_name': 'grok-3-mini-beta',
+        'api_key_env': 'XAI_API_KEY',
+        'base_url': 'https://api.x.ai/v1',
+        'supports_vision': False,
+        'supports_structured_output': True,
+        'cost': 'very_low'
+    },
+    'claude': {
+        'model_name': 'claude-haiku-4-5-20251001',
+        'api_key_env': 'ANTHROPIC_API_KEY',
+        'base_url': None,
+        'supports_vision': True,
+        'supports_structured_output': True,
+        'cost': 'low'
+    },
+    'openai': {
+        'model_name': 'gpt-4o-mini',
+        'api_key_env': 'OPENAI_API_KEY',
+        'base_url': None,
+        'supports_vision': True,
+        'supports_structured_output': True,
+        'cost': 'low'
+    }
+}
+
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -127,19 +155,8 @@ def get_model_specs(provider: TextProvider) -> Dict[str, Any]:
     return TEXT_MODEL_SPECS[provider]
 
 
-def create_text_model(component: str):
-    """
-    Create an LLM instance for a component.
-
-    Args:
-        component: Component name (e.g., 'agent_1_identification')
-
-    Returns:
-        Configured LLM instance
-    """
-    provider = get_text_provider(component)
-    specs = get_model_specs(provider)
-
+def _create_model_from_specs(provider: TextProvider, specs: Dict[str, Any]):
+    """Create an LLM instance from provider + specs dict."""
     api_key = os.getenv(specs['api_key_env'])
     if not api_key:
         raise ValueError(f"API key not found: {specs['api_key_env']}")
@@ -161,15 +178,53 @@ def create_text_model(component: str):
         raise ValueError(f"Unsupported provider: {provider}")
 
 
+def create_text_model(component: str):
+    """
+    Create a standard LLM instance for a component.
+
+    Args:
+        component: Component name (e.g., 'agent_1_identification')
+
+    Returns:
+        Configured LLM instance
+    """
+    provider = get_text_provider(component)
+    specs = get_model_specs(provider)
+    return _create_model_from_specs(provider, specs)
+
+
+def create_text_model_light(component: str):
+    """
+    Create a lightweight LLM instance for a component.
+    Uses cheaper/faster models for simple inputs.
+
+    Args:
+        component: Component name (e.g., 'agent_1_identification')
+
+    Returns:
+        Configured lightweight LLM instance
+    """
+    provider = get_text_provider(component)
+    specs = TEXT_MODEL_SPECS_LIGHT[provider]
+    return _create_model_from_specs(provider, specs)
+
+
 def print_text_config():
     """Print current text model configuration"""
     print("\n" + "="*70)
     print("TEXT/LLM MODEL CONFIGURATION")
     print("="*70)
-    print("\nAI PIPELINE AGENTS:")
-    print(f"  Agent 1 (Identification):     {CONFIG.agent_1_identification.upper()}")
-    print(f"  Agent 2 (Extraction):          {CONFIG.agent_2_extraction.upper()}")
-    print(f"  Agent 3 (Preferences):         {CONFIG.agent_3_preferences.upper()}")
+
+    def _model_line(component):
+        provider = get_text_provider(component)
+        standard = get_model_specs(provider)['model_name']
+        light = TEXT_MODEL_SPECS_LIGHT[provider]['model_name']
+        return f"{provider.upper()} ({standard} / {light})"
+
+    print("\nAI PIPELINE AGENTS:                 (standard / light)")
+    print(f"  Agent 1 (Identification):     {_model_line('agent_1_identification')}")
+    print(f"  Agent 2 (Extraction):          {_model_line('agent_2_extraction')}")
+    print(f"  Agent 3 (Preferences):         {_model_line('agent_3_preferences')}")
     print(f"  Agent 4 (Modification):        {CONFIG.agent_4_modification.upper()}")
     print("\nSUPPORTING SERVICES:")
     print(f"  Pattern Discovery:             {CONFIG.pattern_discovery.upper()}")

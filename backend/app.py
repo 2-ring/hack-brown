@@ -27,7 +27,7 @@ from processors.text import TextFileProcessor
 from processors.pdf import PDFProcessor
 from calendars.service import CalendarService
 from preferences.service import PersonalizationService
-from preferences.models import UserPreferences
+
 from preferences.pattern_discovery_service import PatternDiscoveryService
 from services.data_collection_service import DataCollectionService
 
@@ -136,16 +136,21 @@ app.config['MAX_CONTENT_LENGTH'] = FileLimits.MAX_UPLOAD_BYTES
 # CENTRALIZED MODEL CONFIGURATION
 # ============================================================================
 
-from config.text import create_text_model, print_text_config
+from config.text import create_text_model, create_text_model_light, print_text_config
 from config.audio import print_audio_config
 
-# Create LLM instances for each component based on config
+# Create standard LLM instances for each component
 llm_agent_1 = create_text_model('agent_1_identification')
 llm_agent_2 = create_text_model('agent_2_extraction')
 llm_agent_4 = create_text_model('agent_4_modification')
 llm_agent_3 = create_text_model('agent_3_preferences')
 llm_pattern_discovery = create_text_model('pattern_discovery')
 llm_session_processor = create_text_model('session_processor')
+
+# Create light LLM instances for simple inputs (dynamic complexity routing)
+llm_agent_1_light = create_text_model_light('agent_1_identification')
+llm_agent_2_light = create_text_model_light('agent_2_extraction')
+llm_agent_3_light = create_text_model_light('agent_3_preferences')
 
 # Print configuration on startup
 print_text_config()
@@ -165,11 +170,15 @@ pattern_discovery_service = PatternDiscoveryService(llm_pattern_discovery)
 # Initialize Data Collection service
 data_collection_service = DataCollectionService(calendar_service)
 
-# Initialize Agents with their configured models
+# Initialize Agents with their configured models (standard)
 agent_1_identification = EventIdentificationAgent(llm_agent_1)
 agent_2_extraction = EventExtractionAgent(llm_agent_2)
 agent_4_modification = EventModificationAgent(llm_agent_4)
 agent_3_personalization = PersonalizationAgent(llm_agent_3)
+
+# Initialize light agents for simple inputs (used by /process endpoint)
+agent_1_identification_light = EventIdentificationAgent(llm_agent_1_light)
+agent_2_extraction_light = EventExtractionAgent(llm_agent_2_light)
 
 # Initialize input processor factory and register all processors
 input_processor_factory = InputProcessorFactory()
@@ -201,10 +210,12 @@ pattern_refresh_service = PatternRefreshService(
     pattern_discovery_service=pattern_discovery_service,
 )
 
-# Initialize session processor
+# Initialize session processor (with light models for dynamic complexity routing)
 session_processor = SessionProcessor(
     llm_session_processor, input_processor_factory,
-    pattern_refresh_service=pattern_refresh_service
+    pattern_refresh_service=pattern_refresh_service,
+    llm_light=llm_agent_1_light,
+    llm_personalization_light=llm_agent_3_light,
 )
 app.session_processor = session_processor
 
@@ -358,25 +369,41 @@ def process_input():
             decoded = verify_token(token)
             if decoded:
                 user_id = decoded.get('sub')
-                preferences_obj = personalization_service.load_preferences(user_id)
-                if preferences_obj and preferences_obj.timezone:
-                    timezone = preferences_obj.timezone
+                user_tz = PersonalizationService.get_timezone(user_id)
+                if user_tz:
+                    timezone = user_tz
     except Exception as e:
         print(f"Note: Could not load user timezone: {e}")
 
     # Set PostHog tracking context for this request
+    input_type_label = 'text' if request.is_json else 'file'
     set_tracking_context(
         distinct_id=locals().get('user_id', 'guest'),
         trace_id=f"process-{uuid.uuid4().hex[:8]}",
         pipeline="Guest processing",
+        input_type=input_type_label,
+        is_guest=True,
     )
+
+    # Select agents based on input complexity
+    from config.complexity import InputComplexityAnalyzer, ComplexityLevel
+    input_type = 'image' if requires_vision else 'text'
+    complexity = InputComplexityAnalyzer.analyze(raw_input, input_type=input_type, metadata=metadata)
+    if complexity.level == ComplexityLevel.SIMPLE:
+        logger.info(f"Process endpoint: SIMPLE ({complexity.reason}) -> light models")
+        active_agent_1 = agent_1_identification_light
+        active_agent_2 = agent_2_extraction_light
+    else:
+        logger.info(f"Process endpoint: COMPLEX ({complexity.reason}) -> standard models")
+        active_agent_1 = agent_1_identification
+        active_agent_2 = agent_2_extraction
 
     # Step 3: Run full agent pipeline with validation error handling
     try:
         # Agent 1: Event Identification (with chunking for large text inputs)
         try:
             identification_result = identify_events_chunked(
-                agent=agent_1_identification,
+                agent=active_agent_1,
                 raw_input=raw_input,
                 metadata=metadata,
                 requires_vision=requires_vision,
@@ -408,7 +435,7 @@ def process_input():
             """Process one event through Agent 2 for /api/process."""
             try:
                 try:
-                    calendar_event = agent_2_extraction.execute(
+                    calendar_event = active_agent_2.execute(
                         event.raw_text,
                         event.description,
                         timezone=timezone
@@ -509,8 +536,25 @@ def edit_event():
         return jsonify({'error': 'No edit instruction provided'}), 400
 
     try:
-        # Set PostHog tracking context
-        set_tracking_context(distinct_id='anonymous', trace_id=f"edit-{uuid.uuid4().hex[:8]}", pipeline="Edit event")
+        # Set PostHog tracking context (try to get user from auth header)
+        edit_user_id = 'anonymous'
+        try:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                from auth.middleware import verify_token
+                decoded = verify_token(auth_header.replace('Bearer ', ''))
+                if decoded:
+                    edit_user_id = decoded.get('sub', 'anonymous')
+        except Exception:
+            pass
+
+        set_tracking_context(
+            distinct_id=edit_user_id,
+            trace_id=f"edit-{uuid.uuid4().hex[:8]}",
+            pipeline="Edit event",
+            input_type='modification',
+            is_guest=edit_user_id == 'anonymous',
+        )
 
         # Use the Event Modification Agent
         result = agent_4_modification.execute(events, edit_instruction, calendars=calendars)
@@ -742,61 +786,47 @@ def apply_preferences_endpoint():
         event = CalendarEvent(**event_dict)
 
         # Set PostHog tracking context
-        set_tracking_context(distinct_id=user_id, trace_id=f"prefs-{uuid.uuid4().hex[:8]}", pipeline="Apply preferences")
+        set_tracking_context(
+            distinct_id=user_id,
+            trace_id=f"prefs-{uuid.uuid4().hex[:8]}",
+            pipeline="Apply preferences",
+            input_type='personalization',
+            is_guest=False,
+        )
 
-        # Try to load new patterns first (preferred)
+        # Load patterns from DB (style_stats + calendar patterns)
         patterns = personalization_service.load_patterns(user_id)
+
+        if not patterns:
+            return jsonify({
+                'event': event_dict,
+                'preferences_applied': False,
+                'message': 'No user patterns found. Connect your calendar first.'
+            })
+
         historical_events = []
-
-        if patterns:
-            try:
-                from config.database import QueryLimits
-                historical_events = EventService.get_historical_events_with_embeddings(
-                    user_id=user_id,
-                    limit=QueryLimits.PERSONALIZATION_HISTORICAL_LIMIT
-                )
-            except Exception as e:
-                logger.warning(f"Could not fetch historical events: {e}")
-                historical_events = []
-
-            personalized_event = agent_3_personalization.execute(
-                event=event,
-                discovered_patterns=patterns,
-                historical_events=historical_events,
-                user_id=user_id
+        try:
+            from config.database import QueryLimits
+            historical_events = EventService.get_historical_events_with_embeddings(
+                user_id=user_id,
+                limit=QueryLimits.PERSONALIZATION_HISTORICAL_LIMIT
             )
+        except Exception as e:
+            logger.warning(f"Could not fetch historical events: {e}")
 
-            return jsonify({
-                'event': personalized_event.model_dump(),
-                'preferences_applied': True,
-                'user_id': user_id,
-                'events_analyzed': patterns.get('total_events_analyzed', 0),
-                'pattern_format': 'new'
-            })
+        personalized_event = agent_3_personalization.execute(
+            event=event,
+            discovered_patterns=patterns,
+            historical_events=historical_events,
+            user_id=user_id
+        )
 
-        else:
-            # Fall back to legacy preferences format
-            preferences = personalization_service.load_preferences(user_id)
-
-            if not preferences:
-                return jsonify({
-                    'event': event_dict,
-                    'preferences_applied': False,
-                    'message': 'No user patterns or preferences found. Run pattern discovery first.'
-                })
-
-            personalized_event = agent_3_personalization.execute(
-                event=event,
-                user_preferences=preferences
-            )
-
-            return jsonify({
-                'event': personalized_event.model_dump(),
-                'preferences_applied': True,
-                'user_id': user_id,
-                'events_analyzed': preferences.total_events_analyzed,
-                'pattern_format': 'legacy'
-            })
+        return jsonify({
+            'event': personalized_event.model_dump(),
+            'preferences_applied': True,
+            'user_id': user_id,
+            'events_analyzed': patterns.get('total_events_analyzed', 0),
+        })
 
     except Exception as e:
         logger.error(f"Error in preference application: {e}\n{traceback.format_exc()}")
@@ -808,19 +838,15 @@ def apply_preferences_endpoint():
 @require_auth
 def get_preferences():
     """
-    Get the authenticated user's saved preferences.
+    Get the authenticated user's personalization data (patterns + calendars).
 
     Requires authentication. User ID is extracted from JWT token.
-
-    Returns user preferences if they exist.
     """
     try:
-        # Get user_id from auth middleware (set by @require_auth)
         user_id = request.user_id
+        patterns = personalization_service.load_patterns(user_id)
 
-        preferences = personalization_service.load_preferences(user_id)
-
-        if not preferences:
+        if not patterns:
             return jsonify({
                 'exists': False,
                 'message': f'No preferences found for user {user_id}'
@@ -828,42 +854,13 @@ def get_preferences():
 
         return jsonify({
             'exists': True,
-            'preferences': preferences.model_dump(),
-            'last_analyzed': preferences.last_analyzed,
-            'events_analyzed': preferences.total_events_analyzed
+            'style_stats': patterns.get('style_stats', {}),
+            'total_events_analyzed': patterns.get('total_events_analyzed', 0),
+            'calendars': len(patterns.get('category_patterns', {})),
         })
 
     except Exception as e:
         return jsonify({'error': f'Failed to get preferences: {str(e)}'}), 500
-
-
-@app.route('/personalization/preferences', methods=['DELETE'])
-@require_auth
-def delete_preferences():
-    """
-    Delete the authenticated user's preferences.
-
-    Requires authentication. User ID is extracted from JWT token.
-    """
-    try:
-        # Get user_id from auth middleware (set by @require_auth)
-        user_id = request.user_id
-
-        success = personalization_service.delete_preferences(user_id)
-
-        if success:
-            return jsonify({
-                'success': True,
-                'message': f'Preferences deleted for user {user_id}'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': f'No preferences to delete for user {user_id}'
-            }), 404
-
-    except Exception as e:
-        return jsonify({'error': f'Failed to delete preferences: {str(e)}'}), 500
 
 
 @app.route('/personalization/patterns', methods=['DELETE'])

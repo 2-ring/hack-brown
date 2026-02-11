@@ -124,6 +124,10 @@ def _process_chunk(
         set_tracking_context(
             distinct_id=tracking_context.get('distinct_id'),
             trace_id=tracking_context.get('trace_id'),
+            pipeline=tracking_context.get('pipeline'),
+            input_type=tracking_context.get('input_type'),
+            is_guest=tracking_context.get('is_guest'),
+            chunk_index=chunk_index,
         )
 
     try:

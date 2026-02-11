@@ -221,22 +221,7 @@ def store_google_tokens_from_supabase(user_id: str, provider_token: dict) -> Non
         from . import fetch
         settings = fetch.get_calendar_settings(user_id)
         if settings and settings.get('timezone'):
-            # Store timezone in user preferences
             from preferences.service import PersonalizationService
-            preference_service = PersonalizationService()
-
-            # Load existing preferences or create new ones
-            preferences = preference_service.load_preferences(user_id)
-            if preferences:
-                preferences.timezone = settings['timezone']
-                preference_service.save_preferences(preferences)
-            else:
-                # Create new preferences with timezone
-                from preferences.models import UserPreferences
-                new_preferences = UserPreferences(
-                    user_id=user_id,
-                    timezone=settings['timezone']
-                )
-                preference_service.save_preferences(new_preferences)
+            PersonalizationService.save_timezone(user_id, settings['timezone'])
     except Exception as e:
         print(f"Warning: Could not fetch/store timezone for user {user_id}: {e}")

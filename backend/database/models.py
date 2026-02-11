@@ -125,6 +125,29 @@ class User:
         return response.data[0]
 
     @staticmethod
+    def get_style_stats(user_id: str) -> Optional[Dict[str, Any]]:
+        """Get style_stats from the user's preferences JSONB column."""
+        user = User.get_by_id(user_id)
+        if not user:
+            return None
+        prefs = user.get('preferences') or {}
+        return prefs.get('style_stats')
+
+    @staticmethod
+    def save_style_stats(user_id: str, style_stats: Dict[str, Any], total_events_analyzed: int = 0) -> None:
+        """Save style_stats into the user's preferences JSONB column (merge, don't overwrite)."""
+        supabase = get_supabase()
+        user = User.get_by_id(user_id)
+        if not user:
+            return
+        prefs = user.get('preferences') or {}
+        prefs['style_stats'] = style_stats
+        prefs['total_events_analyzed'] = total_events_analyzed
+        from datetime import datetime
+        prefs['style_stats_updated_at'] = datetime.utcnow().isoformat() + 'Z'
+        supabase.table("users").update({"preferences": prefs}).eq("id", user_id).execute()
+
+    @staticmethod
     def update_provider_tokens(
         user_id: str,
         provider: str,

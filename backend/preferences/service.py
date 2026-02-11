@@ -1,301 +1,156 @@
 """
 Personalization Service for managing user preferences.
-Handles loading, saving, and applying learned patterns.
+All data is stored in the database (users.preferences JSONB + calendars table).
+No local file I/O.
 """
 
-import os
-import json
+import logging
 from typing import Optional
 from datetime import datetime
-from preferences.models import UserPreferences
+
+from database.models import User, Calendar
+
+logger = logging.getLogger(__name__)
 
 
 class PersonalizationService:
-    """Service for managing user preferences and personalization"""
+    """Service for managing user preferences and personalization via the database."""
 
-    def __init__(self, user_data_dir: str = 'user_data'):
-        """
-        Initialize personalization service.
-
-        Args:
-            user_data_dir: Directory to store user preference files
-        """
-        self.user_data_dir = user_data_dir
-        os.makedirs(self.user_data_dir, exist_ok=True)
-
-        # In-memory cache for user preferences
-        # Maps user_id -> UserPreferences object
-        # TODO: Add logic to update/invalidate cache when preferences change
-        # TODO: Consider cache expiration policy (e.g., time-based invalidation)
-        # TODO: Add cache size limits if needed (e.g., LRU eviction)
-        self._preferences_cache = {}
-
-        # In-memory cache for discovered patterns
-        # Maps user_id -> Dict (pattern discovery output)
+    def __init__(self):
+        # In-memory caches (per-process, cleared on deploy)
         self._patterns_cache = {}
 
-    def _get_preferences_path(self, user_id: str) -> str:
-        """Get file path for user's preferences"""
-        return os.path.join(self.user_data_dir, f'{user_id}_preferences.json')
-
-    def load_preferences(self, user_id: str) -> Optional[UserPreferences]:
-        """
-        Load user preferences from cache or disk.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            UserPreferences object if exists, None otherwise
-        """
-        # Check cache first
-        if user_id in self._preferences_cache:
-            return self._preferences_cache[user_id]
-
-        # Not in cache, try loading from disk
-        preferences_path = self._get_preferences_path(user_id)
-
-        if not os.path.exists(preferences_path):
-            return None
-
-        try:
-            with open(preferences_path, 'r') as f:
-                data = json.load(f)
-                preferences = UserPreferences(**data)
-
-                # Populate cache
-                self._preferences_cache[user_id] = preferences
-
-                return preferences
-        except Exception as e:
-            return None
-
-    def save_preferences(self, preferences: UserPreferences) -> bool:
-        """
-        Save user preferences to disk and cache.
-
-        Args:
-            preferences: UserPreferences object to save
-
-        Returns:
-            True if successful, False otherwise
-        """
-        preferences_path = self._get_preferences_path(preferences.user_id)
-
-        try:
-            # Update last analyzed timestamp
-            preferences.last_analyzed = datetime.utcnow().isoformat() + 'Z'
-
-            # Save to disk
-            with open(preferences_path, 'w') as f:
-                json.dump(preferences.model_dump(), f, indent=2)
-
-            # Update cache
-            self._preferences_cache[preferences.user_id] = preferences
-
-            return True
-
-        except Exception as e:
-            return False
-
-    def delete_preferences(self, user_id: str) -> bool:
-        """
-        Delete user preferences from disk and cache.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            True if successful, False otherwise
-        """
-        preferences_path = self._get_preferences_path(user_id)
-
-        try:
-            # Remove from cache
-            if user_id in self._preferences_cache:
-                del self._preferences_cache[user_id]
-
-            # Remove from disk
-            if os.path.exists(preferences_path):
-                os.remove(preferences_path)
-                return True
-            else:
-                return False
-
-        except Exception as e:
-            return False
-
-    def has_preferences(self, user_id: str) -> bool:
-        """
-        Check if user has saved preferences.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            True if preferences exist, False otherwise
-        """
-        preferences_path = self._get_preferences_path(user_id)
-        return os.path.exists(preferences_path)
-
-    def get_or_create_preferences(self, user_id: str, settings: dict = None) -> UserPreferences:
-        """
-        Get existing preferences or create new empty ones.
-
-        Args:
-            user_id: User identifier
-            settings: Optional Google Calendar settings to initialize with
-
-        Returns:
-            UserPreferences object
-        """
-        # Try to load existing
-        preferences = self.load_preferences(user_id)
-
-        if preferences:
-            return preferences
-
-        # Create new
-
-        preferences = UserPreferences(user_id=user_id)
-
-        # Initialize with Google Calendar settings if provided
-        if settings:
-            preferences.timezone = settings.get('timezone')
-            default_length = settings.get('defaultEventLength')
-            if default_length:
-                try:
-                    preferences.default_event_length = int(default_length)
-                except (ValueError, TypeError):
-                    pass
-
-        return preferences
-
     # =========================================================================
-    # Pattern Storage Methods (New Simplified Approach)
+    # Patterns (style_stats + calendar data from DB)
     # =========================================================================
-
-    def _get_patterns_path(self, user_id: str) -> str:
-        """Get file path for user's discovered patterns"""
-        return os.path.join(self.user_data_dir, f'{user_id}_patterns.json')
 
     def load_patterns(self, user_id: str) -> Optional[dict]:
         """
-        Load discovered patterns from cache or disk.
+        Load discovered patterns from DB.
 
-        Args:
-            user_id: User identifier
+        Reads style_stats from users.preferences JSONB and
+        calendar patterns from the calendars table.
 
         Returns:
-            Dict with patterns if exists, None otherwise
-            Dict format:
-                - user_id: str
-                - category_patterns: Dict[category_id, summary]
-                - style_stats: Dict with statistics
-                - total_events_analyzed: int
+            Dict with patterns if any exist, None otherwise.
         """
-        # Check cache first
         if user_id in self._patterns_cache:
             return self._patterns_cache[user_id]
 
-        # Not in cache, try loading from disk
-        patterns_path = self._get_patterns_path(user_id)
-
-        if not os.path.exists(patterns_path):
+        user = User.get_by_id(user_id)
+        if not user:
             return None
 
-        try:
-            with open(patterns_path, 'r') as f:
-                patterns = json.load(f)
+        prefs = user.get('preferences') or {}
+        style_stats = prefs.get('style_stats')
+        total_events_analyzed = prefs.get('total_events_analyzed', 0)
 
-                # Populate cache
-                self._patterns_cache[user_id] = patterns
+        # Load calendar patterns from calendars table
+        db_calendars = Calendar.get_by_user(user_id)
+        category_patterns = {}
+        if db_calendars:
+            for cal in db_calendars:
+                category_patterns[cal['provider_cal_id']] = {
+                    'name': cal['name'],
+                    'is_primary': cal.get('is_primary', False),
+                    'color': cal.get('color'),
+                    'foreground_color': cal.get('foreground_color'),
+                    'description': cal.get('description', ''),
+                    'event_types': cal.get('event_types', []),
+                    'examples': cal.get('examples', []),
+                    'never_contains': cal.get('never_contains', []),
+                }
 
-                return patterns
-        except Exception as e:
-            print(f"Error loading patterns for {user_id}: {e}")
+        if not style_stats and not category_patterns:
             return None
+
+        patterns = {
+            'user_id': user_id,
+            'style_stats': style_stats or {},
+            'total_events_analyzed': total_events_analyzed,
+            'category_patterns': category_patterns,
+        }
+
+        self._patterns_cache[user_id] = patterns
+        return patterns
 
     def save_patterns(self, patterns: dict) -> bool:
         """
-        Save discovered patterns to disk and cache.
+        Save discovered patterns to DB.
 
-        Args:
-            patterns: Dict from PatternDiscoveryService.discover_patterns()
-
-        Returns:
-            True if successful, False otherwise
+        style_stats → users.preferences JSONB
+        category_patterns → calendars table (handled separately by sync/enrichment)
         """
         user_id = patterns.get('user_id')
         if not user_id:
-            print("Error: patterns dict missing user_id")
+            logger.error("patterns dict missing user_id")
             return False
 
-        patterns_path = self._get_patterns_path(user_id)
-
         try:
-            # Add timestamp
-            patterns['last_updated'] = datetime.utcnow().isoformat() + 'Z'
+            style_stats = patterns.get('style_stats', {})
+            total_events_analyzed = patterns.get('total_events_analyzed', 0)
 
-            # Strip calendar data — it lives in the calendars DB table now.
-            # Only style_stats, total_events_analyzed, and metadata stay in the file.
-            file_patterns = {k: v for k, v in patterns.items()
-                            if k not in ('category_patterns', 'calendar_metadata')}
+            User.save_style_stats(user_id, style_stats, total_events_analyzed)
 
-            # Save to disk
-            with open(patterns_path, 'w') as f:
-                json.dump(file_patterns, f, indent=2)
-
-            # Cache still holds the full dict (with category_patterns if present)
+            # Update cache
             self._patterns_cache[user_id] = patterns
 
             return True
-
         except Exception as e:
-            print(f"Error saving patterns for {user_id}: {e}")
+            logger.error(f"Error saving patterns for {user_id}: {e}")
             return False
 
     def has_patterns(self, user_id: str) -> bool:
-        """
-        Check if user has discovered patterns.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            True if patterns exist, False otherwise
-        """
-        # Check cache first for fast path
+        """Check if user has discovered patterns (style_stats or calendars)."""
         if user_id in self._patterns_cache:
             return True
 
-        patterns_path = self._get_patterns_path(user_id)
-        return os.path.exists(patterns_path)
+        user = User.get_by_id(user_id)
+        if not user:
+            return False
+
+        prefs = user.get('preferences') or {}
+        if prefs.get('style_stats'):
+            return True
+
+        db_calendars = Calendar.get_by_user(user_id)
+        return bool(db_calendars)
 
     def delete_patterns(self, user_id: str) -> bool:
-        """
-        Delete user's discovered patterns from disk and cache.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            True if successful, False otherwise
-        """
-        patterns_path = self._get_patterns_path(user_id)
-
+        """Delete user's style_stats from DB and clear cache."""
         try:
-            # Remove from cache
             if user_id in self._patterns_cache:
                 del self._patterns_cache[user_id]
 
-            # Remove from disk
-            if os.path.exists(patterns_path):
-                os.remove(patterns_path)
-                return True
-            else:
+            user = User.get_by_id(user_id)
+            if not user:
                 return False
 
+            prefs = user.get('preferences') or {}
+            prefs.pop('style_stats', None)
+            prefs.pop('total_events_analyzed', None)
+            prefs.pop('style_stats_updated_at', None)
+            User.update_preferences(user_id, prefs)
+            return True
         except Exception as e:
-            print(f"Error deleting patterns for {user_id}: {e}")
+            logger.error(f"Error deleting patterns for {user_id}: {e}")
             return False
+
+    # =========================================================================
+    # Timezone (from users table directly)
+    # =========================================================================
+
+    @staticmethod
+    def get_timezone(user_id: str) -> Optional[str]:
+        """Get user's timezone from their profile."""
+        user = User.get_by_id(user_id)
+        if not user:
+            return None
+        return user.get('timezone')
+
+    @staticmethod
+    def save_timezone(user_id: str, timezone: str) -> None:
+        """Save timezone to the users table."""
+        from database.supabase_client import get_supabase
+        supabase = get_supabase()
+        supabase.table("users").update({"timezone": timezone}).eq("id", user_id).execute()

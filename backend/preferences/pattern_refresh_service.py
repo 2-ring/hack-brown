@@ -168,6 +168,8 @@ class PatternRefreshService:
                 distinct_id=user_id,
                 trace_id=f"refresh-{user_id[:8]}",
                 pipeline="Pattern refresh",
+                input_type='pattern_refresh',
+                is_guest=False,
             )
 
             # Look up provider
@@ -325,6 +327,9 @@ class PatternRefreshService:
                 events_analyzed=0,
             )
             return
+
+        # Set calendar name in tracking context for the LLM call
+        set_tracking_context(calendar_name=cal_name)
 
         # Sample and analyze with LLM
         sampled = self.pattern_discovery_service._smart_sample_weighted(
