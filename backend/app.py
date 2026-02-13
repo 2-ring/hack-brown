@@ -695,9 +695,12 @@ def check_event_conflicts():
     events already in the user's calendar (excluding events from the
     same session so a session's own events don't conflict with themselves).
 
-    TODO: Recurring events — only the base occurrence is checked. Expand
-    RRULEs with python-dateutil to detect conflicts with future occurrences.
+    Handles recurring events in both directions:
+    - Candidate events with RRULEs: expands occurrences, checks each against DB
+    - Existing recurring events in DB: expands occurrences, checks against candidates
     """
+    from utils.rrule_utils import expand_rrule, parse_event_times, times_overlap
+
     try:
         user_id = request.user_id
         data = request.get_json()
@@ -715,33 +718,96 @@ def check_event_conflicts():
             if session:
                 exclude_ids = set(session.get('event_ids') or [])
 
+        # Pre-fetch existing recurring events for direction B checks
+        existing_recurring = Event.get_recurring_events(user_id)
+        # Filter out events from the same session
+        existing_recurring = [
+            e for e in existing_recurring if e.get('id') not in exclude_ids
+        ]
+
         conflicts = {}
         for i, event in enumerate(events):
-            start = event.get('start', {})
-            end = event.get('end', {})
-            start_time = start.get('dateTime')
-            end_time = end.get('dateTime')
-
-            # Skip all-day events (no dateTime)
-            if not start_time or not end_time:
+            parsed = parse_event_times(event)
+            if not parsed:
                 continue
 
+            event_start, event_end = parsed
+            event_duration = event_end - event_start
+            event_conflicts = []
+            seen = set()  # deduplicate by (summary, start_time)
+
+            # --- Direction A: check candidate's base occurrence against DB ---
             raw_conflicts = EventService.get_conflicting_events(
-                user_id, start_time, end_time
+                user_id, event_start.isoformat(), event_end.isoformat()
             )
+            for c in raw_conflicts:
+                if c.get('id') in exclude_ids:
+                    continue
+                key = (c.get('summary', ''), c.get('start_time', ''))
+                if key not in seen:
+                    seen.add(key)
+                    event_conflicts.append({
+                        'summary': c.get('summary', 'Untitled'),
+                        'start_time': c.get('start_time', ''),
+                        'end_time': c.get('end_time', ''),
+                    })
 
-            filtered = [
-                {
-                    'summary': c.get('summary', 'Untitled'),
-                    'start_time': c.get('start_time', ''),
-                    'end_time': c.get('end_time', ''),
-                }
-                for c in raw_conflicts
-                if c.get('id') not in exclude_ids
-            ]
+            # --- Direction A+: if candidate is recurring, check future occurrences ---
+            candidate_recurrence = event.get('recurrence')
+            if candidate_recurrence:
+                occurrences = expand_rrule(
+                    candidate_recurrence, event_start, event_duration
+                )
+                # Skip the first occurrence (already checked above)
+                for occ_start, occ_end in occurrences[1:]:
+                    raw = EventService.get_conflicting_events(
+                        user_id, occ_start.isoformat(), occ_end.isoformat()
+                    )
+                    for c in raw:
+                        if c.get('id') in exclude_ids:
+                            continue
+                        key = (c.get('summary', ''), c.get('start_time', ''))
+                        if key not in seen:
+                            seen.add(key)
+                            event_conflicts.append({
+                                'summary': c.get('summary', 'Untitled'),
+                                'start_time': c.get('start_time', ''),
+                                'end_time': c.get('end_time', ''),
+                            })
 
-            if filtered:
-                conflicts[str(i)] = filtered
+            # --- Direction B: check existing recurring events against candidate ---
+            for rec_event in existing_recurring:
+                rec_start = rec_event.get('start_time')
+                rec_end = rec_event.get('end_time')
+                rec_rules = rec_event.get('recurrence')
+                if not rec_start or not rec_end or not rec_rules:
+                    continue
+
+                try:
+                    from dateutil.parser import isoparse
+                    rec_dt_start = isoparse(rec_start)
+                    rec_dt_end = isoparse(rec_end)
+                    rec_duration = rec_dt_end - rec_dt_start
+
+                    rec_occurrences = expand_rrule(
+                        rec_rules, rec_dt_start, rec_duration
+                    )
+
+                    for occ_start, occ_end in rec_occurrences:
+                        if times_overlap(event_start, event_end, occ_start, occ_end):
+                            key = (rec_event.get('summary', ''), occ_start.isoformat())
+                            if key not in seen:
+                                seen.add(key)
+                                event_conflicts.append({
+                                    'summary': rec_event.get('summary', 'Untitled'),
+                                    'start_time': occ_start.isoformat(),
+                                    'end_time': occ_end.isoformat(),
+                                })
+                except (ValueError, TypeError):
+                    continue
+
+            if event_conflicts:
+                conflicts[str(i)] = event_conflicts
 
         return jsonify({'conflicts': conflicts})
 

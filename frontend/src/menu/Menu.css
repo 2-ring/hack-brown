@@ -319,6 +319,10 @@
   flex-shrink: 0;
 }
 
+.event-count-badge.unsynced {
+  background-color: var(--text-tertiary);
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

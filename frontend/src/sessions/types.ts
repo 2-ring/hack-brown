@@ -29,7 +29,7 @@ export interface ContextResult {
 }
 
 // Input types - captures what the user submitted
-export type InputType = 'image' | 'document' | 'text' | 'audio'
+export type InputType = 'image' | 'document' | 'text' | 'audio' | 'pdf' | 'email'
 
 export interface InputMetadata {
   fileName?: string
@@ -112,6 +112,7 @@ export interface SessionListItem {
   title: string
   timestamp: Date
   eventCount: number
+  addedToCalendar: boolean
   status: Session['status']
   inputType: InputType // Type of data uploaded (file, text, audio)
 }

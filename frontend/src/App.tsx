@@ -38,6 +38,7 @@ import {
 } from './api/backend-client'
 import { syncCalendar } from './api/sync'
 import type { SyncCalendar } from './api/sync'
+import { debugLog, debugError } from './config/debug'
 import './App.css'
 
 type AppState = 'input' | 'loading' | 'review'
@@ -47,9 +48,10 @@ interface SessionListItem {
   id: string
   title: string
   timestamp: Date
-  inputType: 'text' | 'image' | 'audio' | 'document'
+  inputType: 'text' | 'image' | 'audio' | 'document' | 'pdf' | 'email'
   status: 'processing' | 'completed'
   eventCount: number
+  addedToCalendar: boolean
 }
 
 
@@ -85,6 +87,7 @@ function AppContent() {
   // Load guest sessions from localStorage into sessionHistory (used on page load/refresh)
   const loadGuestSessionHistory = useCallback(async () => {
     const guestSessions = GuestSessionManager.getGuestSessions().sessions
+    debugLog('guestSessions', 'loadGuestSessionHistory called, localStorage has', guestSessions.length, 'sessions:', guestSessions.map(gs => gs.id))
     if (guestSessions.length === 0) {
       setSessionHistory([])
       return
@@ -92,11 +95,17 @@ function AppContent() {
     setIsLoadingSessions(true)
     try {
       const sessions = await Promise.all(
-        guestSessions.map(gs => getGuestSession(gs.id).catch(() => null))
+        guestSessions.map(gs =>
+          getGuestSession(gs.id)
+            .then(s => { debugLog('guestSessions', 'fetched OK:', gs.id, s.status); return s })
+            .catch(err => { debugError('guestSessions', 'fetch FAILED:', gs.id, err); return null })
+        )
       )
-      setSessionHistory(sessions.filter((s): s is BackendSession => s !== null))
-    } catch {
-      console.error('Failed to load guest sessions')
+      const valid = sessions.filter((s): s is BackendSession => s !== null)
+      debugLog('guestSessions', 'setting sessionHistory:', valid.length, 'valid sessions')
+      setSessionHistory(valid)
+    } catch (err) {
+      debugError('guestSessions', 'loadGuestSessionHistory error:', err)
     } finally {
       setIsLoadingSessions(false)
     }
@@ -331,6 +340,7 @@ function AppContent() {
         getUserSessions().then(setSessionHistory).catch(console.error)
       } else {
         // Directly add to session history — no extra fetch needed
+        debugLog('guestSessions', 'adding session to history:', session.id, session.status)
         setSessionHistory(prev => [session, ...prev.filter(s => s.id !== session.id)])
       }
 
@@ -358,6 +368,7 @@ function AppContent() {
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
       } else {
+        debugLog('guestSessions', 'completed session:', completedSession.id, completedSession.status, 'event_ids:', completedSession.event_ids?.length)
         setSessionHistory(prev => prev.map(s => s.id === completedSession.id ? completedSession : s))
       }
 
@@ -442,6 +453,7 @@ function AppContent() {
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
       } else {
+        debugLog('guestSessions', 'adding file session to history:', session.id, session.status)
         setSessionHistory(prev => [session, ...prev.filter(s => s.id !== session.id)])
       }
 
@@ -471,6 +483,7 @@ function AppContent() {
       if (user) {
         getUserSessions().then(setSessionHistory).catch(console.error)
       } else {
+        debugLog('guestSessions', 'completed file session:', completedSession.id, completedSession.status, 'event_ids:', completedSession.event_ids?.length)
         setSessionHistory(prev => prev.map(s => s.id === completedSession.id ? completedSession : s))
       }
 
@@ -640,9 +653,10 @@ function AppContent() {
       id: session.id,
       title: session.title || session.input_content.substring(0, 50) + (session.input_content.length > 50 ? '...' : ''),
       timestamp: new Date(session.created_at),
-      inputType: session.input_type as 'text' | 'image' | 'audio',
+      inputType: session.input_type,
       status: session.status === 'processed' ? 'completed' as const : 'processing' as const,
       eventCount: session.event_ids?.length || session.processed_events?.length || 0,
+      addedToCalendar: session.added_to_calendar,
     }))
 
   return (
@@ -695,7 +709,8 @@ function App() {
   return (
     <NotificationProvider>
       <Routes>
-        <Route path="/s/:sessionId?" element={<AppContent />} />
+        <Route path="/" element={<AppContent />} />
+        <Route path="/s/:sessionId" element={<AppContent />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/privacy" element={<Privacy />} />

@@ -208,6 +208,7 @@ export function toSessionListItem(session: Session): SessionListItem {
     title: session.title,
     timestamp: session.createdAt,
     eventCount: session.eventCount,
+    addedToCalendar: false,
     status: session.status,
     inputType: primaryInputType,
   }

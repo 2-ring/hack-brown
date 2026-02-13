@@ -1303,6 +1303,25 @@ class Event:
         return response.data
 
     @staticmethod
+    def get_recurring_events(user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all active recurring events for a user.
+
+        Returns:
+            List of event dicts with recurrence, start_time, end_time, summary
+        """
+        supabase = get_supabase()
+        response = (
+            supabase.table("events")
+            .select("id, summary, start_time, end_time, recurrence")
+            .eq("user_id", user_id)
+            .not_.is_("recurrence", "null")
+            .is_("deleted_at", "null")
+            .execute()
+        )
+        return response.data
+
+    @staticmethod
     def find_similar_events(
         user_id: str,
         query_embedding: List[float],

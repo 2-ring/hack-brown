@@ -1,5 +1,76 @@
 {
   "permissions": {
-    "allow": []
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "TodoWrite",
+      "Task",
+
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(npm ci *)",
+      "Bash(npm ls *)",
+      "Bash(npx tsc *)",
+      "Bash(npx tsc)",
+      "Bash(npx vite *)",
+      "Bash(npx prettier *)",
+      "Bash(npx eslint *)",
+
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(pip install *)",
+      "Bash(pip3 install *)",
+      "Bash(pytest *)",
+      "Bash(pytest)",
+      "Bash(gunicorn *)",
+
+      "Bash(git status*)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git log)",
+      "Bash(git branch *)",
+      "Bash(git branch)",
+      "Bash(git show *)",
+      "Bash(git stash *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git fetch *)",
+      "Bash(git fetch)",
+      "Bash(git remote *)",
+
+      "Bash(gh *)",
+      "Bash(supabase *)",
+      "Bash(aws *)",
+      "Bash(eb *)",
+
+      "Bash(ls *)",
+      "Bash(ls)",
+      "Bash(mkdir *)",
+      "Bash(cat *)",
+      "Bash(wc *)",
+      "Bash(which *)",
+      "Bash(env)",
+      "Bash(pwd)",
+      "Bash(tail *)",
+      "Bash(head *)",
+      "Bash(sort *)",
+      "Bash(jq *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -f *)"
+    ],
+    "defaultMode": "acceptEdits"
   }
 }
