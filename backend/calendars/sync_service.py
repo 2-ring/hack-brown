@@ -84,11 +84,30 @@ class SmartSyncService:
         if not user:
             raise ValueError(f"User {user_id} not found")
 
-        provider = user.get('primary_calendar_provider', 'google')
+        provider = user.get('primary_calendar_provider')
 
-        conn = User.get_primary_calendar_connection(user_id)
+        conn = User.get_primary_calendar_connection(user_id) if provider else None
+
+        # Auto-detect: if no primary is set, find any connection with 'calendar' usage
+        if not conn:
+            connections = user.get('provider_connections', [])
+            for c in connections:
+                if 'calendar' in c.get('usage', []):
+                    conn = c
+                    provider = c.get('provider')
+                    # Fix the missing primary_calendar_provider for future calls
+                    try:
+                        User.set_primary_calendar(user_id, provider)
+                        logger.info(f"Auto-set primary_calendar_provider to '{provider}' for user {user_id[:8]}")
+                    except Exception:
+                        pass
+                    break
+
         if not conn:
             raise ValueError("No calendar provider connected")
+
+        if not provider:
+            provider = 'google'
 
         calendar_id = conn.get('email')
 

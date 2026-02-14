@@ -1,0 +1,18 @@
+Analyze this calendar category. Another AI agent will use your output to decide which calendar to assign newly created events to.
+
+CATEGORY: {{ category_name }} {{ primary_label }}
+
+SAMPLE EVENTS ({{ event_count }} of {{ total_count }} total — recency-weighted sample, not exhaustive):
+{{ event_summaries_json }}
+
+The events above are a sample. Use the calendar name "{{ category_name }}" to infer the full scope — don't overfit to the specific events shown.
+{% if other_calendars_section %}
+{{ other_calendars_section }}
+{% endif %}
+Provide:
+- description: 1-2 sentence summary of what belongs in this calendar
+- event_types: List of event types (e.g., ["Classes", "Homework", "Office Hours"])
+- examples: 5-7 representative titles from the data
+- never_contains: What doesn't belong here (e.g., ["personal events", "work meetings"])
+
+Return structured JSON.

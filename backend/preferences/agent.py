@@ -12,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from typing import List, Dict, Optional
 
 from core.base_agent import BaseAgent
+from core.prompt_loader import load_prompt
 from extraction.models import CalendarEvent
 from preferences.similarity import ProductionSimilaritySearch
 from config.posthog import get_invoke_config
@@ -28,7 +29,7 @@ class PersonalizationAgent(BaseAgent):
     def __init__(self, llm: ChatAnthropic):
         super().__init__("Agent3_Personalization")
         self.llm = llm.with_structured_output(CalendarEvent)
-        self.system_prompt = self.load_prompt("preferences.txt")
+        self.system_prompt = load_prompt("preferences/prompts/preferences.txt")
         self.similarity_search = None
 
     def execute(

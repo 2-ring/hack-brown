@@ -6,9 +6,10 @@ Returns only the events that need to change (edit or delete).
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from core.base_agent import BaseAgent
+from core.prompt_loader import load_prompt
 from extraction.models import ModificationResult
 from config.posthog import get_invoke_config
 
@@ -22,7 +23,7 @@ class EventModificationAgent(BaseAgent):
     def __init__(self, llm):
         super().__init__("Agent4_EventModification")
         self.llm = llm.with_structured_output(ModificationResult)
-        self.prompt_template = self.load_prompt("modification.txt")
+        self._prompt_path = "modification/prompts/modification.txt"
 
     def execute(
         self,
@@ -61,20 +62,17 @@ class EventModificationAgent(BaseAgent):
             cal_lines = [f"- {c['name']} (ID: {c['id']})" for c in calendars]
             calendars_block = f"\n\nAVAILABLE CALENDARS:\n" + "\n".join(cal_lines) + "\nWhen moving events between calendars, set the 'calendar' field to the calendar ID (not the name)."
 
-        # Use the raw prompt template directly in ChatPromptTemplate so that
-        # double-brace JSON examples (e.g. {{"summary": ...}}) are preserved
-        # as LangChain literal braces, not interpreted by Python str.format().
-        chain = ChatPromptTemplate.from_messages([
-            ("system", self.prompt_template),
-            ("human", "EVENTS:\n{events}{calendars}\n\nINSTRUCTION:\n{instruction}")
-        ]) | self.llm
+        system_prompt = load_prompt(
+            self._prompt_path,
+            current_date=current_date,
+            current_time=current_time,
+        )
 
-        result = chain.invoke({
-            "events": events_block,
-            "calendars": calendars_block,
-            "instruction": instruction,
-            "current_date": current_date,
-            "current_time": current_time,
-        }, config=get_invoke_config("modification"))
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"EVENTS:\n{events_block}{calendars_block}\n\nINSTRUCTION:\n{instruction}"),
+        ]
+
+        result = self.llm.invoke(messages, config=get_invoke_config("modification"))
 
         return result

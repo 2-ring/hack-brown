@@ -8,9 +8,9 @@ Uses Instructor for automatic Pydantic validation retries.
 
 import time as _time
 from typing import List, Optional
-from pathlib import Path
 
 from core.base_agent import BaseAgent
+from core.prompt_loader import load_prompt
 from extraction.models import ExtractedEvent
 from config.posthog import capture_llm_generation
 
@@ -52,9 +52,7 @@ class EventExtractionAgent(BaseAgent):
         self.provider = provider
         self.max_retries = max_retries
 
-        prompt_path = Path(__file__).parent.parent / "prompts" / "extraction.txt"
-        with open(prompt_path, 'r') as f:
-            self.prompt_template = f.read()
+        self._prompt_path = "extraction/prompts/extraction.txt"
 
     def execute(
         self,
@@ -85,7 +83,7 @@ class EventExtractionAgent(BaseAgent):
 
         combined_text = ' '.join(raw_text_list)
 
-        system_prompt = self.prompt_template.format(timezone=timezone)
+        system_prompt = load_prompt(self._prompt_path, timezone=timezone)
 
         user_message = self._build_user_message(
             event_text=combined_text,

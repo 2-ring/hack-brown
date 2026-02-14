@@ -18,6 +18,7 @@ from datetime import datetime
 import json
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
+from core.prompt_loader import load_prompt
 from config.posthog import get_invoke_config, set_tracking_context
 from config.similarity import PatternDiscoveryConfig
 
@@ -375,28 +376,26 @@ class PatternDiscoveryService:
         other_cal_section = ""
         if other_calendars:
             lines = [f"- {c['name']}: {c['description']}" for c in other_calendars]
-            other_cal_section = f"""
-OTHER CALENDARS THIS USER HAS:
-{chr(10).join(lines)}
+            other_cal_section = (
+                "OTHER CALENDARS THIS USER HAS:\n"
+                + "\n".join(lines)
+                + "\n\nIf this calendar overlaps with another, clarify what distinguishes it."
+            )
 
-If this calendar overlaps with another, clarify what distinguishes it."""
+        primary_label = (
+            "(PRIMARY — default/catch-all calendar)" if is_primary
+            else "(Secondary — specialized calendar)"
+        )
 
-        prompt = f"""Analyze this calendar category. Another AI agent will use your output to decide which calendar to assign newly created events to.
-
-CATEGORY: {category_name} {"(PRIMARY — default/catch-all calendar)" if is_primary else "(Secondary — specialized calendar)"}
-
-SAMPLE EVENTS ({len(event_summaries)} of {total_count} total — recency-weighted sample, not exhaustive):
-{json.dumps(event_summaries, indent=2)}
-
-The events above are a sample. Use the calendar name "{category_name}" to infer the full scope — don't overfit to the specific events shown.
-{other_cal_section}
-Provide:
-- description: 1-2 sentence summary of what belongs in this calendar
-- event_types: List of event types (e.g., ["Classes", "Homework", "Office Hours"])
-- examples: 5-7 representative titles from the data
-- never_contains: What doesn't belong here (e.g., ["personal events", "work meetings"])
-
-Return structured JSON."""
+        prompt = load_prompt(
+            "preferences/prompts/pattern_discovery.txt",
+            category_name=category_name,
+            primary_label=primary_label,
+            event_count=len(event_summaries),
+            total_count=total_count,
+            event_summaries_json=json.dumps(event_summaries, indent=2),
+            other_calendars_section=other_cal_section,
+        )
 
         # Structured output
         class CategorySummary(BaseModel):

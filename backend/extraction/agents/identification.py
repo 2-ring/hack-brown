@@ -4,12 +4,12 @@ Identifies distinct calendar events in the input.
 """
 
 from typing import Dict, Any, Union
-from pathlib import Path
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 from core.base_agent import BaseAgent
+from core.prompt_loader import load_prompt
 from extraction.models import IdentificationResult
 from config.posthog import get_invoke_config
 
@@ -36,10 +36,7 @@ class EventIdentificationAgent(BaseAgent):
         self.is_anthropic = isinstance(llm, ChatAnthropic)
         self.is_openai = isinstance(llm, ChatOpenAI)
 
-        # Load prompt from extraction/prompts directory
-        prompt_path = Path(__file__).parent.parent / "prompts" / "identification.txt"
-        with open(prompt_path, 'r') as f:
-            self.prompt_template = f.read()
+        self.prompt_template = load_prompt("extraction/prompts/identification.txt")
 
     def execute(
         self,
