@@ -1,6 +1,6 @@
 /**
  * Supabase authentication client for DropCal.
- * Handles Google OAuth sign-in, sign-out, and session management.
+ * Handles OAuth sign-in (Google, Microsoft, Apple), sign-out, and session management.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -30,6 +30,48 @@ export async function signInWithGoogle() {
         access_type: 'offline',
         prompt: 'consent',
       },
+    },
+  });
+
+  if (error) {
+    console.error('Sign in error:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Sign in with Microsoft (Azure) OAuth.
+ * Requests auth + calendar scopes so Outlook calendar is connected on sign-in.
+ */
+export async function signInWithMicrosoft() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'email profile openid User.Read Calendars.ReadWrite offline_access',
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    console.error('Sign in error:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Sign in with Apple OAuth.
+ * Note: Apple Sign-In provides authentication only. Apple Calendar (CalDAV)
+ * must be connected separately via Settings with an app-specific password.
+ */
+export async function signInWithApple() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: window.location.origin,
     },
   });
 

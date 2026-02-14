@@ -235,8 +235,7 @@ class SessionProcessor:
             return patterns, historical_events
         except Exception as e:
             logger.warning(f"Could not load personalization context: {e}")
-        except Exception as e:
-            logger.warning(f"Failed to migrate patterns to DB: {e}")
+            return None, None
 
     def _select_agents(self, text: str, input_type: str = 'text', metadata: dict = None):
         """

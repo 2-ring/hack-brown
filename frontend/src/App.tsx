@@ -11,6 +11,7 @@ import { Terms } from './legal/Terms'
 import { useAuth } from './auth/AuthContext'
 import { GuestSessionManager } from './auth/GuestSessionManager'
 import { AuthModal } from './auth/AuthModal'
+import { AppleCalendarModal } from './auth/AppleCalendarModal'
 import {
   NotificationProvider,
   useNotifications,
@@ -57,7 +58,7 @@ interface SessionListItem {
 
 // Main content component that handles all the business logic
 function AppContent() {
-  const { user, loading: authLoading, calendarReady } = useAuth()
+  const { user, loading: authLoading, calendarReady, showAppleCalendarSetup, dismissAppleCalendarSetup } = useAuth()
   const navigate = useNavigate()
   const { sessionId } = useParams<{ sessionId?: string }>()
   const { addNotification } = useNotifications()
@@ -657,6 +658,10 @@ function AppContent() {
         isOpen={authModalHeading !== null}
         onClose={() => setAuthModalHeading(null)}
         heading={authModalHeading ?? undefined}
+      />
+      <AppleCalendarModal
+        isOpen={showAppleCalendarSetup}
+        onClose={dismissAppleCalendarSetup}
       />
       <Menu
         isOpen={sidebarOpen}

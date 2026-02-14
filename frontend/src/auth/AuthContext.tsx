@@ -14,10 +14,12 @@ import {
   getSession,
   getCurrentUser,
   signInWithGoogle,
+  signInWithMicrosoft,
+  signInWithApple,
   signOut as authSignOut,
   onAuthStateChange,
 } from './supabase';
-import { syncUserProfile, getUserProfile, storeGoogleCalendarTokens } from '../api/backend-client';
+import { syncUserProfile, getUserProfile, storeGoogleCalendarTokens, sendMicrosoftTokens } from '../api/backend-client';
 import { sessionCache } from '../sessions/cache';
 import { GuestSessionManager } from './GuestSessionManager';
 
@@ -38,8 +40,10 @@ interface AuthContextType {
   setPreferences: React.Dispatch<React.SetStateAction<UserPreferences>>;
   primaryCalendarProvider: string | null;
   setPrimaryCalendarProviderLocal: (provider: string | null) => void;
-  signIn: () => Promise<void>;
+  signIn: (provider?: 'google' | 'microsoft' | 'apple') => Promise<void>;
   signOut: () => Promise<void>;
+  showAppleCalendarSetup: boolean;
+  dismissAppleCalendarSetup: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [preferences, setPreferences] = useState<UserPreferences>({});
   const [primaryCalendarProvider, setPrimaryCalendarProvider] = useState<string | null>(null);
   const [calendarReady, setCalendarReady] = useState(false);
+  const [showAppleCalendarSetup, setShowAppleCalendarSetup] = useState(false);
 
   // Guard against duplicate token storage when Supabase fires both
   // INITIAL_SESSION and SIGNED_IN during the same OAuth redirect
@@ -138,14 +143,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .then(result => console.log(result.is_new_user ? 'Account created successfully' : 'Welcome back'))
               .catch(error => console.error('Failed to sync user profile:', error));
 
-            const tokenStoragePromise = hasProviderToken
-              ? storeGoogleCalendarTokens({
-                  access_token: newSession.provider_token!,
-                  refresh_token: newSession.provider_refresh_token || undefined,
-                })
-                  .then(() => console.log('Google Calendar tokens stored successfully'))
-                  .catch(error => console.error('Failed to store Google Calendar tokens:', error))
-              : Promise.resolve();
+            // Detect auth provider and store calendar tokens accordingly
+            const authProvider = newSession.user?.app_metadata?.provider;
+            let tokenStoragePromise: Promise<void>;
+
+            if (!hasProviderToken) {
+              tokenStoragePromise = Promise.resolve();
+            } else if (authProvider === 'azure') {
+              // Microsoft sign-in: send tokens to Microsoft calendar endpoint
+              tokenStoragePromise = sendMicrosoftTokens({
+                access_token: newSession.provider_token!,
+                refresh_token: newSession.provider_refresh_token || undefined,
+                email: newSession.user?.email || undefined,
+              })
+                .then(() => console.log('Microsoft Calendar tokens stored successfully'))
+                .catch(error => console.error('Failed to store Microsoft Calendar tokens:', error));
+            } else if (authProvider === 'apple') {
+              // Apple sign-in: no calendar tokens from OAuth (CalDAV needs app-specific password).
+              // Prompt the user to connect their Apple Calendar if not already connected.
+              tokenStoragePromise = Promise.resolve();
+              setShowAppleCalendarSetup(true);
+            } else {
+              // Google (default): store Google Calendar tokens
+              tokenStoragePromise = storeGoogleCalendarTokens({
+                access_token: newSession.provider_token!,
+                refresh_token: newSession.provider_refresh_token || undefined,
+              })
+                .then(() => console.log('Google Calendar tokens stored successfully'))
+                .catch(error => console.error('Failed to store Google Calendar tokens:', error));
+            }
 
             await Promise.all([profileSyncPromise, tokenStoragePromise]);
 
@@ -191,9 +217,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = async () => {
+  const signIn = async (provider: 'google' | 'microsoft' | 'apple' = 'google') => {
     try {
-      await signInWithGoogle();
+      switch (provider) {
+        case 'microsoft':
+          await signInWithMicrosoft();
+          break;
+        case 'apple':
+          await signInWithApple();
+          break;
+        case 'google':
+        default:
+          await signInWithGoogle();
+          break;
+      }
     } catch (error) {
       console.error('Sign in failed:', error);
       throw error;
@@ -241,6 +278,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPrimaryCalendarProviderLocal: setPrimaryCalendarProvider,
     signIn,
     signOut,
+    showAppleCalendarSetup,
+    dismissAppleCalendarSetup: () => setShowAppleCalendarSetup(false),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

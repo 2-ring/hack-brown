@@ -60,13 +60,13 @@ export function AuthModal({
         <WordMark size={24} />
         <h2 className="display-text auth-modal-heading">{heading}</h2>
         <div className="auth-modal-buttons">
-          <MenuButton onClick={signIn} icon={GoogleIcon} variant="signin">
+          <MenuButton onClick={() => signIn('google')} icon={GoogleIcon} variant="signin">
             Sign in with Google
           </MenuButton>
-          <MenuButton onClick={signIn} icon={MicrosoftIcon} variant="signin">
+          <MenuButton onClick={() => signIn('microsoft')} icon={MicrosoftIcon} variant="signin">
             Sign in with Microsoft
           </MenuButton>
-          <MenuButton onClick={signIn} icon={AppleIcon} variant="signin">
+          <MenuButton onClick={() => signIn('apple')} icon={AppleIcon} variant="signin">
             Sign in with Apple
           </MenuButton>
         </div>

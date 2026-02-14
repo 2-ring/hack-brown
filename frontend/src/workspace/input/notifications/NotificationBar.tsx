@@ -25,7 +25,7 @@ export function NotificationBar({ notification, onDismiss }: NotificationBarProp
         weight={notification.iconWeight || 'duotone'}
         className="notification-bar-icon"
       />
-      <p className="notification-bar-text">{notification.message}</p>
+      <p className="notification-bar-text" data-nosnippet>{notification.message}</p>
       <button
         className="notification-bar-close"
         onClick={() => onDismiss(notification.id)}

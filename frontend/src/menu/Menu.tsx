@@ -1,4 +1,4 @@
-import { Sidebar as SidebarIcon, Baby, CalendarBlank, CalendarStar, ArrowSquareOut, Images, Files, Pen, Microphone, GoogleLogo, MicrosoftOutlookLogo, AppleLogo } from '@phosphor-icons/react'
+import { Sidebar as SidebarIcon, Baby, CalendarStar, ArrowSquareOut, Images, Files, Pen, Microphone, GoogleLogo, MicrosoftOutlookLogo, AppleLogo } from '@phosphor-icons/react'
 import type { SessionListItem } from '../sessions'
 import type { InputType } from '../sessions'
 import { Account } from './Account'
@@ -38,8 +38,8 @@ export function Menu({
   // Select brand images based on theme
   const wordImage = themeMode === 'dark' ? wordImageDark : wordImageLight
 
-  // Use provider from auth context (already fetched during sign-in), default to Google
-  const primaryProvider = (primaryCalendarProvider as 'google' | 'microsoft' | 'apple') || 'google'
+  // Use provider from auth context (already fetched during sign-in)
+  const primaryProvider = primaryCalendarProvider as 'google' | 'microsoft' | 'apple' | null
 
   // Get calendar URL based on provider
   const getCalendarUrl = () => {
@@ -50,8 +50,6 @@ export function Menu({
         return 'https://outlook.office.com/calendar'
       case 'apple':
         return 'https://www.icloud.com/calendar'
-      default:
-        return 'https://calendar.google.com'
     }
   }
 
@@ -64,8 +62,6 @@ export function Menu({
         return <MicrosoftOutlookLogo size={20} weight="duotone" />
       case 'apple':
         return <AppleLogo size={20} weight="duotone" />
-      default:
-        return <CalendarBlank size={20} weight="duotone" />
     }
   }
 
@@ -180,14 +176,16 @@ export function Menu({
             </MenuButton>
           </Tooltip>
 
-          <MenuButton
-            onClick={() => window.open(getCalendarUrl(), '_blank')?.focus()}
-            icon={getCalendarIcon()}
-            trailingIcon={<ArrowSquareOut size={14} weight="regular" />}
-            variant="secondary"
-          >
-            View calendar
-          </MenuButton>
+          {primaryProvider && (
+            <MenuButton
+              onClick={() => window.open(getCalendarUrl(), '_blank')?.focus()}
+              icon={getCalendarIcon()}
+              trailingIcon={<ArrowSquareOut size={14} weight="regular" />}
+              variant="secondary"
+            >
+              View calendar
+            </MenuButton>
+          )}
 
           <div className="chat-history">
             {isLoadingSessions ? (

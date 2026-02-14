@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>DropCal</title>
-    <meta name="description" content="Drop anything in. Get calendar events out. Paste text, upload an image, forward an email—get perfectly formatted events ready for your calendar." />
+    <title>DropCal — Turn Anything Into Calendar Events</title>
+    <meta name="description" content="Paste text, snap a photo, forward an email, or upload a PDF — DropCal uses AI to instantly create perfectly formatted calendar events. Free and works with Google Calendar and Outlook." />
 
     <meta name="theme-color" content="#1170C5" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://dropcal.ai" />
-    <meta property="og:title" content="DropCal" />
-    <meta property="og:description" content="Drop anything in. Get calendar events out." />
+    <meta property="og:title" content="DropCal — Turn Anything Into Calendar Events" />
+    <meta property="og:description" content="Paste text, snap a photo, forward an email, or upload a PDF — DropCal uses AI to instantly create perfectly formatted calendar events." />
     <meta property="og:image" content="https://dropcal.ai/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="DropCal" />
-    <meta name="twitter:description" content="Drop anything in. Get calendar events out." />
+    <meta name="twitter:title" content="DropCal — Turn Anything Into Calendar Events" />
+    <meta name="twitter:description" content="Paste text, snap a photo, forward an email, or upload a PDF — DropCal uses AI to instantly create perfectly formatted calendar events." />
     <meta name="twitter:image" content="https://dropcal.ai/og-image.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -29,14 +29,30 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Structured Data -->
+    <!-- Structured Data: Organization (for Google logo) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "DropCal",
+      "url": "https://dropcal.ai",
+      "logo": "https://dropcal.ai/android-chrome-512x512.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "hello@dropcal.ai",
+        "contactType": "customer support"
+      }
+    }
+    </script>
+
+    <!-- Structured Data: WebApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "DropCal",
       "url": "https://dropcal.ai",
-      "description": "Drop anything in. Get calendar events out. Paste text, upload an image, forward an email—get perfectly formatted events ready for your calendar.",
+      "description": "Paste text, snap a photo, forward an email, or upload a PDF — DropCal uses AI to instantly create perfectly formatted calendar events. Free and works with Google Calendar and Outlook.",
       "applicationCategory": "ProductivityApplication",
       "operatingSystem": "Web",
       "offers": {
@@ -49,20 +65,9 @@
       "featureList": [
         "Extract calendar events from text, images, audio, and documents",
         "AI-powered event parsing with smart formatting",
-        "Google Calendar integration",
+        "Google Calendar and Outlook integration",
         "Scheduling conflict detection"
-      ],
-      "creator": {
-        "@type": "Organization",
-        "name": "DropCal",
-        "url": "https://dropcal.ai",
-        "logo": "https://dropcal.ai/android-chrome-512x512.png",
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "email": "hello@dropcal.ai",
-          "contactType": "customer support"
-        }
-      }
+      ]
     }
     </script>
   </head>

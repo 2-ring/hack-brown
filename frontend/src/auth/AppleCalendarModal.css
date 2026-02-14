@@ -1,0 +1,109 @@
+/* Apple Calendar Modal — extends auth-modal styles */
+
+.apple-calendar-modal {
+  gap: 0;
+}
+
+.apple-calendar-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+  padding: 0 1rem 1rem;
+  line-height: 1.4;
+}
+
+.apple-calendar-steps {
+  width: 100%;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--background-secondary, var(--surface));
+  border-radius: 8px;
+}
+
+.apple-calendar-steps p {
+  margin: 0.25rem 0;
+}
+
+.apple-calendar-steps a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.apple-calendar-steps a:hover {
+  text-decoration: underline;
+}
+
+.apple-calendar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.apple-calendar-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.apple-calendar-input:focus {
+  border-color: var(--primary);
+}
+
+.apple-calendar-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.apple-calendar-error {
+  font-size: 0.8125rem;
+  color: var(--error);
+  margin: 0;
+}
+
+.apple-calendar-connect-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--background);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.apple-calendar-connect-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.apple-calendar-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.apple-calendar-skip-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 0.8125rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.apple-calendar-skip-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover, var(--border-light));
+}

@@ -56,7 +56,7 @@ export function Account() {
       <div className="account-container">
         <div className="account-sign-in-buttons">
           <MenuButton
-            onClick={signIn}
+            onClick={() => signIn('google')}
             icon={GoogleIcon}
             variant="signin"
           >
@@ -64,7 +64,7 @@ export function Account() {
           </MenuButton>
 
           <MenuButton
-            onClick={signIn}
+            onClick={() => signIn('microsoft')}
             icon={MicrosoftIcon}
             variant="signin"
           >
@@ -72,7 +72,7 @@ export function Account() {
           </MenuButton>
 
           <MenuButton
-            onClick={signIn}
+            onClick={() => signIn('apple')}
             icon={AppleIcon}
             variant="signin"
           >
