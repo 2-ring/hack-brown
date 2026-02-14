@@ -19,7 +19,9 @@ from langextract.factory import ModelConfig
 # ============================================================================
 
 # LangExtract only supports providers with an OpenAI-compatible API.
-# 'claude' is NOT supported — the caller should fall back to chunked_identification.
+# IMPORTANT: agent_1_identification in config/text.py MUST be set to one of
+# these providers. There is no fallback — an unsupported provider (e.g. 'claude')
+# will crash the text identification pipeline.
 _LANGEXTRACT_SUPPORTED_PROVIDERS = ('grok', 'openai')
 
 

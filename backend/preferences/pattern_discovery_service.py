@@ -276,6 +276,9 @@ class PatternDiscoveryService:
 
         category_patterns = {}
 
+        # Accumulate descriptions as we go so later calendars get cross-context
+        described_calendars: List[Dict] = []
+
         for calendar in calendars:
             cal_id = calendar.get('id')
             cal_name = calendar.get('summary', 'Unnamed')
@@ -294,28 +297,31 @@ class PatternDiscoveryService:
 
             if not cal_events:
                 # Empty category
+                description = 'This category has no events in the analyzed period'
                 category_patterns[cal_id] = {
                     'name': cal_name,
                     'is_primary': is_primary,
                     'color': cal_color,
                     'foreground_color': cal_foreground_color,
-                    'description': 'This category has no events in the analyzed period',
+                    'description': description,
                     'event_types': [],
                     'examples': [],
                     'never_contains': []
                 }
+                described_calendars.append({'name': cal_name, 'description': description})
                 continue
 
             # Sample events for analysis with recency weighting
             # 60% from recent events, 30% mid-term, 10% historical
             sampled = self._smart_sample_weighted(cal_events, target=PatternDiscoveryConfig.TARGET_SAMPLE_SIZE, recency_bias=PatternDiscoveryConfig.RECENCY_BIAS_DEFAULT)
 
-            # Call LLM to analyze this category
+            # Call LLM to analyze this category (with cross-calendar context)
             summary = self._analyze_category_with_llm(
                 category_name=cal_name,
                 is_primary=is_primary,
                 events=sampled,
-                total_count=len(cal_events)
+                total_count=len(cal_events),
+                other_calendars=described_calendars or None
             )
 
             category_patterns[cal_id] = {
@@ -326,6 +332,11 @@ class PatternDiscoveryService:
                 **summary
             }
 
+            described_calendars.append({
+                'name': cal_name,
+                'description': summary.get('description', '')
+            })
+
         return category_patterns
 
     def _analyze_category_with_llm(
@@ -333,13 +344,19 @@ class PatternDiscoveryService:
         category_name: str,
         is_primary: bool,
         events: List[Dict],
-        total_count: int
+        total_count: int,
+        other_calendars: Optional[List[Dict]] = None
     ) -> Dict:
         """
         Use LLM to analyze a single category (calendar) and generate summary.
 
-        Note: Color information is excluded from LLM analysis - colors are
-        just visual output, not organizational patterns.
+        Args:
+            category_name: Name of the calendar being analyzed
+            is_primary: Whether this is the user's primary/default calendar
+            events: Sampled events from this calendar
+            total_count: Total number of events in this calendar
+            other_calendars: Optional list of {name, description} dicts for
+                other calendars the user has (for cross-calendar differentiation)
 
         Returns:
             Dict with description, event_types, examples, never_contains
@@ -354,30 +371,29 @@ class PatternDiscoveryService:
                 'location': e.get('location', '')[:PatternDiscoveryConfig.LOCATION_DISPLAY_MAX_LENGTH] if e.get('location') else None
             })
 
-        prompt = f"""Analyze this calendar category to understand when/why the user uses it.
+        # Build cross-calendar context if available
+        other_cal_section = ""
+        if other_calendars:
+            lines = [f"- {c['name']}: {c['description']}" for c in other_calendars]
+            other_cal_section = f"""
+OTHER CALENDARS THIS USER HAS:
+{chr(10).join(lines)}
 
-CONTEXT: You are writing this description for another AI agent that will use it to decide which calendar to assign newly created events to. Tailor your description and content to help that agent make accurate calendar selection decisions.
+If this calendar overlaps with another, clarify what distinguishes it."""
+
+        prompt = f"""Analyze this calendar category. Another AI agent will use your output to decide which calendar to assign newly created events to.
 
 CATEGORY: {category_name} {"(PRIMARY — default/catch-all calendar)" if is_primary else "(Secondary — specialized calendar)"}
-TOTAL EVENTS IN THIS CALENDAR: {total_count}
 
-IMPORTANT: The events below are a SAMPLE, not the complete set. They were selected using recency-weighted sampling from {total_count} total events. Use the calendar name "{category_name}" to logically infer the full scope of this calendar — do not overfit your description to only the specific events shown. For example, if a calendar named "Office Hours" only shows math course events in the sample, the calendar likely contains office hours for ALL courses, not just math.
-
-SAMPLE EVENTS ({len(event_summaries)} of {total_count}):
+SAMPLE EVENTS ({len(event_summaries)} of {total_count} total — recency-weighted sample, not exhaustive):
 {json.dumps(event_summaries, indent=2)}
 
-YOUR TASK:
-Write a concise description of this category's usage pattern that will help another agent correctly assign new events to it.
-
-Focus on:
-1. What types of events belong here? (generalize from the calendar name + sample)
-2. What NEVER goes here? (if this is a specialized calendar)
-3. Is this category specialized or general-purpose?
-
+The events above are a sample. Use the calendar name "{category_name}" to infer the full scope — don't overfit to the specific events shown.
+{other_cal_section}
 Provide:
-- description: 1-2 sentence summary of what this calendar is for (written to help an agent decide whether a new event belongs here)
-- event_types: List of event types this calendar covers (e.g., ["Classes", "Homework", "Office Hours"])
-- examples: 5-7 representative example titles from the data
+- description: 1-2 sentence summary of what belongs in this calendar
+- event_types: List of event types (e.g., ["Classes", "Homework", "Office Hours"])
+- examples: 5-7 representative titles from the data
 - never_contains: What doesn't belong here (e.g., ["personal events", "work meetings"])
 
 Return structured JSON."""

@@ -26,10 +26,10 @@ class TextModelConfig:
     Supporting services (Agent 4, pattern discovery, session processor) all
     follow `default` — change one value to switch them all.
 
-    NOTE: agent_1_identification also controls LangExtract (text-based
+    NOTE: agent_1_identification controls LangExtract (text-based
     identification). LangExtract only supports OpenAI-compatible providers
-    (grok, openai). If set to 'claude', text identification falls back to
-    the LangChain Agent 1 pipeline; vision always uses LangChain Agent 1.
+    (grok, openai). Setting this to 'claude' will crash the text pipeline —
+    there is no fallback. Vision (images) always uses LangChain Agent 1.
     """
 
     # ── Core Pipeline Agents (set individually) ──────────────────────────
@@ -68,11 +68,11 @@ class TextModelConfig:
 
     @classmethod
     def all_claude(cls):
-        """Use Claude for everything - production quality.
-        NOTE: LangExtract doesn't support Claude, so text identification
-        falls back to the LangChain chunked pipeline automatically."""
+        """Use Claude for Agents 2-4 — production quality.
+        WARNING: agent_1 stays 'grok' because LangExtract requires an
+        OpenAI-compatible provider. Setting it to 'claude' will crash."""
         return cls(
-            agent_1_identification='claude',
+            agent_1_identification='grok',
             agent_2_extraction='claude',
             agent_3_preferences='claude',
             default='claude',

@@ -333,6 +333,14 @@ class PatternRefreshService:
         # Set calendar name in tracking context for the LLM call
         set_tracking_context(calendar_name=cal_name)
 
+        # Load other calendar descriptions for cross-context
+        all_calendars = Calendar.get_by_user(user_id)
+        other_calendars = [
+            {'name': c['name'], 'description': c['description']}
+            for c in all_calendars
+            if c.get('description') and c['provider_cal_id'] != cal_id
+        ] or None
+
         # Sample and analyze with LLM
         sampled = self.pattern_discovery_service._smart_sample_weighted(
             events,
@@ -344,7 +352,8 @@ class PatternRefreshService:
             category_name=cal_name,
             is_primary=is_primary,
             events=sampled,
-            total_count=current_count
+            total_count=current_count,
+            other_calendars=other_calendars
         )
 
         Calendar.upsert(
