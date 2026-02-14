@@ -1,6 +1,6 @@
 """
-Document Processor — converts documents to text using markitdown.
-Handles docx, pptx, xlsx, html, csv, epub, and other document formats.
+Document Processor — converts documents to structured Markdown using Docling.
+Handles docx, pptx, xlsx, html, and csv formats.
 """
 
 import os
@@ -8,30 +8,21 @@ import logging
 from pathlib import Path
 from typing import Set
 
-from markitdown import MarkItDown
-
 from .factory import BaseInputProcessor, ProcessingResult, InputType
 
 logger = logging.getLogger(__name__)
 
-# Singleton converter (stateless, safe to share)
-_converter = MarkItDown()
-
 
 class DocumentProcessor(BaseInputProcessor):
     """
-    Extracts text from document files using Microsoft's markitdown library.
-    Supports: .docx, .pptx, .xlsx, .html, .htm, .csv, .json, .xml, .epub, .ipynb
+    Extracts text from document files using Docling.
+    Preserves tables, headings, and document structure as Markdown.
     """
 
     SUPPORTED_FORMATS: Set[str] = {
         '.docx', '.pptx', '.xlsx',
         '.html', '.htm',
-        '.csv', '.tsv',
-        '.json', '.xml',
-        '.epub',
-        '.ipynb',
-        '.rtf',
+        '.csv',
     }
 
     def supports_file(self, file_path: str) -> bool:
@@ -41,7 +32,7 @@ class DocumentProcessor(BaseInputProcessor):
 
     def process(self, file_path: str, **kwargs) -> ProcessingResult:
         """
-        Convert document to text using markitdown.
+        Convert document to Markdown using Docling.
 
         Args:
             file_path: Path to the document file
@@ -79,8 +70,11 @@ class DocumentProcessor(BaseInputProcessor):
             )
 
         try:
-            result = _converter.convert(file_path)
-            text = result.text_content
+            from docling.document_converter import DocumentConverter
+
+            converter = DocumentConverter()
+            result = converter.convert(file_path)
+            text = result.document.export_to_markdown()
 
             if not text or not text.strip():
                 return ProcessingResult(
@@ -102,7 +96,7 @@ class DocumentProcessor(BaseInputProcessor):
                     'file_name': Path(file_path).name,
                     'file_size_mb': round(file_size_mb, 2),
                     'char_count': len(text),
-                    'converter': 'markitdown',
+                    'converter': 'docling',
                 },
                 success=True
             )

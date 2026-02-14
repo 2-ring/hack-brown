@@ -88,7 +88,10 @@ export const syncCalendar = async (): Promise<SyncResult> => {
   }
 
   if (!response.ok) {
-    throw new Error(`Sync failed: ${response.statusText}`);
+    // response.statusText is empty under HTTP/2 — read the body for details
+    const body = await response.json().catch(() => null);
+    const detail = body?.error || response.statusText || `status ${response.status}`;
+    throw new Error(`Sync failed: ${detail}`);
   }
 
   return response.json();

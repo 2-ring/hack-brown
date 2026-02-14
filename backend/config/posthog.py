@@ -205,6 +205,11 @@ def get_invoke_config(agent_name=None, properties=None):
 
         # Build properties from thread-local context
         merged_properties = {'environment': _ENVIRONMENT}
+
+        # $ai_session_id groups all traces in a pipeline run into one AI session
+        if trace_id:
+            merged_properties['$ai_session_id'] = str(trace_id)
+
         if agent_name:
             merged_properties["agent_name"] = agent_name
         if pipeline:
@@ -300,6 +305,7 @@ def capture_pipeline_trace(
 
         event_properties = {
             '$ai_trace_id': session_id,
+            '$ai_session_id': str(session_id),
             '$ai_span_id': str(uuid.uuid4()),
             '$ai_span_name': f"Pipeline: {input_type}{guest_suffix}",
             '$ai_latency': duration_ms / 1000,
@@ -353,6 +359,7 @@ def capture_phase_span(
 
         event_properties = {
             '$ai_trace_id': session_id,
+            '$ai_session_id': str(session_id),
             '$ai_parent_id': session_id,
             '$ai_span_id': str(uuid.uuid4()),
             '$ai_span_name': _PHASE_LABELS.get(phase_name, phase_name),
@@ -418,11 +425,18 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
 
         event_properties = {
             '$ai_trace_id': trace_id,
+            '$ai_session_id': str(trace_id) if trace_id else None,
+            '$ai_span_id': str(uuid.uuid4()),
+            '$ai_span_name': _AGENT_LABELS.get(agent_name, f'Error: {agent_name}'),
             'environment': _ENVIRONMENT,
             'agent_name': agent_name,
             'error_type': type(error).__name__,
             'error_message': str(error),
         }
+
+        pipeline = getattr(_local, 'pipeline', None)
+        if pipeline:
+            event_properties['pipeline'] = pipeline
 
         # Include thread-local context for richer error events
         for attr in _AUTO_INCLUDE_ATTRS:
@@ -441,6 +455,7 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
                 '$ai_is_error': True,
                 '$ai_provider': 'pipeline',
                 '$ai_model': f'agent:{agent_name}',
+                '$ai_framework': 'dropcal',
             },
         )
     except Exception as e:
@@ -466,15 +481,23 @@ def capture_llm_generation(agent_name: str, model: str, provider: str, duration_
     try:
         distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
         trace_id = getattr(_local, 'trace_id', None)
+        pipeline = getattr(_local, 'pipeline', None)
 
         event_properties = {
             '$ai_trace_id': trace_id,
+            '$ai_session_id': str(trace_id) if trace_id else None,
+            '$ai_span_id': str(uuid.uuid4()),
+            '$ai_span_name': _AGENT_LABELS.get(agent_name, agent_name),
             '$ai_provider': provider,
             '$ai_model': model,
             '$ai_latency': duration_ms / 1000 if duration_ms else None,
+            '$ai_framework': 'dropcal',
             'environment': _ENVIRONMENT,
             'agent_name': agent_name,
         }
+
+        if pipeline:
+            event_properties['pipeline'] = pipeline
 
         for attr in _AUTO_INCLUDE_ATTRS:
             val = getattr(_local, attr, None)

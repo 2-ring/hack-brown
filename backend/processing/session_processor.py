@@ -107,12 +107,12 @@ class SessionProcessor:
 
     def _convert_document(self, file_path: str) -> str:
         """
-        Download a document from Supabase storage and convert to text.
-        Uses Docling for PDFs (preserves tables/structure), markitdown for other formats.
-        Returns the extracted text.
+        Download a document from Supabase storage and convert to structured
+        Markdown using Docling. Returns the extracted text.
         """
         import tempfile
         from storage.file_handler import FileStorage
+        from docling.document_converter import DocumentConverter
 
         # Download file bytes from Supabase
         file_bytes = FileStorage.download_file(file_path)
@@ -124,29 +124,14 @@ class SessionProcessor:
             tmp_path = tmp.name
 
         try:
-            # Use Docling for PDFs (better table/structure preservation)
-            if ext.lower() == '.pdf':
-                try:
-                    from docling.document_converter import DocumentConverter
-                    converter = DocumentConverter()
-                    result = converter.convert(tmp_path)
-                    text = result.document.export_to_markdown()
-                    if text and text.strip():
-                        logger.info(f"Document converted (docling): {file_path} → {len(text)} chars")
-                        return text
-                except Exception as e:
-                    logger.warning(f"Docling conversion failed, falling back to markitdown: {e}")
-
-            # Fallback to markitdown for non-PDFs or if Docling fails
-            from markitdown import MarkItDown
-            md = MarkItDown()
-            result = md.convert(tmp_path)
-            text = result.text_content
+            converter = DocumentConverter()
+            result = converter.convert(tmp_path)
+            text = result.document.export_to_markdown()
 
             if not text or not text.strip():
                 raise ValueError("No text content could be extracted from the document")
 
-            logger.info(f"Document converted (markitdown): {file_path} → {len(text)} chars")
+            logger.info(f"Document converted: {file_path} → {len(text)} chars")
             return text
         finally:
             os.unlink(tmp_path)
