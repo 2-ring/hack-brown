@@ -38,11 +38,12 @@ export const MenuButton = forwardRef<HTMLButtonElement, MenuButtonProps>(
     ref
   ) {
     const variantClass = variant === 'signin' ? 'menu-button-signin' : 'menu-button-action';
+    const primaryClass = variant === 'primary' ? 'menu-button-primary' : '';
 
     return (
       <button
         ref={ref}
-        className={`menu-button ${variantClass} ${className}`}
+        className={`menu-button ${variantClass} ${primaryClass} ${className}`}
         onClick={onClick}
         disabled={disabled}
       >

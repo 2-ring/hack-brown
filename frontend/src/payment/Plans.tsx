@@ -35,7 +35,7 @@ export function Plans() {
         { text: 'Up to 10 events per month', included: true },
         { text: 'Text and image input', included: true },
         { text: 'Basic event extraction', included: true },
-        { text: 'Google Calendar integration', included: true },
+        { text: 'Calendar integration', included: true },
         { text: 'Conflict detection', included: false },
         { text: 'Advanced AI parsing', included: false },
         { text: 'Priority processing', included: false },

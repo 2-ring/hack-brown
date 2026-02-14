@@ -15,9 +15,11 @@ from database.supabase_client import get_supabase
 auth_bp = Blueprint('auth', __name__)
 
 
-def extract_google_profile_from_metadata(user_metadata: Dict[str, Any]) -> Dict[str, Any]:
+def extract_profile_from_metadata(user_metadata: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Extract profile information from Supabase user metadata (Google OAuth).
+    Extract profile information from Supabase user metadata.
+    Works across providers (Google, Azure/Microsoft, Apple) since Supabase
+    normalizes common fields like name, avatar_url, and sub.
 
     Args:
         user_metadata: Supabase user.user_metadata dict
@@ -66,12 +68,17 @@ def sync_user_profile():
         auth_user = auth_response.user
         user_metadata = auth_user.user_metadata or {}
 
-        # Determine which provider they used
-        # For now, we only support Google, but this is extensible
-        provider = 'google'  # Can be extended to check auth_user.app_metadata.provider
+        # Determine which provider they used from Supabase app_metadata
+        app_metadata = auth_user.app_metadata or {}
+        raw_provider = app_metadata.get('provider', 'google')
+        # Supabase uses 'azure' for Microsoft — map to our internal 'microsoft'
+        provider = 'microsoft' if raw_provider == 'azure' else raw_provider
 
-        # Extract profile info from metadata
-        profile = extract_google_profile_from_metadata(user_metadata)
+        # Extract profile info from metadata (works across providers)
+        profile = extract_profile_from_metadata(user_metadata)
+
+        # Google and Microsoft sign-in include calendar scopes, Apple does not
+        usage = ["auth", "calendar"] if provider in ('google', 'microsoft') else ["auth"]
 
         # Check if user exists
         existing_user = User.get_by_id(user_id)
@@ -92,7 +99,7 @@ def sync_user_profile():
                     "email": auth_user.email,
                     "display_name": profile['display_name'],
                     "photo_url": profile['photo_url'],
-                    "usage": ["auth", "calendar"],
+                    "usage": usage,
                     "linked_at": "now"
                 }]
             }
@@ -105,7 +112,7 @@ def sync_user_profile():
                 provider=provider,
                 provider_id=profile['provider_id'],
                 email=auth_user.email,
-                usage=["auth", "calendar"],
+                usage=usage,
                 display_name=profile['display_name'],
                 photo_url=profile['photo_url']
             )

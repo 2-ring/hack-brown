@@ -5,7 +5,6 @@
 export interface User {
   id: string;
   email: string;
-  google_id?: string;
   display_name?: string;
   photo_url?: string;
   preferences?: {

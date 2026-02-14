@@ -175,7 +175,15 @@ class PatternRefreshService:
             # Look up provider
             from database.models import User
             user = User.get_by_id(user_id)
-            provider = (user or {}).get('primary_calendar_provider', 'google')
+            provider = (user or {}).get('primary_calendar_provider')
+            if not provider:
+                # Auto-detect from provider_connections
+                connections = (user or {}).get('provider_connections', [])
+                for conn in connections:
+                    if 'calendar' in conn.get('usage', []):
+                        provider = conn.get('provider')
+                        break
+                provider = provider or 'google'
 
             cal_lookup = {cal['id']: cal for cal in current_calendars}
 

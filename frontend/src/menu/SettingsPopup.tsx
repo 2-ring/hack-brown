@@ -54,7 +54,11 @@ type ViewMode = 'main' | 'integrations' | 'apple-connect' | 'account';
 
 export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoading = false, triggerRef }: SettingsPopupProps) {
   const navigate = useNavigate();
-  const { signOut, signIn, preferences, setPreferences, setPrimaryCalendarProviderLocal } = useAuth();
+  const { signOut, signIn, user, preferences, setPreferences, setPrimaryCalendarProviderLocal } = useAuth();
+
+  // Determine the user's auth provider (the one they signed in with)
+  const rawAuthProvider = user?.app_metadata?.provider;
+  const userAuthProvider = rawAuthProvider === 'azure' ? 'microsoft' : (rawAuthProvider || 'google');
   const popupRef = useRef<HTMLDivElement>(null);
   const { themeMode, toggleTheme } = useTheme();
 
@@ -167,8 +171,8 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
   };
 
   const handleDisconnectProvider = async (provider: 'google' | 'microsoft' | 'apple') => {
-    if (provider === 'google') {
-      // Google is the auth provider — disconnecting = signing out
+    if (provider === userAuthProvider) {
+      // This is the auth provider — disconnecting = signing out
       await handleLogout();
       return;
     }
@@ -202,8 +206,8 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
 
   const handleConnectNew = async (provider: 'google' | 'microsoft' | 'apple') => {
     if (provider === 'google') {
-      // Sign-in includes calendar scopes, so this reconnects Google Calendar
-      await signIn();
+      // Re-auth with Google to get calendar scopes
+      await signIn('google');
       setTimeout(() => fetchCalendarProviders(), 2000);
     } else if (provider === 'microsoft') {
       try {
@@ -470,9 +474,9 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
             <>
               {['google', 'microsoft', 'apple'].map((provider) => {
                 const calendar = calendars.find(cal => cal.provider === provider && cal.isConnected);
-                // Google is always connected when signed in (auth = calendar)
-                const isGoogleAuth = provider === 'google';
-                const isConnected = isGoogleAuth || !!calendar;
+                // Auth provider is always connected when signed in (auth includes calendar for Google/Microsoft)
+                const isAuthProviderRow = provider === userAuthProvider;
+                const isConnected = isAuthProviderRow || !!calendar;
                 const isDefault = calendar?.isDefault;
 
                 if (!isConnected) {
@@ -515,7 +519,7 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                       <span style={{ lineHeight: '1.2' }}>{getProviderName(provider)}</span>
                       <span style={{ fontSize: '11px', color: disconnectMode ? 'var(--error)' : '#999', lineHeight: '1.2' }}>
                         {disconnectMode
-                          ? (isGoogleAuth ? 'Sign out' : 'Disconnect')
+                          ? (isAuthProviderRow ? 'Sign out' : 'Disconnect')
                           : (calendar?.email || userEmail)
                         }
                       </span>

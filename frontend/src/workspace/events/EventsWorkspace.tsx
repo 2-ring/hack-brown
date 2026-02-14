@@ -17,6 +17,7 @@ import {
 import { updateEvent, deleteEvent, pushEvents, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
 import type { SyncCalendar } from '../../api/sync'
+import { useAuth } from '../../auth/AuthContext'
 import {
   useNotificationQueue,
   createSuccessNotification,
@@ -62,6 +63,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const pendingEditRef = useRef<CalendarEvent | null>(null)
   const { currentNotification, addNotification, dismissNotification } = useNotificationQueue()
   const [eventConflicts, setEventConflicts] = useState<Record<string, ConflictInfo[]>>({})
+  const { primaryCalendarProvider } = useAuth()
 
   const calendars = propCalendars && propCalendars.length > 0 ? propCalendars : DEFAULT_CALENDARS
 
@@ -564,7 +566,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                       formatTime={formatTime}
                       formatTimeRange={formatTimeRange}
                       getCalendarColor={getCalendarColor}
-                      activeProvider="google"
+                      activeProvider={primaryCalendarProvider || undefined}
                       conflictInfo={eventConflicts[String(index)]}
                       onClick={() => handleEventClick(index)}
                     />
@@ -620,7 +622,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                         <div className="event-date-event-single">
                           <SwipeableEvent
                             event={event}
-                            activeProvider="google"
+                            activeProvider={primaryCalendarProvider || undefined}
                             onSwipeRight={handleSwipeAdd}
                             onSwipeLeft={handleSwipeDelete}
                           >
@@ -634,7 +636,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                               formatTime={formatTime}
                               formatTimeRange={formatTimeRange}
                               getCalendarColor={getCalendarColor}
-                              activeProvider="google"
+                              activeProvider={primaryCalendarProvider || undefined}
                               conflictInfo={eventConflicts[String(originalIndex)]}
                               onClick={() => handleEventClick(originalIndex)}
                             />

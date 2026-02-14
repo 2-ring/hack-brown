@@ -344,43 +344,6 @@ export async function storeGoogleCalendarTokens(providerToken: any): Promise<voi
 }
 
 /**
- * Check if user has connected Google Calendar.
- */
-export async function checkGoogleCalendarStatus(): Promise<{
-  connected: boolean;
-  valid: boolean;
-  message: string;
-}> {
-  const headers = await getAuthHeaders();
-
-  const response = await fetch(`${API_URL}/auth/google-calendar/status`, {
-    method: 'GET',
-    headers,
-  });
-
-  return handleResponse(response);
-}
-
-/**
- * Attempt to refresh Google Calendar tokens on the backend.
- * Called when a calendar API call returns 401.
- */
-export async function refreshGoogleCalendarTokens(): Promise<{
-  refreshed: boolean;
-  needs_reauth: boolean;
-  error?: string;
-}> {
-  const headers = await getAuthHeaders();
-
-  const response = await fetch(`${API_URL}/auth/google-calendar/refresh-tokens`, {
-    method: 'POST',
-    headers,
-  });
-
-  return handleResponse(response);
-}
-
-/**
  * Push event(s) to the user's calendar provider.
  * Backend decides create vs update vs skip per event.
  *

@@ -58,8 +58,15 @@ def get_user_primary_provider(user_id: str) -> str:
     primary_provider = user.get('primary_calendar_provider')
 
     if not primary_provider:
-        # Default to Google if no primary set (backward compatibility)
-        primary_provider = 'google'
+        # Auto-detect from provider_connections
+        connections = user.get('provider_connections', [])
+        for conn in connections:
+            if 'calendar' in conn.get('usage', []):
+                primary_provider = conn.get('provider')
+                break
+
+    if not primary_provider:
+        raise ValueError(f"No calendar provider configured for user {user_id}")
 
     return primary_provider
 

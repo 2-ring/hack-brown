@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { CaretDown as CaretDownIcon } from '@phosphor-icons/react'
+import { CaretDown as CaretDownIcon, MicrosoftOutlookLogo, AppleLogo } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
+import { useAuth } from '../../auth/AuthContext'
 
 interface CalendarOption {
   id: string
@@ -26,6 +27,17 @@ const GoogleIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 )
 
+function getProviderDefault(provider: string | null): CalendarOption {
+  switch (provider) {
+    case 'microsoft':
+      return { id: 'microsoft', name: 'Outlook', icon: <MicrosoftOutlookLogo size={16} weight="duotone" /> }
+    case 'apple':
+      return { id: 'apple', name: 'Apple', icon: <AppleLogo size={16} weight="duotone" /> }
+    default:
+      return { id: 'google', name: 'Google', icon: <GoogleIcon size={16} /> }
+  }
+}
+
 export function CalendarSelector({
   selectedCalendar,
   calendars = [],
@@ -35,13 +47,10 @@ export function CalendarSelector({
 }: CalendarSelectorProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { primaryCalendarProvider } = useAuth()
 
-  // Default to Google if no calendar is selected
-  const currentCalendar = selectedCalendar || {
-    id: 'google',
-    name: 'Google',
-    icon: <GoogleIcon size={16} />
-  }
+  // Default to user's primary provider if no calendar is selected
+  const currentCalendar = selectedCalendar || getProviderDefault(primaryCalendarProvider)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -99,8 +108,8 @@ export function CalendarSelector({
             ))
           ) : (
             <div className="calendar-selector-option active">
-              <GoogleIcon size={18} />
-              <span>Google</span>
+              {getProviderDefault(primaryCalendarProvider).icon}
+              <span>{getProviderDefault(primaryCalendarProvider).name}</span>
             </div>
           )}
         </div>

@@ -107,7 +107,7 @@ class SmartSyncService:
             raise ValueError("No calendar provider connected")
 
         if not provider:
-            provider = 'google'
+            raise ValueError("Could not determine calendar provider")
 
         calendar_id = conn.get('email')
 
@@ -188,29 +188,62 @@ class SmartSyncService:
         provider = state['provider']
         calendar_id = state['calendar_id']
 
-        if strategy == 'incremental':
-            # Use sync token (most efficient)
-            return self._incremental_sync(user_id, provider, calendar_id)
-
-        elif strategy == 'fast_incremental':
-            # Quick check for events modified in last hour
-            return self._fast_incremental_sync(user_id, provider, calendar_id)
-
-        elif strategy == 'full':
-            # Full sync (first time or token expired)
-            return self._full_sync(user_id, provider, calendar_id)
-
+        # Google has optimized sync token support; other providers use generic fetch
+        if provider == 'google':
+            if strategy == 'incremental':
+                return self._google_incremental_sync(user_id, provider, calendar_id)
+            elif strategy == 'fast_incremental':
+                return self._google_fast_incremental_sync(user_id, provider, calendar_id)
+            elif strategy == 'full':
+                return self._google_full_sync(user_id, provider, calendar_id)
+            else:
+                raise ValueError(f"Unknown strategy: {strategy}")
         else:
-            raise ValueError(f"Unknown strategy: {strategy}")
+            # Microsoft/Apple: use factory list_events (no sync token support yet)
+            return self._generic_full_sync(user_id, provider, calendar_id)
 
-    def _incremental_sync(
+    def _generic_full_sync(
         self,
         user_id: str,
         provider: str,
         calendar_id: str
     ) -> Dict:
         """
-        Incremental sync using sync token.
+        Generic full sync for non-Google providers (Microsoft, Apple).
+        Uses the factory's list_events() since these providers don't support sync tokens.
+        """
+        import calendars.factory as calendar_factory
+
+        time_min = (datetime.utcnow() - timedelta(days=365)).isoformat() + 'Z'
+
+        events = calendar_factory.list_events(
+            user_id,
+            max_results=SyncConfig.MAX_RESULTS_FULL,
+            time_min=time_min,
+            provider=provider,
+            calendar_id=calendar_id
+        )
+
+        results = {'events_added': 0, 'events_updated': 0, 'events_deleted': 0}
+
+        for event in events:
+            change = self._process_event(user_id, provider, calendar_id, event)
+            if change:
+                results[f'events_{change}'] += 1
+
+        # Update last_synced_at
+        self._save_sync_state(user_id, provider, calendar_id, sync_token=None)
+
+        return results
+
+    def _google_incremental_sync(
+        self,
+        user_id: str,
+        provider: str,
+        calendar_id: str
+    ) -> Dict:
+        """
+        Google-specific incremental sync using sync token.
         Only fetches changes since last sync.
         """
         from calendars.google import auth
@@ -242,7 +275,7 @@ class SmartSyncService:
 
                 # Process events
                 for event in response.get('items', []):
-                    change = self._process_event(user_id, calendar_id, event)
+                    change = self._process_event(user_id, provider, calendar_id, event)
                     if change:
                         results[f'events_{change}'] += 1
 
@@ -255,7 +288,7 @@ class SmartSyncService:
                 if e.resp.status == 410:
                     # Token expired - fallback to full sync
                     print(f"Sync token expired for user {user_id}, falling back to full sync")
-                    return self._full_sync(user_id, provider, calendar_id)
+                    return self._google_full_sync(user_id, provider, calendar_id)
                 raise
 
         # Save new sync token
@@ -264,14 +297,14 @@ class SmartSyncService:
 
         return results
 
-    def _fast_incremental_sync(
+    def _google_fast_incremental_sync(
         self,
         user_id: str,
         provider: str,
         calendar_id: str
     ) -> Dict:
         """
-        Fast incremental: only check events modified in last hour.
+        Google-specific fast incremental: only check events modified in last hour.
         Used when we don't have a sync token but synced recently.
         """
         from calendars.google import auth
@@ -296,7 +329,7 @@ class SmartSyncService:
         results = {'events_added': 0, 'events_updated': 0, 'events_deleted': 0}
 
         for event in response.get('items', []):
-            change = self._process_event(user_id, calendar_id, event)
+            change = self._process_event(user_id, provider, calendar_id, event)
             if change:
                 results[f'events_{change}'] += 1
 
@@ -307,14 +340,14 @@ class SmartSyncService:
 
         return results
 
-    def _full_sync(
+    def _google_full_sync(
         self,
         user_id: str,
         provider: str,
         calendar_id: str
     ) -> Dict:
         """
-        Full sync: fetch all events from last year.
+        Google-specific full sync: fetch all events from last year.
         Used on first sync or when token expires.
         """
         from calendars.google import auth
@@ -345,7 +378,7 @@ class SmartSyncService:
 
             # Process events
             for event in response.get('items', []):
-                change = self._process_event(user_id, calendar_id, event)
+                change = self._process_event(user_id, provider, calendar_id, event)
                 if change:
                     results[f'events_{change}'] += 1
 
@@ -360,7 +393,7 @@ class SmartSyncService:
 
         return results
 
-    def _process_event(self, user_id: str, calendar_id: str, event: Dict) -> Optional[str]:
+    def _process_event(self, user_id: str, provider: str, calendar_id: str, event: Dict) -> Optional[str]:
         """
         Process single event (create/update/delete).
 
@@ -373,7 +406,7 @@ class SmartSyncService:
         # Check if exists
         existing = Event.get_by_provider_event_id(
             user_id=user_id,
-            provider='google',
+            provider=provider,
             provider_event_id=provider_event_id
         )
 
@@ -406,7 +439,7 @@ class SmartSyncService:
         else:
             EventService.create_provider_event(
                 user_id=user_id,
-                provider='google',
+                provider=provider,
                 provider_account_id=calendar_id,
                 provider_event_id=provider_event_id,
                 compute_embedding_now=False,
@@ -569,7 +602,7 @@ class SmartSyncService:
         user_id: str,
         provider: str,
         calendar_id: str,
-        sync_token: str
+        sync_token: Optional[str] = None
     ):
         """Save sync state to provider connection in users table."""
         user = User.get_by_id(user_id)
@@ -581,7 +614,8 @@ class SmartSyncService:
         # Find and update the provider connection
         for conn in connections:
             if conn.get('provider') == provider:
-                conn['sync_token'] = sync_token
+                if sync_token is not None:
+                    conn['sync_token'] = sync_token
                 conn['last_synced_at'] = datetime.utcnow().isoformat()
                 break
 

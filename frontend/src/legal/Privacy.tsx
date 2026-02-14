@@ -238,8 +238,8 @@ export function Privacy() {
             account settings
           </li>
           <li>
-            Request full account deletion and removal of all associated data by
-            contacting us
+            Delete your account and all associated data directly from the app
+            settings
           </li>
         </ul>
 

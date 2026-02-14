@@ -77,7 +77,7 @@ export const syncCalendar = async (): Promise<SyncResult> => {
       total_events_in_db: 0,
       is_first_sync: false,
       has_sync_token: false,
-      provider: 'google',
+      provider: 'unknown',
       calendar_id: 'primary',
       events_added: 0,
       events_updated: 0,

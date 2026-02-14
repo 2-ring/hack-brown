@@ -100,6 +100,24 @@
   transition: color 0.15s ease;
 }
 
+/* Primary variant: icon and text use primary color, bolder text, more shadow */
+.menu-button-primary {
+  box-shadow: 0 1px 3px var(--shadow-light);
+}
+
+.menu-button-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 6px var(--shadow-light);
+}
+
+.menu-button-primary .menu-button-icon {
+  color: var(--text-primary);
+}
+
+.menu-button-primary .menu-button-text {
+  font-family: var(--display-font), sans-serif;
+  font-weight: 600;
+}
+
 .menu-button-text {
   /* No flex: 1 - let content stay together and center as a unit */
 }
