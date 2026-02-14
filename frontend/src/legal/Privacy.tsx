@@ -7,100 +7,219 @@ export function Privacy() {
       <PageHeader />
       <div className="legal-content">
         <h1>Privacy Policy</h1>
-        <p className="legal-updated">Last updated: February 7, 2026</p>
+        <p className="legal-updated">Last updated: February 13, 2026</p>
 
         <p>
-          DropCal ("we", "our", "us") operates the dropcal.ai website and service.
-          This policy explains how we collect, use, and protect your information.
+          DropCal ("we", "our", "us") operates the dropcal.ai website and
+          service. This policy explains how we collect, use, store, and protect
+          your information when you use DropCal.
         </p>
 
         <h2>Information We Collect</h2>
 
         <h3>Account Information</h3>
         <p>
-          When you sign in with Google, we receive your name, email address, and
-          profile photo from your Google account. We use this to create and manage
-          your DropCal account.
+          When you sign in with Google or another provider, we receive your
+          name, email address, and profile photo. We use this to create and
+          manage your DropCal account.
         </p>
 
         <h3>Calendar Data</h3>
         <p>
-          With your permission, we access your Google Calendar to check for
-          scheduling conflicts and to create new events on your behalf. We read
-          your existing events solely for conflict detection and do not modify or
-          delete your existing calendar entries.
+          With your explicit permission, we access your calendar (Google
+          Calendar, Microsoft Outlook, or Apple Calendar) to read your existing
+          events, check for scheduling conflicts, and create new events on your
+          behalf. We sync your calendar events to provide personalized event
+          formatting — DropCal learns your naming conventions, scheduling
+          patterns, and calendar organization from your existing events so that
+          new events match your style. We do not modify or delete your existing
+          calendar entries.
         </p>
 
         <h3>Content You Provide</h3>
         <p>
           When you use DropCal, you may submit text, images, audio recordings,
-          PDFs, or URLs. We process this content to extract calendar event
-          information. Your input content and the resulting events are stored in
-          your account so you can access your session history.
+          PDFs, or other files. We process this content to extract calendar
+          event information. Uploaded files are stored securely and your input
+          content and resulting events are stored in your account so you can
+          access your session history.
         </p>
 
         <h3>Guest Sessions</h3>
         <p>
-          You can use DropCal without an account. Guest sessions are stored with
-          an anonymous identifier and can be migrated to a full account if you
+          You can use DropCal without an account. Guest sessions are stored
+          with an anonymous identifier and are not linked to any personal
+          information. Guest sessions can be migrated to a full account if you
           later sign in.
         </p>
 
         <h2>How We Use Your Information</h2>
         <ul>
-          <li>To extract calendar events from your input</li>
+          <li>To extract calendar events from your input using AI</li>
           <li>To check for scheduling conflicts with your existing calendar</li>
-          <li>To create events in your Google Calendar when you confirm</li>
-          <li>To improve event formatting based on your preferences over time</li>
+          <li>To create events in your calendar when you confirm them</li>
+          <li>
+            To learn your personal formatting preferences (naming style,
+            calendar organization, event categorization) from your existing
+            events and apply them to new events you create through DropCal
+          </li>
           <li>To maintain your session history</li>
+          <li>To improve and monitor the reliability of our service</li>
         </ul>
 
-        <h2>Third-Party Services</h2>
+        <h2>How We Process Your Data with AI</h2>
         <p>
-          We use the following third-party services to operate DropCal. Your data
-          may be processed by these services as described:
+          DropCal uses AI models to extract events from your input and to
+          personalize event formatting. This involves sending data to
+          third-party AI providers via their APIs for processing:
         </p>
         <ul>
           <li>
-            <strong>Supabase</strong> — Database hosting, authentication, and file
-            storage. Stores your account data, sessions, and uploaded files.
+            Your input content (text, transcribed audio, extracted document
+            text) is sent to AI models to identify and extract event details.
           </li>
           <li>
-            <strong>Google</strong> — OAuth authentication and Calendar API
-            integration. We request calendar access with your explicit consent.
+            A sample of your existing calendar event titles, dates, and
+            locations may be sent to AI models to analyze your formatting
+            preferences. This analysis is performed solely for your account and
+            is never combined with other users' data.
           </li>
           <li>
-            <strong>AI Providers (Anthropic, OpenAI, xAI)</strong> — Your input
-            text and extracted event data are sent to AI models for processing.
-            These providers process data according to their respective privacy
-            policies and do not use API inputs for model training.
+            We generate numerical representations (embeddings) of your events
+            to find similar past events and improve formatting suggestions.
+            These embeddings are stored per-user and used only for your
+            personalization.
+          </li>
+        </ul>
+        <p>
+          All AI processing is performed on a per-user basis to provide
+          features directly to you. We do not use your data to train, create,
+          or improve any generalized or foundational AI models. Our AI
+          providers contractually commit to not using API inputs for model
+          training.
+        </p>
+
+        <h2>Third-Party Services</h2>
+        <p>
+          We use the following third-party services to operate DropCal. Your
+          data may be processed by these services as described:
+        </p>
+        <ul>
+          <li>
+            <strong>Supabase</strong> — Database hosting, authentication, and
+            file storage. Stores your account data, sessions, and uploaded
+            files.
           </li>
           <li>
-            <strong>Deepgram</strong> — Audio files are sent for transcription when
-            you submit audio recordings.
+            <strong>Google</strong> — OAuth authentication and Google Calendar
+            API integration. We request calendar access with your explicit
+            consent.
+          </li>
+          <li>
+            <strong>Microsoft</strong> — OAuth authentication and Outlook
+            Calendar API integration for users who connect Microsoft accounts.
+          </li>
+          <li>
+            <strong>AI Providers (Anthropic, xAI, OpenAI)</strong> — Your input
+            content, extracted event data, and calendar event samples are sent
+            to AI models for event extraction and personalization. These
+            providers process data under commercial API agreements that prohibit
+            using inputs for model training.
+          </li>
+          <li>
+            <strong>Deepgram</strong> — Audio files are sent for speech-to-text
+            transcription when you submit audio recordings.
+          </li>
+          <li>
+            <strong>PostHog</strong> — Product analytics. We collect anonymized
+            usage data (page views, feature usage) to understand how DropCal is
+            used and improve the service. PostHog does not receive your calendar
+            data or input content.
+          </li>
+        </ul>
+
+        <h2>Google User Data</h2>
+        <p>
+          DropCal's use and transfer to any other app of information received
+          from Google APIs will adhere to the{' '}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google API Services User Data Policy
+          </a>
+          , including the Limited Use requirements.
+        </p>
+        <p>Specifically, we:</p>
+        <ul>
+          <li>
+            Only access Google Calendar data necessary to provide DropCal's
+            features (conflict detection, event creation, and personalized
+            formatting)
+          </li>
+          <li>
+            Do not use Google Calendar data for advertising, retargeting, or
+            serving ads
+          </li>
+          <li>
+            Do not sell, rent, or transfer Google Calendar data to third
+            parties, except as necessary to provide the service (AI processing
+            as described above) or as required by law
+          </li>
+          <li>
+            Do not use Google Calendar data to train, create, or improve
+            generalized AI or machine learning models
+          </li>
+          <li>
+            Encrypt OAuth tokens at rest using industry-standard encryption
+          </li>
+          <li>
+            Allow you to revoke access and request deletion of your data at any
+            time
           </li>
         </ul>
 
         <h2>Data Security</h2>
         <p>
-          OAuth tokens (used to access your calendar) are encrypted at rest using
-          industry-standard encryption before being stored. All data is transmitted
-          over HTTPS.
+          OAuth tokens used to access your calendar are encrypted at rest using
+          industry-standard encryption (Fernet symmetric encryption) before
+          being stored in our database. All data is transmitted over HTTPS. File
+          uploads are stored in access-controlled cloud storage with
+          time-limited signed URLs.
         </p>
 
-        <h2>Data Retention</h2>
+        <h2>Data Retention and Deletion</h2>
         <p>
-          Your sessions and events are stored for as long as you maintain your
-          account. You can delete individual sessions at any time. If you wish to
-          delete your account and all associated data, contact us at the email
-          below.
+          Your sessions, events, and uploaded files are stored for as long as
+          you maintain your account. You can delete individual sessions and
+          their associated data at any time through the app.
+        </p>
+        <p>
+          If you disconnect a calendar provider, we delete the associated
+          access tokens from our systems. If you delete your account, we
+          permanently delete all of your data, including your profile, sessions,
+          events, uploaded files, learned preferences, and stored embeddings.
+        </p>
+        <p>
+          You may also revoke DropCal's access to your Google account at any
+          time through your{' '}
+          <a
+            href="https://myaccount.google.com/permissions"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google Account permissions
+          </a>
+          .
         </p>
 
         <h2>Cookies and Tracking</h2>
         <p>
-          We use essential cookies for authentication (session management via
-          Supabase). We do not use analytics trackers, advertising cookies, or
-          any third-party tracking scripts.
+          We use essential cookies for authentication and session management
+          (via Supabase). We use PostHog for anonymized product analytics
+          (page views and feature usage). We do not use advertising cookies or
+          sell data to advertisers.
         </p>
 
         <h2>Your Rights</h2>
@@ -108,8 +227,17 @@ export function Privacy() {
         <ul>
           <li>Access and view all data stored in your account</li>
           <li>Delete individual sessions and their associated events</li>
-          <li>Revoke calendar access at any time through your Google Account settings</li>
-          <li>Request full account deletion by contacting us</li>
+          <li>
+            Disconnect any calendar provider, which removes stored access tokens
+          </li>
+          <li>
+            Revoke calendar access at any time through your calendar provider's
+            account settings
+          </li>
+          <li>
+            Request full account deletion and removal of all associated data by
+            contacting us
+          </li>
         </ul>
 
         <h2>Changes to This Policy</h2>

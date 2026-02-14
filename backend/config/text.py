@@ -209,6 +209,40 @@ def create_text_model_light(component: str):
     return _create_model_from_specs(provider, specs)
 
 
+def create_instructor_client(component: str, light: bool = False):
+    """
+    Create an Instructor-patched client for a component.
+    Returns (client, model_name, provider) tuple.
+
+    Instructor wraps the raw provider SDK (OpenAI/Anthropic) to add
+    automatic Pydantic validation retries on structured output calls.
+
+    Args:
+        component: Component name (e.g., 'agent_2_extraction')
+        light: If True, use the lightweight model variant
+    """
+    import instructor
+
+    provider = get_text_provider(component)
+    specs = TEXT_MODEL_SPECS_LIGHT[provider] if light else TEXT_MODEL_SPECS[provider]
+    api_key = os.getenv(specs['api_key_env'])
+    if not api_key:
+        raise ValueError(f"API key not found: {specs['api_key_env']}")
+
+    if provider in ('grok', 'openai'):
+        from openai import OpenAI
+        raw_client = OpenAI(api_key=api_key, base_url=specs.get('base_url'))
+        patched = instructor.from_openai(raw_client)
+        return patched, specs['model_name'], provider
+    elif provider == 'claude':
+        from anthropic import Anthropic
+        raw_client = Anthropic(api_key=api_key)
+        patched = instructor.from_anthropic(raw_client)
+        return patched, specs['model_name'], provider
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+
 def print_text_config():
     """Print current text model configuration"""
     print("\n" + "="*70)

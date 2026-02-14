@@ -15,7 +15,7 @@ from config.limits import FileLimits, TextLimits, PDFLimits
 class PDFProcessor(BaseInputProcessor):
     """
     Processes PDF files using a hybrid approach:
-    1. Try text extraction first (fast, cheap, perfect for digital PDFs)
+    1. Try structured text extraction with Docling (preserves tables and headings)
     2. If text is insufficient, render to images for vision processing
     """
 
@@ -24,13 +24,13 @@ class PDFProcessor(BaseInputProcessor):
 
     def __init__(self):
         """Initialize PDF processor with required libraries"""
-        self.has_pypdf = False
+        self.has_docling = False
         self.has_pdf2image = False
 
-        # Try to import PyPDF2
+        # Try to import Docling for structured text extraction
         try:
-            import PyPDF2
-            self.has_pypdf = True
+            from docling.document_converter import DocumentConverter
+            self.has_docling = True
         except ImportError:
             pass
 
@@ -48,26 +48,21 @@ class PDFProcessor(BaseInputProcessor):
 
     def _extract_text(self, file_path: str) -> str:
         """
-        Extract text from PDF using PyPDF2.
+        Extract text from PDF using Docling.
+        Preserves tables as Markdown and maintains document structure.
         Returns empty string if extraction fails.
         """
-        if not self.has_pypdf:
+        if not self.has_docling:
             return ""
 
         try:
-            import PyPDF2
+            from docling.document_converter import DocumentConverter
 
-            text_parts = []
-            with open(file_path, 'rb') as pdf_file:
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
+            converter = DocumentConverter()
+            result = converter.convert(file_path)
+            text = result.document.export_to_markdown()
 
-                # Extract text from all pages
-                for page in pdf_reader.pages:
-                    text = page.extract_text()
-                    if text:
-                        text_parts.append(text)
-
-            return '\n\n'.join(text_parts)
+            return text or ""
 
         except Exception as e:
             print(f"Text extraction failed: {e}")
@@ -192,7 +187,7 @@ class PDFProcessor(BaseInputProcessor):
                     metadata={
                         'file_name': Path(file_path).name,
                         'file_size_mb': round(file_size_mb, 2),
-                        'extraction_method': 'text',
+                        'extraction_method': 'docling',
                         'char_count': len(text)
                     },
                     success=True
@@ -204,8 +199,8 @@ class PDFProcessor(BaseInputProcessor):
         if not images:
             # Both methods failed
             error_msg = "PDF processing failed. "
-            if not self.has_pypdf:
-                error_msg += "PyPDF2 not installed for text extraction. "
+            if not self.has_docling:
+                error_msg += "Docling not installed for text extraction. "
             if not self.has_pdf2image:
                 error_msg += "pdf2image not installed for image rendering."
 

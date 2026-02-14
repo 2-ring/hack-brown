@@ -447,6 +447,52 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
         logger.debug(f"PostHog: Failed to capture error event: {e}")
 
 
+def capture_llm_generation(agent_name: str, model: str, provider: str, duration_ms: float = 0, properties: dict = None):
+    """
+    Capture a successful LLM generation event for non-LangChain calls (e.g., Instructor).
+    Mirrors the $ai_generation events that the LangChain CallbackHandler produces.
+
+    Args:
+        agent_name: Which agent made the call (e.g., "extraction")
+        model: Model name (e.g., "grok-3")
+        provider: Provider name (e.g., "grok", "claude")
+        duration_ms: Call duration in milliseconds
+        properties: Optional additional properties
+    """
+    client = _ensure_client()
+    if not client:
+        return
+
+    try:
+        distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
+        trace_id = getattr(_local, 'trace_id', None)
+
+        event_properties = {
+            '$ai_trace_id': trace_id,
+            '$ai_provider': provider,
+            '$ai_model': model,
+            '$ai_latency': duration_ms / 1000 if duration_ms else None,
+            'environment': _ENVIRONMENT,
+            'agent_name': agent_name,
+        }
+
+        for attr in _AUTO_INCLUDE_ATTRS:
+            val = getattr(_local, attr, None)
+            if val is not None:
+                event_properties[attr] = val
+
+        if properties:
+            event_properties.update(properties)
+
+        client.capture(
+            distinct_id=distinct_id,
+            event='$ai_generation',
+            properties=event_properties,
+        )
+    except Exception as e:
+        logger.debug(f"PostHog: Failed to capture LLM generation: {e}")
+
+
 def get_posthog_client():
     """Get the raw PostHog client for custom events (feature flags, etc.)."""
     return _ensure_client()

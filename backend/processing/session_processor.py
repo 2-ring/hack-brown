@@ -45,15 +45,20 @@ class SessionProcessor:
         self.llm = llm
         self.input_processor_factory = input_processor_factory
 
+        # Agent 2 uses Instructor for self-correcting structured output
+        from config.text import create_instructor_client
+        client, model, provider = create_instructor_client('agent_2_extraction')
+
         # Standard agents
         self.agent_1_identification = EventIdentificationAgent(llm)
-        self.agent_2_extraction = EventExtractionAgent(llm)
+        self.agent_2_extraction = EventExtractionAgent(client, model, provider)
         self.agent_3_personalization = PersonalizationAgent(llm_personalization or llm)
 
         # Light agents (for simple inputs)
         if llm_light:
+            client_l, model_l, provider_l = create_instructor_client('agent_2_extraction', light=True)
             self.agent_1_identification_light = EventIdentificationAgent(llm_light)
-            self.agent_2_extraction_light = EventExtractionAgent(llm_light)
+            self.agent_2_extraction_light = EventExtractionAgent(client_l, model_l, provider_l)
             self.agent_3_personalization_light = PersonalizationAgent(llm_personalization_light or llm_light)
             self.has_light_agents = True
         else:
@@ -100,23 +105,38 @@ class SessionProcessor:
 
     def _convert_document(self, file_path: str) -> str:
         """
-        Download a document from Supabase storage and convert to text
-        using markitdown. Returns the extracted text.
+        Download a document from Supabase storage and convert to text.
+        Uses Docling for PDFs (preserves tables/structure), markitdown for other formats.
+        Returns the extracted text.
         """
         import tempfile
         from storage.file_handler import FileStorage
-        from markitdown import MarkItDown
 
         # Download file bytes from Supabase
         file_bytes = FileStorage.download_file(file_path)
 
-        # Write to temp file (markitdown needs a file path)
+        # Write to temp file
         ext = os.path.splitext(file_path)[1] or '.docx'
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             tmp.write(file_bytes)
             tmp_path = tmp.name
 
         try:
+            # Use Docling for PDFs (better table/structure preservation)
+            if ext.lower() == '.pdf':
+                try:
+                    from docling.document_converter import DocumentConverter
+                    converter = DocumentConverter()
+                    result = converter.convert(tmp_path)
+                    text = result.document.export_to_markdown()
+                    if text and text.strip():
+                        logger.info(f"Document converted (docling): {file_path} → {len(text)} chars")
+                        return text
+                except Exception as e:
+                    logger.warning(f"Docling conversion failed, falling back to markitdown: {e}")
+
+            # Fallback to markitdown for non-PDFs or if Docling fails
+            from markitdown import MarkItDown
             md = MarkItDown()
             result = md.convert(tmp_path)
             text = result.text_content
@@ -124,7 +144,7 @@ class SessionProcessor:
             if not text or not text.strip():
                 raise ValueError("No text content could be extracted from the document")
 
-            logger.info(f"Document converted: {file_path} → {len(text)} chars")
+            logger.info(f"Document converted (markitdown): {file_path} → {len(text)} chars")
             return text
         finally:
             os.unlink(tmp_path)
