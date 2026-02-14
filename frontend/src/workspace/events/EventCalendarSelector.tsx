@@ -10,10 +10,10 @@ interface CalendarOption {
 }
 
 interface EventCalendarSelectorProps {
-  selectedCalendarId?: string
+  selectedCalendarId?: string | null
   calendars: CalendarOption[]
   isLoading?: boolean
-  onCalendarSelect?: (calendarId: string) => void
+  onCalendarSelect?: (calendarId: string | null) => void
 }
 
 const ColoredDot = ({ color, size = 12 }: { color: string; size?: number }) => (
@@ -37,8 +37,11 @@ export function EventCalendarSelector({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Find the selected calendar or default to first one
-  const currentCalendar = calendars.find(cal => cal.id === selectedCalendarId) || calendars[0]
+  // null/undefined = primary calendar
+  const currentCalendar = selectedCalendarId
+    ? calendars.find(cal => cal.id === selectedCalendarId)
+    : calendars.find(cal => cal.primary)
+    || calendars[0]
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -57,8 +60,9 @@ export function EventCalendarSelector({
     }
   }, [isDropdownOpen])
 
-  const handleCalendarClick = (calendarId: string) => {
-    onCalendarSelect?.(calendarId)
+  const handleCalendarClick = (calendar: CalendarOption) => {
+    // null = primary calendar, only store ID for non-primary
+    onCalendarSelect?.(calendar.primary ? null : calendar.id)
     setIsDropdownOpen(false)
   }
 
@@ -91,8 +95,8 @@ export function EventCalendarSelector({
           }).map((calendar) => (
             <div
               key={calendar.id}
-              className={`calendar-selector-option ${calendar.id === currentCalendar.id ? 'active' : ''}`}
-              onClick={() => handleCalendarClick(calendar.id)}
+              className={`calendar-selector-option ${currentCalendar && calendar.id === currentCalendar.id ? 'active' : ''}`}
+              onClick={() => handleCalendarClick(calendar)}
             >
               <ColoredDot color={calendar.backgroundColor} size={12} />
               <span>{calendar.summary}</span>

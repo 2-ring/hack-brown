@@ -47,26 +47,6 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.app-legal-links {
-  position: fixed;
-  bottom: 4px;
-  right: 8px;
-  display: flex;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-disabled);
-  z-index: 1;
-  opacity: 0.5;
-}
-
-.app-legal-links a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.app-legal-links a:hover {
-  text-decoration: underline;
-}
 
 .content {
   width: 100%;

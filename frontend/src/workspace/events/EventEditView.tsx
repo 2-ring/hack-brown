@@ -109,8 +109,9 @@ export function EventEditView({
     }
   }
 
-  const handleCalendarSelect = (calendarId: string) => {
-    handleChange('calendar', calendarId)
+  const handleCalendarSelect = (calendar: SyncCalendar) => {
+    // null = primary/default calendar, only store ID for non-primary
+    handleChange('calendar', calendar.primary ? null : calendar.id)
   }
 
   const handleFrequencySelect = (freq: RecurrenceFrequency | 'NONE') => {
@@ -201,14 +202,19 @@ export function EventEditView({
                   if (a.primary && !b.primary) return -1
                   if (!a.primary && b.primary) return 1
                   return a.summary.localeCompare(b.summary)
-                }).map((calendar) => (
+                }).map((calendar) => {
+                  // null/undefined calendar = primary (default)
+                  const isSelected = editedEvent.calendar
+                    ? calendar.id === editedEvent.calendar
+                    : !!calendar.primary
+                  return (
                   <button
                     key={calendar.id}
-                    className={`calendar-chip ${calendar.id === editedEvent.calendar ? 'active' : ''}`}
-                    onClick={() => handleCalendarSelect(calendar.id)}
+                    className={`calendar-chip ${isSelected ? 'active' : ''}`}
+                    onClick={() => handleCalendarSelect(calendar)}
                     style={{
-                      backgroundColor: calendar.id === editedEvent.calendar ? calendar.backgroundColor : 'transparent',
-                      color: calendar.id === editedEvent.calendar ? '#ffffff' : 'var(--text-primary)',
+                      backgroundColor: isSelected ? calendar.backgroundColor : 'transparent',
+                      color: isSelected ? '#ffffff' : 'var(--text-primary)',
                       borderColor: calendar.backgroundColor
                     }}
                   >
@@ -218,7 +224,8 @@ export function EventEditView({
                     />
                     <span>{calendar.summary}</span>
                   </button>
-                ))
+                  )
+                })
               )}
             </div>
           </motion.div>

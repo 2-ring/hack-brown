@@ -466,9 +466,10 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
 
 
   const getCalendarColor = (calendarId: string | undefined): string => {
-    if (!calendarId || calendarId === 'primary') {
-      // Default color for primary calendar (Google Calendar blue)
-      return '#1170C5'
+    // null/undefined = primary calendar
+    if (!calendarId) {
+      const primary = calendars.find(cal => cal.primary)
+      return primary?.backgroundColor || '#1170C5'
     }
 
     const calendar = calendars.find(cal => cal.id === calendarId)

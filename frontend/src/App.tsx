@@ -711,11 +711,6 @@ function AppContent() {
           sessionId={currentSession?.id}
         />
       </div>
-      <div className="app-legal-links">
-        <a href="/privacy">Privacy</a>
-        <span>·</span>
-        <a href="/terms">Terms</a>
-      </div>
     </div>
   )
 }
