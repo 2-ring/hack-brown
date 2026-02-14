@@ -36,7 +36,7 @@ import {
   getGuestSession,
   migrateGuestSessions
 } from './api/backend-client'
-import { syncCalendar } from './api/sync'
+import { syncCalendar, getCalendars } from './api/sync'
 import type { SyncCalendar } from './api/sync'
 import { debugLog, debugError } from './config/debug'
 import './App.css'
@@ -237,12 +237,23 @@ function AppContent() {
     }
   }, [user, authLoading, loadGuestSessionHistory])
 
-  // Sync calendar once tokens are stored and ready
-  // Separate from session loading because calendarReady may be set after user
+  // Fetch calendar list from DB immediately when auth is ready (fast, no provider API calls).
+  // Then sync with provider in the background, which may update the list.
   const lastSyncedUserId = useRef<string | null>(null)
   useEffect(() => {
     if (user && calendarReady && user.id !== lastSyncedUserId.current) {
       lastSyncedUserId.current = user.id
+
+      // Immediately fetch calendars from DB (fast — populates calendar selectors right away)
+      getCalendars()
+        .then(calendars => {
+          if (calendars.length > 0) {
+            setSyncedCalendars(calendars)
+          }
+        })
+        .catch(() => {})
+
+      // Then sync with provider (may update calendar list)
       syncCalendar()
         .then(result => {
           if (result.skipped) {

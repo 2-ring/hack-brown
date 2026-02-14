@@ -30,9 +30,6 @@ class PatternDiscoveryConfig:
     MIN_SAMPLE_PER_TIER: float = 0.05   # At least 5% from each tier
     MID_TIER_ALLOCATION_WEIGHT: float = 0.75  # 75% of non-recency allocation
 
-    # Exponential decay for historical sampling
-    EXPONENTIAL_DECAY_RATE: float = 2.0
-
 
 class EvaluationConfig:
     """Similarity evaluation thresholds and defaults."""

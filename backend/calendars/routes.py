@@ -10,7 +10,7 @@ from .service import CalendarService
 from calendars import factory
 from calendars.google import auth as google_auth  # Still needed for legacy token storage endpoint
 from auth.middleware import require_auth
-from database.models import User
+from database.models import User, Calendar
 
 # Create blueprint
 calendar_bp = Blueprint('calendar', __name__)
@@ -650,6 +650,57 @@ def _delete_provider_calendars(user_id: str, provider: str) -> int:
     except Exception as e:
         print(f"Warning: Failed to delete {provider} calendars for user {user_id}: {e}")
         return 0
+
+
+# ============================================================================
+# Calendar List Endpoint
+# ============================================================================
+
+@calendar_bp.route('/calendar/list', methods=['GET'])
+@require_auth
+def list_calendars():
+    """
+    List all calendars for the authenticated user from the database.
+
+    Fast endpoint — reads from the calendars table, no provider API calls.
+    Use this to populate calendar selectors (e.g. event edit screen).
+    Calendars are synced to the DB during /calendar/sync.
+
+    Returns:
+        {
+            "success": true,
+            "calendars": [
+                {
+                    "id": "provider_calendar_id",
+                    "summary": "Calendar Name",
+                    "backgroundColor": "#1170C5",
+                    "foregroundColor": "#ffffff",
+                    "primary": true,
+                    "description": "AI-generated description"
+                }
+            ]
+        }
+    """
+    try:
+        user_id = request.user_id
+
+        db_calendars = Calendar.get_by_user(user_id)
+        calendars = [{
+            'id': cal['provider_cal_id'],
+            'summary': cal['name'],
+            'backgroundColor': cal.get('color', '#1170C5'),
+            'foregroundColor': cal.get('foreground_color'),
+            'primary': cal.get('is_primary', False),
+            'description': cal.get('description'),
+        } for cal in db_calendars]
+
+        return jsonify({
+            'success': True,
+            'calendars': calendars,
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to list calendars: {str(e)}'}), 500
 
 
 # ============================================================================

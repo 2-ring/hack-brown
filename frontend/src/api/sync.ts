@@ -98,6 +98,35 @@ export const syncCalendar = async (): Promise<SyncResult> => {
 };
 
 /**
+ * Fetch the user's calendar list from the database.
+ * Fast endpoint — no provider API calls, just reads stored calendars.
+ * Use this to populate calendar selectors immediately on load.
+ */
+export const getCalendars = async (): Promise<SyncCalendar[]> => {
+  const token = await getAccessToken();
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}/calendar/list`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+  return data.calendars || [];
+};
+
+/**
  * Check if sync is needed based on last sync time.
  *
  * @param lastSyncedAt - ISO timestamp of last sync

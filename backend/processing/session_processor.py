@@ -12,6 +12,7 @@ from database.models import Session as DBSession, Event
 from processors.factory import InputProcessorFactory, InputType
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import EventExtractionAgent
+from extraction.temporal_resolver import resolve_temporal
 from preferences.agent import PersonalizationAgent
 from extraction.title_generator import get_title_generator
 from events.service import EventService
@@ -283,16 +284,21 @@ class SessionProcessor:
                 event_index=idx,
             )
             try:
-                # Agent 2: Extract facts and produce calendar event
+                # Agent 2: Extract facts with NL temporal expressions
                 # Forward context layers from identification (LangExtract
                 # populates these; old pipeline leaves them as None).
-                calendar_event = agent_2.execute(
+                extracted_event = agent_2.execute(
                     event.raw_text,
                     event.description,
                     timezone=timezone,
                     document_context=event.document_context,
                     surrounding_context=event.surrounding_context,
                     input_type=event.input_type,
+                )
+
+                # Deterministic temporal resolution: NL → ISO 8601 via Duckling
+                calendar_event = resolve_temporal(
+                    extracted_event, user_timezone=timezone
                 )
 
                 # Agent 3: Personalize (if patterns available)
@@ -311,9 +317,9 @@ class SessionProcessor:
                         session_id=session_id,
                         summary=calendar_event.summary,
                         start_time=calendar_event.start.dateTime,
-                        end_time=calendar_event.end.dateTime,
+                        end_time=calendar_event.end.dateTime if calendar_event.end else None,
                         start_date=calendar_event.start.date,
-                        end_date=calendar_event.end.date,
+                        end_date=calendar_event.end.date if calendar_event.end else None,
                         is_all_day=calendar_event.start.date is not None,
                         description=calendar_event.description,
                         location=calendar_event.location,

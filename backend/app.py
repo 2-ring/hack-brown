@@ -39,6 +39,7 @@ from events.service import EventService
 # Import agent modules
 from extraction.agents.identification import EventIdentificationAgent
 from extraction.agents.facts import EventExtractionAgent
+from extraction.temporal_resolver import resolve_temporal
 from modification.agent import EventModificationAgent
 from preferences.agent import PersonalizationAgent
 
@@ -453,10 +454,15 @@ def process_input():
             """Process one event through Agent 2 for /api/process."""
             try:
                 try:
-                    calendar_event = active_agent_2.execute(
+                    extracted_event = active_agent_2.execute(
                         event.raw_text,
                         event.description,
                         timezone=timezone
+                    )
+
+                    # Deterministic temporal resolution: NL → ISO 8601 via Duckling
+                    calendar_event = resolve_temporal(
+                        extracted_event, user_timezone=timezone
                     )
 
                     # Log soft warning for long titles (>8 words)
