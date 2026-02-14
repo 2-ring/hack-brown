@@ -86,6 +86,10 @@ PASSES_COMPLEX = 2  # Complex inputs: 2 passes (~93% recall vs ~85%)
 MAX_CHAR_BUFFER = 1500  # Characters per chunk (LangExtract default sweet spot)
 MAX_WORKERS = 10        # Parallel chunk processing
 
+# Context windows passed to Agent 2 alongside each extraction span
+DOCUMENT_CONTEXT_CHARS = 500    # Chars from start of document (captures headers, course names, timezone declarations)
+SURROUNDING_CONTEXT_CHARS = 300  # Chars before/after extraction span (captures section headers, adjacent details)
+
 
 # ============================================================================
 # Few-shot examples

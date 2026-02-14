@@ -26,6 +26,12 @@ class IdentifiedEvent(BaseModel):
         description="'definite' if certain this will happen, 'tentative' if uncertain (contains words like: maybe, possibly, might, perhaps, etc.)"
     )
 
+    # Context fields — populated post-identification (not by LLM).
+    # Carry document-level and local context to Agent 2 for richer extraction.
+    document_context: Optional[str] = None
+    surrounding_context: Optional[str] = None
+    input_type: Optional[str] = None
+
 
 class IdentificationResult(BaseModel):
     """Result of event identification"""

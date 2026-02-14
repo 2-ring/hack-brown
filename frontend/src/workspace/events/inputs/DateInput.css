@@ -23,10 +23,28 @@
   animation: calendarSlideIn 0.15s ease-out;
 }
 
+/* Open above when near bottom of viewport */
+.date-calendar-dropdown.above {
+  top: auto;
+  bottom: calc(100% + 8px);
+  animation-name: calendarSlideInAbove;
+}
+
 @keyframes calendarSlideIn {
   from {
     opacity: 0;
     transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes calendarSlideInAbove {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;

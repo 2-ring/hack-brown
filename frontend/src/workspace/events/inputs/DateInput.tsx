@@ -126,6 +126,7 @@ export function DateInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
   const [viewYear, setViewYear] = useState(selectedDate.getFullYear())
   const [viewMonth, setViewMonth] = useState(selectedDate.getMonth())
   const [isOpen, setIsOpen] = useState(false)
+  const [openAbove, setOpenAbove] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const displayValue = useMemo(() => formatDisplay(value), [value])
@@ -137,6 +138,15 @@ export function DateInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
       setIsOpen(true)
     }
   }, [isEditing, selectedDate])
+
+  // Flip above when not enough space below
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      setOpenAbove(spaceBelow < 340)
+    }
+  }, [isOpen])
 
   // Click-outside to close
   useEffect(() => {
@@ -197,7 +207,7 @@ export function DateInputDesktop({ value, onChange, onFocus, onBlur, isEditing, 
       </span>
 
       {isOpen && (
-        <div className="date-calendar-dropdown">
+        <div className={`date-calendar-dropdown ${openAbove ? 'above' : ''}`}>
           <CalendarGrid
             value={value}
             viewYear={viewYear}

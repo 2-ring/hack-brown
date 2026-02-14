@@ -5,13 +5,23 @@ Uses Instructor for automatic Pydantic validation retries.
 """
 
 import time as _time
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from core.base_agent import BaseAgent
 from extraction.models import CalendarEvent
 from config.posthog import capture_llm_generation
+
+# Human-readable labels for input types, shown in user message
+_INPUT_TYPE_LABELS = {
+    'text': 'text',
+    'pdf': 'PDF document',
+    'audio': 'audio transcription',
+    'email': 'email',
+    'image': 'image',
+    'document': 'document',
+}
 
 
 class EventExtractionAgent(BaseAgent):
@@ -45,7 +55,10 @@ class EventExtractionAgent(BaseAgent):
         self,
         raw_text_list: List[str],
         description: str,
-        timezone: str = 'America/New_York'
+        timezone: str = 'America/New_York',
+        document_context: Optional[str] = None,
+        surrounding_context: Optional[str] = None,
+        input_type: Optional[str] = None,
     ) -> CalendarEvent:
         """
         Extract event from raw text and produce a calendar event.
@@ -54,6 +67,9 @@ class EventExtractionAgent(BaseAgent):
             raw_text_list: Text chunks for the event (from Agent 1)
             description: Identifying description of the event (from Agent 1)
             timezone: User's IANA timezone
+            document_context: First ~500 chars of source document (headers, course codes, timezone declarations)
+            surrounding_context: Text around the extraction span (section headers, adjacent details)
+            input_type: Source type ('text', 'pdf', 'audio', 'email', 'document')
 
         Returns:
             CalendarEvent ready for calendar API (or personalization)
@@ -69,13 +85,68 @@ class EventExtractionAgent(BaseAgent):
             timezone=timezone
         )
 
-        user_message = (
-            f"Event description: {description}\n\n"
-            f"Event text: {combined_text}\n\n"
-            f"Produce a complete calendar event."
+        user_message = self._build_user_message(
+            event_text=combined_text,
+            description=description,
+            document_context=document_context,
+            surrounding_context=surrounding_context,
+            input_type=input_type,
         )
 
         return self._invoke_instructor(system_prompt, user_message)
+
+    def _build_user_message(
+        self,
+        event_text: str,
+        description: str,
+        document_context: Optional[str] = None,
+        surrounding_context: Optional[str] = None,
+        input_type: Optional[str] = None,
+    ) -> str:
+        """
+        Build the structured user message with context layers.
+
+        Includes only the layers that are present and add information
+        beyond the event text itself.
+        """
+        parts = []
+
+        # Layer 1: Document context (global — course codes, timezones, shared locations)
+        if document_context:
+            source_label = _INPUT_TYPE_LABELS.get(input_type, input_type or 'text')
+            parts.append(
+                f"[DOCUMENT CONTEXT]\n"
+                f"Source type: {source_label}\n"
+                f"---\n"
+                f"{document_context}\n"
+                f"[/DOCUMENT CONTEXT]"
+            )
+
+        # Layer 2: Surrounding context (local — section headers, adjacent sentences)
+        if surrounding_context:
+            parts.append(
+                f"[SURROUNDING CONTEXT]\n"
+                f"{surrounding_context}\n"
+                f"[/SURROUNDING CONTEXT]"
+            )
+
+        # Layer 3: Event text (source of truth)
+        parts.append(
+            f"[EVENT TEXT]\n"
+            f"{event_text}\n"
+            f"[/EVENT TEXT]"
+        )
+
+        # Layer 4: Event description (Agent 1's interpretation — guide only)
+        parts.append(
+            f"[EVENT DESCRIPTION]\n"
+            f"{description}\n"
+            f"[/EVENT DESCRIPTION]"
+        )
+
+        parts.append("Produce a complete calendar event.")
+
+        return "\n\n".join(parts)
 
     def _invoke_instructor(self, system_prompt: str, user_message: str) -> CalendarEvent:
         """Call Instructor with provider-appropriate API and capture to PostHog."""

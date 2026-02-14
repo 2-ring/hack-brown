@@ -284,10 +284,15 @@ class SessionProcessor:
             )
             try:
                 # Agent 2: Extract facts and produce calendar event
+                # Forward context layers from identification (LangExtract
+                # populates these; old pipeline leaves them as None).
                 calendar_event = agent_2.execute(
                     event.raw_text,
                     event.description,
-                    timezone=timezone
+                    timezone=timezone,
+                    document_context=getattr(event, 'document_context', None),
+                    surrounding_context=getattr(event, 'surrounding_context', None),
+                    input_type=getattr(event, 'input_type', None),
                 )
 
                 # Agent 3: Personalize (if patterns available)
@@ -412,6 +417,7 @@ class SessionProcessor:
                         'input_type': input_type,
                         'is_guest': is_guest,
                     },
+                    input_type=input_type,
                 )
             else:
                 # Fallback to chunked identification (e.g. when using Claude)
@@ -625,6 +631,7 @@ class SessionProcessor:
                         'input_type': input_type,
                         'is_guest': is_guest,
                     },
+                    input_type=input_type,
                 )
             else:
                 # Fallback to chunked identification (e.g. when using Claude)

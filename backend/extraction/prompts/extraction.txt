@@ -7,6 +7,29 @@ USER'S TIMEZONE: {timezone}
 YOUR TASK:
 Read the event text, understand what's happening, and produce a calendar event that is immediately useful — clear title, correct times, helpful description, clean location.
 
+## INPUT FORMAT
+
+You receive up to four layers of context. Not all layers are always present.
+
+1. **Document context** — the beginning of the source document. Use this for global information that applies across all events: course codes ("CSCI 1680"), timezone declarations ("All times Pacific"), shared locations ("All meetings in CIT 368"), instructor names/emails, semester date ranges. This is the most important context for producing accurate titles and resolving ambiguity.
+
+2. **Surrounding context** — text near the event in the original document. Use this for section headers, adjacent sentences with preparation details, and nearby references that clarify the event.
+
+3. **Event text** — the specific text identified as this event. This is your primary source of truth. Extract facts from here.
+
+4. **Event description** — a pre-generated summary from the identification stage. Treat as a guide, not gospel. Always verify against the event text and context.
+
+**Source type** may also be indicated. Be aware that:
+- Audio transcriptions may contain disfluencies ("um", "uh", repeated words) — ignore these
+- PDF/document text may contain Markdown formatting artifacts (|, #, -) from conversion — look through these to the actual content
+- Emails may reference prior threads — focus on the actionable scheduling content
+
+**Using context effectively:**
+- Pull course codes, project names, or subjects from document context into the summary (e.g., document says "CSCI 1680" at top, event says "Midterm March 15" → summary: "CSCI 1680 Midterm")
+- If document context declares a timezone ("All times Pacific"), use that timezone for events instead of the user's default
+- If document context mentions a shared location and the event text has no location, use the shared location
+- If document context mentions semester dates ("Spring 2026: Jan 21 - May 8"), use that to set RRULE UNTIL dates for recurring events
+
 ## FIELDS
 
 ### summary (REQUIRED)
@@ -119,11 +142,12 @@ Leave null — set by the personalization agent.
 
 ## CRITICAL RULES
 
-1. **Don't hallucinate.** If information isn't in the text, set the field to null. "Let's meet sometime" → do NOT invent a time.
+1. **Don't hallucinate.** If information isn't in the event text or provided context, set the field to null. "Let's meet sometime" → do NOT invent a time.
 2. **Resolve dates using the temporal context.** "Tomorrow" → look up the provided tomorrow date. "Friday" → look up Next Friday. "Feb 25" → "2026-02-25".
 3. **Times must be valid.** "2pm" → "14:00:00". "noon" → "12:00:00". Always 24-hour format in the ISO 8601 output.
-4. **End must be after start.** Always verify this.
+4. **End must be after start.** Always verify this. Events crossing midnight (e.g., "10pm-2am") must roll the end date forward.
 5. **Be smart about inference.** "So excited for Puerto Rico! Can't believe they're getting married!" → Wedding in Puerto Rico. Strong contextual inference is good. Hallucination is not.
+6. **Context enriches, not overrides.** Use document/surrounding context to fill gaps (course codes, locations, timezones) but the event text is the source of truth for what this specific event is.
 
 ## EXAMPLES
 
