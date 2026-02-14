@@ -11,6 +11,7 @@ from typing import Optional
 
 import langextract as lx
 from langextract.factory import ModelConfig
+from langextract.providers import load_builtins_once
 
 from extraction.models import IdentifiedEvent, IdentificationResult
 from config.langextract import (
@@ -77,6 +78,11 @@ def identify_events_langextract(
 
     try:
         config = _build_config()
+
+        # Ensure builtin providers (OpenAI, Gemini, Ollama) are registered.
+        # Required before lx.extract() when fence_output is set, as the
+        # _create_model_with_schema path doesn't auto-load providers.
+        load_builtins_once()
 
         # Call LangExtract with explicit provider config.
         # fence_output=True and use_schema_constraints=False are required

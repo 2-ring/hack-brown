@@ -61,6 +61,8 @@ from processing.session_processor import SessionProcessor
 from config.processing import ProcessingConfig
 from processing.parallel import process_events_parallel, EventProcessingResult
 from processing.chunked_identification import identify_events_chunked
+from extraction.langextract_identifier import identify_events_langextract
+from config.langextract import PASSES_SIMPLE, PASSES_COMPLEX
 from config.posthog import init_posthog, set_tracking_context, flush_posthog, capture_agent_error
 
 # Import rate limit configuration
@@ -403,18 +405,31 @@ def process_input():
 
     # Step 3: Run full agent pipeline with validation error handling
     try:
-        # Agent 1: Event Identification (with chunking for large text inputs)
+        # Agent 1: Event Identification
         try:
-            identification_result = identify_events_chunked(
-                agent=active_agent_1,
-                raw_input=raw_input,
-                metadata=metadata,
-                requires_vision=requires_vision,
-                tracking_context={
-                    'distinct_id': locals().get('user_id', 'guest'),
-                    'trace_id': f"process-{uuid.uuid4().hex[:8]}",
-                },
-            )
+            if requires_vision:
+                # Image inputs: use old Agent 1 with vision (LangExtract is text-only)
+                identification_result = identify_events_chunked(
+                    agent=active_agent_1,
+                    raw_input=raw_input,
+                    metadata=metadata,
+                    requires_vision=True,
+                    tracking_context={
+                        'distinct_id': locals().get('user_id', 'guest'),
+                        'trace_id': f"process-{uuid.uuid4().hex[:8]}",
+                    },
+                )
+            else:
+                # Text inputs: use LangExtract
+                passes = PASSES_COMPLEX if complexity.level == ComplexityLevel.COMPLEX else PASSES_SIMPLE
+                identification_result = identify_events_langextract(
+                    text=raw_input,
+                    extraction_passes=passes,
+                    tracking_context={
+                        'distinct_id': locals().get('user_id', 'guest'),
+                        'trace_id': f"process-{uuid.uuid4().hex[:8]}",
+                    },
+                )
         except ValidationError as e:
             logger.error(f"Validation error in Agent 1 (Identification): {e}")
             capture_agent_error("identification", e, {'error_stage': 'validation'})

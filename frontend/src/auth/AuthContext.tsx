@@ -164,8 +164,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Signal that calendar tokens are now stored and ready
             setCalendarReady(true);
           })();
-        } else {
-          // No token storage needed (session restore via listener) — already ready
+        } else if (!syncInitiatedRef.current) {
+          // No token storage needed (session restore via listener) — already ready.
+          // Only set calendarReady if no background sync is in-flight. When
+          // syncInitiatedRef is true, the background async above will set
+          // calendarReady once token storage completes — don't race it.
           setCalendarReady(true);
         }
       } else {

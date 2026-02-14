@@ -46,7 +46,7 @@ interface EventEditViewProps {
   getCalendarColor: (calendarId: string | undefined) => string
 }
 
-type EditableField = 'summary' | 'location' | 'description' | 'startDate' | 'startTime' | 'endDate' | 'endTime' | 'timezone' | 'repeat'
+type EditableField = 'summary' | 'location' | 'description' | 'startDate' | 'startTime' | 'endDate' | 'endTime' | 'timezone' | 'repeat' | 'recurrenceEndDate'
 
 export function EventEditView({
   event,
@@ -451,12 +451,22 @@ export function EventEditView({
 
                           {recurrenceConfig.endType === 'until' && (
                             <div className="recurrence-end-value">
-                              <input
-                                type="date"
-                                className="recurrence-date-input"
-                                value={recurrenceConfig.endDate || ''}
-                                onChange={(e) => updateRecurrence({ endDate: e.target.value })}
-                              />
+                              <div className="editable-content-wrapper" onClick={(e) => handleEditClick('recurrenceEndDate', e)}>
+                                <DateInput
+                                  value={recurrenceConfig.endDate ? new Date(recurrenceConfig.endDate + 'T00:00:00').toISOString() : new Date().toISOString()}
+                                  onChange={(isoString) => {
+                                    const d = new Date(isoString)
+                                    const yyyy = d.getFullYear()
+                                    const mm = String(d.getMonth() + 1).padStart(2, '0')
+                                    const dd = String(d.getDate()).padStart(2, '0')
+                                    updateRecurrence({ endDate: `${yyyy}-${mm}-${dd}` })
+                                  }}
+                                  onFocus={() => setEditingField('recurrenceEndDate')}
+                                  onBlur={handleEditBlur}
+                                  isEditing={editingField === 'recurrenceEndDate'}
+                                  className="date-text"
+                                />
+                              </div>
                             </div>
                           )}
 

@@ -524,8 +524,8 @@ def disconnect_calendar_provider():
     """
     Disconnect a calendar provider.
 
-    Removes calendar tokens and updates usage array.
-    If disconnecting primary provider, clears primary_calendar_provider.
+    Revokes OAuth token with provider, removes tokens, deletes synced events
+    and calendar patterns for that provider.
 
     Expects JSON body:
     {
@@ -555,6 +555,15 @@ def disconnect_calendar_provider():
         if not conn:
             return jsonify({'error': f'Provider {provider} not connected'}), 400
 
+        # Revoke OAuth token with the provider
+        _revoke_provider_token(user_id, provider)
+
+        # Delete synced events from this provider
+        _delete_provider_events(user_id, provider)
+
+        # Delete calendar patterns for this provider
+        _delete_provider_calendars(user_id, provider)
+
         # Remove 'calendar' from usage
         usage = conn.get('usage', [])
         if 'calendar' in usage:
@@ -582,6 +591,65 @@ def disconnect_calendar_provider():
 
     except Exception as e:
         return jsonify({'error': f'Failed to disconnect provider: {str(e)}'}), 500
+
+
+def _revoke_provider_token(user_id: str, provider: str) -> None:
+    """Revoke OAuth token with the provider's API. Best-effort."""
+    try:
+        tokens = User.get_provider_tokens(user_id, provider)
+        if not tokens:
+            return
+
+        access_token = tokens.get('access_token')
+        if not access_token:
+            return
+
+        if provider == 'google':
+            import requests
+            requests.post(
+                'https://oauth2.googleapis.com/revoke',
+                params={'token': access_token},
+                headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                timeout=5,
+            )
+        elif provider == 'microsoft':
+            # Microsoft Graph does not support programmatic token revocation
+            # Tokens will expire naturally; user can revoke at myaccount.microsoft.com
+            pass
+        elif provider == 'apple':
+            # Apple app-specific passwords cannot be revoked programmatically
+            # User must revoke at appleid.apple.com
+            pass
+    except Exception as e:
+        print(f"Warning: Failed to revoke {provider} token for user {user_id}: {e}")
+
+
+def _delete_provider_events(user_id: str, provider: str) -> int:
+    """Hard-delete all synced events from a specific provider."""
+    try:
+        from database.supabase_client import get_supabase
+        supabase = get_supabase()
+        response = supabase.table("events").delete()\
+            .eq("user_id", user_id)\
+            .eq("provider", provider).execute()
+        return len(response.data)
+    except Exception as e:
+        print(f"Warning: Failed to delete {provider} events for user {user_id}: {e}")
+        return 0
+
+
+def _delete_provider_calendars(user_id: str, provider: str) -> int:
+    """Delete calendar patterns for a specific provider."""
+    try:
+        from database.supabase_client import get_supabase
+        supabase = get_supabase()
+        response = supabase.table("calendars").delete()\
+            .eq("user_id", user_id)\
+            .eq("provider", provider).execute()
+        return len(response.data)
+    except Exception as e:
+        print(f"Warning: Failed to delete {provider} calendars for user {user_id}: {e}")
+        return 0
 
 
 # ============================================================================

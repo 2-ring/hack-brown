@@ -493,8 +493,12 @@ class User:
         if photo_url:
             connection["photo_url"] = photo_url
 
-        # Update or append
+        # Update or append (preserve encrypted_tokens and sync state from existing)
         if existing_idx is not None:
+            existing = connections[existing_idx]
+            for key in ('encrypted_tokens', 'sync_token', 'last_synced_at'):
+                if key in existing and key not in connection:
+                    connection[key] = existing[key]
             connections[existing_idx] = connection
         else:
             connections.append(connection)

@@ -7,7 +7,7 @@ Separate from calendar connections - this is purely for authentication.
 from flask import Blueprint, jsonify, request
 from typing import Dict, Any
 
-from database.models import User, Session as DBSession
+from database.models import User, Session as DBSession, Event, Calendar
 from auth.middleware import require_auth
 from database.supabase_client import get_supabase
 
@@ -494,3 +494,82 @@ def check_apple_calendar_status():
             'valid': False,
             'message': str(e)
         })
+
+
+# ============================================================================
+# Account Deletion
+# ============================================================================
+
+@auth_bp.route('/auth/delete-account', methods=['DELETE'])
+@require_auth
+def delete_account():
+    """
+    Permanently delete a user's account and all associated data.
+
+    This performs a full cascade deletion:
+    1. Revokes OAuth tokens with all connected providers
+    2. Deletes all sessions (cascading to events and uploaded files)
+    3. Deletes any remaining events (synced provider events)
+    4. Deletes calendar patterns
+    5. Deletes all uploaded files from storage
+    6. Deletes the user row from the users table
+    7. Deletes the user from Supabase Auth
+
+    Returns:
+        JSON with success message
+    """
+    user_id = request.user_id
+
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # 1. Revoke OAuth tokens with all connected providers
+        from calendars.routes import _revoke_provider_token
+        connections = user.get('provider_connections', [])
+        for conn in connections:
+            provider = conn.get('provider')
+            if provider:
+                _revoke_provider_token(user_id, provider)
+
+        # 2. Delete all sessions (cascades to linked events + uploaded files)
+        supabase = get_supabase()
+        all_sessions = supabase.table("sessions").select("id")\
+            .eq("user_id", user_id).execute()
+        for session in all_sessions.data:
+            DBSession.delete(session['id'])
+
+        # 3. Delete any remaining events (synced provider events not linked to sessions)
+        supabase.table("events").delete().eq("user_id", user_id).execute()
+
+        # 4. Delete calendar patterns
+        Calendar.delete_by_user(user_id)
+
+        # 5. Delete all uploaded files from storage
+        try:
+            from storage.file_handler import FileStorage
+            user_files = FileStorage.list_user_files(user_id)
+            for file_info in user_files:
+                file_name = file_info.get('name', '')
+                if file_name:
+                    FileStorage.delete_file(f"{user_id}/{file_name}")
+        except Exception as e:
+            print(f"Warning: Failed to clean up storage files for user {user_id}: {e}")
+
+        # 6. Delete the user row from the users table
+        supabase.table("users").delete().eq("id", user_id).execute()
+
+        # 7. Delete from Supabase Auth
+        try:
+            supabase.auth.admin.delete_user(user_id)
+        except Exception as e:
+            print(f"Warning: Failed to delete Supabase Auth user {user_id}: {e}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Account and all associated data deleted successfully'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete account: {str(e)}'}), 500
