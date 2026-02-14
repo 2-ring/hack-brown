@@ -16,6 +16,12 @@ Calendar integrations: Google, Microsoft Outlook, Apple (CalDAV).
 
 ## Development
 
+Duckling (temporal parsing service, required):
+
+```
+docker-compose up -d duckling
+```
+
 Backend (port 5000):
 
 ```

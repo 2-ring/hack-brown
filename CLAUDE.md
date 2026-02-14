@@ -11,7 +11,7 @@ Production: dropcal.ai (frontend) / api.dropcal.ai (backend)
 The core is a 3-agent LangChain pipeline, plus a separate modification agent for user edits. Each agent inherits from `BaseAgent` (`backend/core/base_agent.py`), uses `.with_structured_output(PydanticModel)` for typed returns, and loads prompts from a `prompts/` directory relative to its own file.
 
 ```
-Input → Agent 1 (Identification) → Agent 2 (Extraction) → Agent 3 (Preferences, conditional)
+Input → Agent 1 (Identification) → Agent 2 (Extraction) → Temporal Resolver → Agent 3 (Preferences, conditional)
                                          ↕ parallel per event
 
 Modification Agent ← user edits (separate from pipeline)
@@ -20,7 +20,8 @@ Modification Agent ← user edits (separate from pipeline)
 | Agent | File | Input → Output | Job |
 |-------|------|---------------|-----|
 | 1 - Identification | `extraction/agents/identification.py` | raw text/image → `IdentificationResult` | Find all events in input |
-| 2 - Extraction | `extraction/agents/facts.py` | per-event raw_text → `CalendarEvent` | Extract facts and format for calendar API |
+| 2 - Extraction | `extraction/agents/facts.py` | per-event raw_text → `ExtractedEvent` (NL temporal) | Extract facts as natural language (no date math) |
+| Temporal Resolver | `extraction/temporal_resolver.py` | `ExtractedEvent` → `CalendarEvent` (ISO 8601) | Deterministic date resolution via Duckling |
 | 3 - Preferences | `preferences/agent.py` | `CalendarEvent` + patterns → personalized `CalendarEvent` | Apply learned preferences |
 | Modification | `modification/agent.py` | user edit request → modified event | Handle user corrections (not part of main pipeline) |
 
@@ -70,6 +71,7 @@ Key patterns:
 
 ```bash
 # Backend
+docker-compose up -d duckling                  # Start Duckling (required for temporal parsing)
 cd backend && python app.py                    # Dev server (port 5000)
 cd backend && gunicorn wsgi:app -b 0.0.0.0:8000  # Production
 cd backend && pytest tests/                    # Run tests
