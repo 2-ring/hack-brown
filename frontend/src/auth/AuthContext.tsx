@@ -31,11 +31,14 @@ export interface UserPreferences {
   conflictBehavior?: 'warn' | 'skip' | 'add';
 }
 
+type PlanType = 'free' | 'pro';
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
   calendarReady: boolean;
+  plan: PlanType;
   preferences: UserPreferences;
   setPreferences: React.Dispatch<React.SetStateAction<UserPreferences>>;
   primaryCalendarProvider: string | null;
@@ -55,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState<PlanType>('free');
   const [preferences, setPreferences] = useState<UserPreferences>({});
   const [primaryCalendarProvider, setPrimaryCalendarProvider] = useState<string | null>(null);
   const [calendarReady, setCalendarReady] = useState(false);
@@ -89,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             if (profile.user?.primary_calendar_provider) {
               setPrimaryCalendarProvider(profile.user.primary_calendar_provider);
+            }
+            if (profile.user?.plan) {
+              setPlan(profile.user.plan);
             }
           } catch {
             // Preferences will use defaults
@@ -184,6 +191,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (profile.user?.primary_calendar_provider) {
                 setPrimaryCalendarProvider(profile.user.primary_calendar_provider);
               }
+              if (profile.user?.plan) {
+                setPlan(profile.user.plan);
+              }
             } catch (error) {
               console.error('Failed to load user profile:', error);
             }
@@ -200,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUser(null);
+        setPlan('free');
         setPreferences({});
         setPrimaryCalendarProvider(null);
         setCalendarReady(false);
@@ -245,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 2. Clear all local auth state
       setSession(null);
       setUser(null);
+      setPlan('free');
       setPreferences({});
       setPrimaryCalendarProvider(null);
       setCalendarReady(false);
@@ -272,6 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     calendarReady,
+    plan,
     preferences,
     setPreferences,
     primaryCalendarProvider,

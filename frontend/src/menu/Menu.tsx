@@ -33,35 +33,39 @@ export function Menu({
   isLoadingSessions = false,
 }: MenuProps) {
   const { themeMode } = useTheme()
-  const { primaryCalendarProvider } = useAuth()
+  const { user, primaryCalendarProvider } = useAuth()
 
   // Select brand images based on theme
   const wordImage = themeMode === 'dark' ? wordImageDark : wordImageLight
 
-  // Use provider from auth context (already fetched during sign-in)
-  const primaryProvider = primaryCalendarProvider as 'google' | 'microsoft' | 'apple' | null
+  // Derive effective provider: prefer explicit primary, fall back to auth provider
+  const rawAuthProvider = user?.app_metadata?.provider
+  const authProvider = rawAuthProvider === 'azure' ? 'microsoft' : rawAuthProvider
+  const primaryProvider = (primaryCalendarProvider || authProvider) as 'google' | 'microsoft' | 'apple' | null
 
   // Get calendar URL based on provider
   const getCalendarUrl = () => {
     switch (primaryProvider) {
-      case 'google':
-        return 'https://calendar.google.com'
       case 'microsoft':
         return 'https://outlook.office.com/calendar'
       case 'apple':
         return 'https://www.icloud.com/calendar'
+      case 'google':
+      default:
+        return 'https://calendar.google.com'
     }
   }
 
   // Get calendar icon based on provider
   const getCalendarIcon = () => {
     switch (primaryProvider) {
-      case 'google':
-        return <GoogleLogo size={20} weight="duotone" />
       case 'microsoft':
         return <MicrosoftOutlookLogo size={20} weight="duotone" />
       case 'apple':
         return <AppleLogo size={20} weight="duotone" />
+      case 'google':
+      default:
+        return <GoogleLogo size={20} weight="duotone" />
     }
   }
 

@@ -219,6 +219,7 @@ export async function syncUserProfile(): Promise<{
     }>;
     primary_auth_provider: string | null;
     primary_calendar_provider: string | null;
+    plan: 'free' | 'pro';
   };
   is_new_user: boolean;
   provider: string;
@@ -256,6 +257,8 @@ export async function getUserProfile(): Promise<{
     }>;
     primary_auth_provider: string | null;
     primary_calendar_provider: string | null;
+    plan: 'free' | 'pro';
+    stripe_customer_id: string | null;
     preferences: any;
     created_at: string;
     updated_at: string;
@@ -640,6 +643,58 @@ export async function deleteAccount(): Promise<{
 
   const response = await fetch(`${API_URL}/auth/delete-account`, {
     method: 'DELETE',
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+// ============================================================================
+// Billing & Subscription
+// ============================================================================
+
+/**
+ * Create a Stripe Checkout session to upgrade to Pro.
+ */
+export async function createCheckoutSession(): Promise<{ checkout_url: string }> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/billing/create-checkout-session`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({}),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Create a Stripe Customer Portal session to manage subscription.
+ */
+export async function createPortalSession(): Promise<{ portal_url: string }> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/billing/create-portal-session`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({}),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Get user's billing/plan status.
+ */
+export async function getBillingStatus(): Promise<{
+  plan: 'free' | 'pro';
+  stripe_customer_id: string | null;
+  subscription_status: string | null;
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/billing/status`, {
+    method: 'GET',
     headers,
   });
 

@@ -435,6 +435,74 @@ class User:
         return response.data[0]
 
     # ========================================================================
+    # Plan & Billing Methods
+    # ========================================================================
+
+    @staticmethod
+    def update_plan(
+        user_id: str,
+        plan: str,
+        stripe_subscription_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Update user's plan and optionally their Stripe subscription ID.
+
+        Args:
+            user_id: User's UUID
+            plan: Plan tier ('free' or 'pro')
+            stripe_subscription_id: Stripe subscription ID (optional, cleared on downgrade)
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+        data = {"plan": plan}
+        if stripe_subscription_id is not None:
+            data["stripe_subscription_id"] = stripe_subscription_id
+        elif plan == "free":
+            data["stripe_subscription_id"] = None
+        response = supabase.table("users").update(data).eq("id", user_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def update_stripe_customer_id(
+        user_id: str,
+        stripe_customer_id: str
+    ) -> Dict[str, Any]:
+        """
+        Store the Stripe customer ID for a user.
+
+        Args:
+            user_id: User's UUID
+            stripe_customer_id: Stripe customer ID (cus_...)
+
+        Returns:
+            Dict containing updated user data
+        """
+        supabase = get_supabase()
+        response = supabase.table("users").update({
+            "stripe_customer_id": stripe_customer_id
+        }).eq("id", user_id).execute()
+        return response.data[0]
+
+    @staticmethod
+    def get_by_stripe_customer_id(stripe_customer_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Look up user by their Stripe customer ID.
+
+        Args:
+            stripe_customer_id: Stripe customer ID (cus_...)
+
+        Returns:
+            Dict containing user data or None if not found
+        """
+        supabase = get_supabase()
+        response = supabase.table("users").select("*").eq(
+            "stripe_customer_id", stripe_customer_id
+        ).execute()
+        return response.data[0] if response.data else None
+
+    # ========================================================================
     # Unified Provider Connection Methods (New Architecture)
     # ========================================================================
 

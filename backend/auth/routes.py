@@ -148,7 +148,8 @@ def sync_user_profile():
                 'photo_url': user['photo_url'],
                 'provider_connections': user.get('provider_connections', []),
                 'primary_auth_provider': user.get('primary_auth_provider'),
-                'primary_calendar_provider': user.get('primary_calendar_provider')
+                'primary_calendar_provider': user.get('primary_calendar_provider'),
+                'plan': user.get('plan', 'free')
             },
             'is_new_user': is_new_user,
             'provider': provider,
@@ -198,6 +199,8 @@ def get_user_profile():
                 'provider_connections': user.get('provider_connections', []),
                 'primary_auth_provider': user.get('primary_auth_provider'),
                 'primary_calendar_provider': user.get('primary_calendar_provider'),
+                'plan': user.get('plan', 'free'),
+                'stripe_customer_id': user.get('stripe_customer_id'),
                 'preferences': user.get('preferences', {}),
                 'created_at': user.get('created_at'),
                 'updated_at': user.get('updated_at')
@@ -531,6 +534,14 @@ def delete_account():
         user = User.get_by_id(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
+
+        # 0. Cancel Stripe subscription if exists
+        if user.get('stripe_subscription_id'):
+            try:
+                import stripe
+                stripe.Subscription.cancel(user['stripe_subscription_id'])
+            except Exception as e:
+                print(f"Warning: Failed to cancel Stripe subscription for user {user_id}: {e}")
 
         # 1. Revoke OAuth tokens with all connected providers
         from calendars.routes import _revoke_provider_token

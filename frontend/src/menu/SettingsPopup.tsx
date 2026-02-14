@@ -54,7 +54,7 @@ type ViewMode = 'main' | 'integrations' | 'apple-connect' | 'account';
 
 export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoading = false, triggerRef }: SettingsPopupProps) {
   const navigate = useNavigate();
-  const { signOut, signIn, user, preferences, setPreferences, setPrimaryCalendarProviderLocal } = useAuth();
+  const { signOut, signIn, user, plan, preferences, setPreferences, setPrimaryCalendarProviderLocal } = useAuth();
 
   // Determine the user's auth provider (the one they signed in with)
   const rawAuthProvider = user?.app_metadata?.provider;
@@ -316,7 +316,7 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
                 )}
                 <div className="settings-popup-user-info">
                   <span className="settings-popup-user-name">{userName}</span>
-                  <span className="settings-popup-user-plan">Pro plan</span>
+                  <span className="settings-popup-user-plan">{plan === 'pro' ? 'Pro plan' : 'Free plan'}</span>
                 </div>
               </div>
               <div className="settings-popup-email">{userEmail}</div>
@@ -395,7 +395,7 @@ export function SettingsPopup({ onClose, userEmail, userName, userAvatar, isLoad
             <>
               <button className="settings-popup-item" onClick={handleUpgradePlan}>
                 <CrownSimple size={20} weight="duotone" />
-                <span>Upgrade plan</span>
+                <span>{plan === 'pro' ? 'Manage subscription' : 'Upgrade plan'}</span>
               </button>
 
               <button

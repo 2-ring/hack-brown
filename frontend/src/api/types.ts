@@ -2,11 +2,15 @@
  * TypeScript types for backend API responses.
  */
 
+export type PlanType = 'free' | 'pro';
+
 export interface User {
   id: string;
   email: string;
   display_name?: string;
   photo_url?: string;
+  plan?: PlanType;
+  stripe_customer_id?: string;
   preferences?: {
     defaultCalendarId?: string;
     timezone?: string;

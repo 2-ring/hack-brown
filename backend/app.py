@@ -51,6 +51,7 @@ from calendars.routes import calendar_bp
 from auth.routes import auth_bp
 from sessions.routes import sessions_bp
 from inbound_email.routes import inbound_email_bp
+from billing.routes import billing_bp
 
 # Import auth middleware
 from auth.middleware import require_auth
@@ -73,6 +74,10 @@ load_dotenv()
 
 # Initialize PostHog analytics
 init_posthog()
+
+# Initialize Stripe products/prices (idempotent)
+from billing.stripe_setup import ensure_stripe_products
+ensure_stripe_products()
 
 app = Flask(__name__)
 
@@ -127,6 +132,10 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(calendar_bp)
 app.register_blueprint(sessions_bp)
 app.register_blueprint(inbound_email_bp)
+app.register_blueprint(billing_bp)
+
+# Exempt Stripe webhook from rate limiting (called server-to-server by Stripe)
+limiter.exempt(billing_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
@@ -1014,11 +1023,15 @@ def create_text_session():
         if not input_text:
             return jsonify({'error': 'No text provided'}), 400
 
-        if len(input_text) > ProcessingConfig.MAX_TEXT_INPUT_LENGTH:
+        # Plan-based text input limit
+        from auth.plan_limits import get_user_limits
+        limits = get_user_limits(user_id)
+        if len(input_text) > limits.max_text_input_length:
             return jsonify({
-                'error': ProcessingConfig.get_text_limit_error_message(len(input_text)),
-                'error_type': 'input_too_large'
-            }), 413
+                'error': 'You\'ve hit a limit on your current plan. Upgrade to Pro to keep creating!',
+                'error_type': 'plan_limit',
+                'upgrade_url': '/plans'
+            }), 403
 
         # Create session in database
         session = DBSession.create(
@@ -1077,6 +1090,28 @@ def upload_file_endpoint():
             return jsonify({
                 'error': f'Unsupported file type: {file.content_type} ({file.filename})'
             }), 400
+
+        # Plan-based feature checks for file types
+        from auth.plan_limits import get_user_limits
+        limits = get_user_limits(user_id)
+        if file_type == 'audio' and not limits.audio_input_enabled:
+            return jsonify({
+                'error': 'You\'ve hit a limit on your current plan. Upgrade to Pro to keep creating!',
+                'error_type': 'plan_limit',
+                'upgrade_url': '/plans'
+            }), 403
+        if file_type == 'pdf' and not limits.pdf_input_enabled:
+            return jsonify({
+                'error': 'You\'ve hit a limit on your current plan. Upgrade to Pro to keep creating!',
+                'error_type': 'plan_limit',
+                'upgrade_url': '/plans'
+            }), 403
+        if file_type == 'document' and not limits.document_input_enabled:
+            return jsonify({
+                'error': 'You\'ve hit a limit on your current plan. Upgrade to Pro to keep creating!',
+                'error_type': 'plan_limit',
+                'upgrade_url': '/plans'
+            }), 403
 
         # Upload to Supabase Storage
         file_path = FileStorage.upload_file(

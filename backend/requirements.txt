@@ -41,3 +41,5 @@ python-dateutil==2.8.2
 instructor>=1.0.0
 # Analytics & LLM Observability
 posthog[langchain]>=4.0.0
+# Billing
+stripe>=8.0.0
