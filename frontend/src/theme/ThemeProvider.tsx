@@ -4,6 +4,8 @@ import { lightTheme } from './lightTheme';
 import { darkTheme } from './darkTheme';
 import { useAuth } from '../auth/AuthContext';
 import { updateUserPreferences } from '../api/backend-client';
+import { isNativePlatform } from '../utils/platform';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 interface ThemeContextType {
   theme: Theme;
@@ -95,6 +97,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     // Add data attribute to body for theme-specific styling
     document.body.setAttribute('data-theme', resolvedTheme);
+
+    // Sync native status bar style with theme
+    if (isNativePlatform()) {
+      StatusBar.setStyle({
+        style: resolvedTheme === 'dark' ? Style.Dark : Style.Light,
+      }).catch(() => {});
+    }
   }, [theme, resolvedTheme]);
 
   return (

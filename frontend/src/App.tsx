@@ -12,6 +12,8 @@ import { useAuth } from './auth/AuthContext'
 import { GuestSessionManager } from './auth/GuestSessionManager'
 import { AuthModal } from './auth/AuthModal'
 import { AppleCalendarModal } from './auth/AppleCalendarModal'
+import { isNativePlatform } from './utils/platform'
+import { App as CapApp } from '@capacitor/app'
 import {
   NotificationProvider,
   useNotifications,
@@ -111,6 +113,23 @@ function AppContent() {
       setIsLoadingSessions(false)
     }
   }, [])
+
+  // Handle deep links on native (e.g. dropcal://s/SESSION_ID)
+  useEffect(() => {
+    if (!isNativePlatform()) return
+
+    const listener = CapApp.addListener('appUrlOpen', ({ url }) => {
+      // Handle session deep links: dropcal://s/:sessionId
+      const sessionMatch = url.match(/dropcal:\/\/s\/([a-zA-Z0-9-]+)/)
+      if (sessionMatch) {
+        navigate(`/s/${sessionMatch[1]}`)
+      }
+    })
+
+    return () => {
+      listener.then(l => l.remove())
+    }
+  }, [navigate])
 
   // Check guest mode on mount
   useEffect(() => {
@@ -703,16 +722,19 @@ function AppContent() {
 
 // Router wrapper component
 function App() {
+  const native = isNativePlatform()
+
   return (
     <NotificationProvider>
       <Routes>
         <Route path="/" element={<AppContent />} />
         <Route path="/s/:sessionId" element={<AppContent />} />
-        <Route path="/plans" element={<Plans />} />
-        <Route path="/welcome" element={<Welcome />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="*" element={<NotFound />} />
+        {/* Web-only routes — skip on native app */}
+        {!native && <Route path="/plans" element={<Plans />} />}
+        {!native && <Route path="/welcome" element={<Welcome />} />}
+        {!native && <Route path="/privacy" element={<Privacy />} />}
+        {!native && <Route path="/terms" element={<Terms />} />}
+        <Route path="*" element={native ? <AppContent /> : <NotFound />} />
       </Routes>
     </NotificationProvider>
   )
