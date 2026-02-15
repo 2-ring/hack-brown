@@ -29,9 +29,6 @@ from extraction.duckling_client import DucklingClient, DucklingError
 
 logger = logging.getLogger(__name__)
 
-# Matches an explicit 4-digit year (2000-2099) in date text
-_EXPLICIT_YEAR_RE = re.compile(r'\b20\d{2}\b')
-
 # Singleton client — reused across calls
 _duckling_client: Optional[DucklingClient] = None
 
@@ -65,32 +62,6 @@ _TZ_ALIASES = {
     "utc": "UTC",
     "gmt": "UTC",
 }
-
-
-def _enforce_year(dt: datetime, date_text: Optional[str], now: datetime) -> datetime:
-    """
-    Enforce the year convention: if date_text contains no explicit year,
-    the intended year is the current year. Duckling defaults to the next
-    future occurrence which can push past dates into next year.
-
-    Only overrides when:
-    - date_text has no 4-digit year (e.g., "January 28", not "January 28, 2027")
-    - Duckling resolved to a different year than current
-    """
-    if not date_text or _EXPLICIT_YEAR_RE.search(date_text):
-        return dt
-    current_year = now.year
-    if dt.year != current_year:
-        try:
-            dt = dt.replace(year=current_year)
-        except ValueError:
-            # Feb 29 in a non-leap year — use Feb 28
-            dt = dt.replace(year=current_year, day=28)
-        logger.debug(
-            f"Year override: '{date_text}' resolved to {dt.year + (now.year - current_year)}, "
-            f"forced to {current_year}"
-        )
-    return dt
 
 
 def resolve_temporal(
@@ -324,7 +295,6 @@ def _resolve_all_day(
     start = _duckling_parse_datetime(temporal.date_text, client, tz_obj, now)
     if start is None:
         raise ValueError(f"Could not resolve date: '{temporal.date_text}'")
-    start = _enforce_year(start, temporal.date_text, now)
 
     start_date_str = start.strftime("%Y-%m-%d")
 
@@ -333,7 +303,6 @@ def _resolve_all_day(
     if temporal.end_date_text:
         end = _duckling_parse_datetime(temporal.end_date_text, client, tz_obj, now)
         if end:
-            end = _enforce_year(end, temporal.end_date_text, now)
             # Google Calendar all-day end date is exclusive (add 1 day)
             end_date = end.date() + timedelta(days=1)
             end_dt = CalendarDateTime(date=end_date.strftime("%Y-%m-%d"))
@@ -393,9 +362,6 @@ def _resolve_timed(
             f"time='{temporal.start_time_text}'"
         )
 
-    # Enforce year convention: no year in date_text = current year
-    start = _enforce_year(start, temporal.date_text, now)
-
     start_dt = CalendarDateTime(
         dateTime=_format_iso8601(start),
         timeZone=tz_name,
@@ -429,9 +395,6 @@ def _resolve_end_time(
         end = _duckling_parse_datetime(combined_end, client, tz_obj, now)
 
         if end:
-            # Enforce year convention on end date if end_date_text was provided
-            if temporal.end_date_text:
-                end = _enforce_year(end, temporal.end_date_text, now)
             # Use start's date if only time was parsed and no end_date_text
             if not temporal.end_date_text and end.date() != start.date():
                 end = tz_obj.localize(datetime.combine(start.date(), end.time()))

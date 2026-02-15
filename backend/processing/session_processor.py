@@ -53,6 +53,12 @@ class SessionProcessor:
         from config.text import create_instructor_client
         client, model, provider = create_instructor_client('agent_2_extraction')
 
+        # CONSOLIDATE stage uses a lightweight Instructor client
+        cons_client, cons_model, cons_provider = create_instructor_client('default', light=True)
+        self._consolidation_client = cons_client
+        self._consolidation_model = cons_model
+        self._consolidation_provider = cons_provider
+
         # Standard agents
         self.agent_1_identification = EventIdentificationAgent(llm)
         self.agent_2_extraction = EventExtractionAgent(client, model, provider)
@@ -270,18 +276,12 @@ class SessionProcessor:
         agent_3: PersonalizationAgent = None,
     ) -> None:
         """
-        Process identified events in parallel and write to DB.
+        Process identified events through CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE.
+
+        For <=3 events: uses legacy per-event flow (no consolidation needed).
+        For >3 events: consolidates into groups, then processes per-group in parallel.
 
         Shared by process_text_session and process_file_session.
-
-        Args:
-            session_id: Session ID for DB writes
-            user_id: User ID for event ownership
-            events: List of IdentifiedEvent objects from Agent 1
-            timezone: User's IANA timezone
-            is_guest: Whether this is a guest session
-            agent_2: Extraction agent to use (defaults to standard)
-            agent_3: Personalization agent to use (defaults to standard)
         """
         # Fall back to standard agents if not specified
         agent_2 = agent_2 or self.agent_2_extraction
@@ -306,14 +306,274 @@ class SessionProcessor:
         _parent_input_type = get_tracking_property('input_type')
         _parent_pipeline = get_tracking_property('pipeline')
 
+        total_events = len(events)
+
+        # ── Small batches: skip consolidation, use per-event flow ──────────
+        if total_events <= 3:
+            logger.info(f"Session {session_id}: {total_events} events — skipping CONSOLIDATE")
+            self._process_events_per_event(
+                session_id=session_id, user_id=user_id, events=events,
+                timezone=timezone, is_guest=is_guest, agent_2=agent_2,
+                agent_3=agent_3, patterns=patterns,
+                historical_events=historical_events,
+                use_personalization=use_personalization,
+                db_lock=db_lock, _parent_input_type=_parent_input_type,
+                _parent_pipeline=_parent_pipeline,
+            )
+            return
+
+        # ── CONSOLIDATE: group + dedup + cross-event context ───────────────
+        from extraction.consolidation import consolidate_events, build_groups
+
+        try:
+            consolidation_result = consolidate_events(
+                events=events,
+                instructor_client=self._consolidation_client,
+                model_name=self._consolidation_model,
+                provider=self._consolidation_provider,
+            )
+            groups = build_groups(events, consolidation_result)
+            cross_event_context = consolidation_result.cross_event_context
+            logger.info(
+                f"Session {session_id}: CONSOLIDATE complete — "
+                f"{len(groups)} groups, cross_event_context: {cross_event_context[:100]}..."
+            )
+        except Exception as e:
+            logger.warning(
+                f"Session {session_id}: CONSOLIDATE failed ({e}), "
+                f"falling back to per-event flow"
+            )
+            capture_agent_error("consolidation", e, {'session_id': session_id})
+            self._process_events_per_event(
+                session_id=session_id, user_id=user_id, events=events,
+                timezone=timezone, is_guest=is_guest, agent_2=agent_2,
+                agent_3=agent_3, patterns=patterns,
+                historical_events=historical_events,
+                use_personalization=use_personalization,
+                db_lock=db_lock, _parent_input_type=_parent_input_type,
+                _parent_pipeline=_parent_pipeline,
+            )
+            return
+
+        # ── STRUCTURE + RESOLVE + PERSONALIZE: per-group in parallel ───────
+        def process_single_group(group_idx, group_data):
+            """Process one group: batch Agent 2 → per-event temporal + Agent 3 + DB."""
+            import uuid as _uuid
+            category, indexed_events = group_data
+            group_events = [ie for _, ie in indexed_events]
+            original_indices = [idx for idx, _ in indexed_events]
+            group_start = _time.time()
+
+            # Propagate tracking context to this worker thread
+            set_tracking_context(
+                distinct_id=user_id,
+                trace_id=session_id,
+                pipeline=_parent_pipeline,
+                input_type=_parent_input_type,
+                is_guest=is_guest,
+                num_events=total_events,
+                has_personalization=use_personalization,
+            )
+
+            try:
+                # STRUCTURE: batch extraction for the group
+                extracted_events = agent_2.execute_batch(
+                    events=group_events,
+                    cross_event_context=cross_event_context,
+                    document_context=group_events[0].document_context,
+                    input_type=group_events[0].input_type,
+                )
+
+                # Validate count matches
+                if len(extracted_events) != len(group_events):
+                    logger.warning(
+                        f"Session {session_id}: Group '{category}' returned "
+                        f"{len(extracted_events)} events, expected {len(group_events)}. "
+                        f"Processing what we got."
+                    )
+
+                # Per-event: RESOLVE → PERSONALIZE → DB write
+                results = []
+                for i, (orig_idx, identified_event) in enumerate(indexed_events):
+                    if i >= len(extracted_events):
+                        break
+                    extracted_event = extracted_events[i]
+                    event_span_id = str(_uuid.uuid4())
+                    event_start = _time.time()
+
+                    try:
+                        # RESOLVE: NL temporal → ISO 8601
+                        calendar_event = resolve_temporal(
+                            extracted_event, user_timezone=timezone
+                        )
+
+                        # PERSONALIZE
+                        if use_personalization:
+                            calendar_event = agent_3.execute(
+                                event=calendar_event,
+                                discovered_patterns=patterns,
+                                historical_events=historical_events,
+                                user_id=user_id
+                            )
+
+                        # DB write
+                        with db_lock:
+                            EventService.create_dropcal_event(
+                                user_id=user_id,
+                                session_id=session_id,
+                                summary=calendar_event.summary,
+                                start_time=calendar_event.start.dateTime,
+                                end_time=calendar_event.end.dateTime if calendar_event.end else None,
+                                start_date=calendar_event.start.date,
+                                end_date=calendar_event.end.date if calendar_event.end else None,
+                                is_all_day=calendar_event.start.date is not None,
+                                description=calendar_event.description,
+                                location=calendar_event.location,
+                                calendar_name=calendar_event.calendar,
+                                color_id=calendar_event.colorId,
+                                original_input=identified_event.raw_text,
+                                extracted_facts=calendar_event.model_dump(),
+                                system_suggestion=calendar_event.model_dump(),
+                                recurrence=calendar_event.recurrence,
+                                attendees=calendar_event.attendees
+                            )
+
+                        capture_event_span(
+                            session_id=session_id, span_id=event_span_id,
+                            event_index=orig_idx, num_events=total_events,
+                            duration_ms=(_time.time() - event_start) * 1000,
+                            event_description=identified_event.description,
+                        )
+                        results.append(EventProcessingResult(
+                            index=orig_idx, success=True, calendar_event=calendar_event
+                        ))
+
+                    except Exception as e:
+                        logger.error(
+                            f"Error on event {orig_idx+1} (group '{category}') "
+                            f"in session {session_id}: {e}\n{traceback.format_exc()}"
+                        )
+                        capture_event_span(
+                            session_id=session_id, span_id=event_span_id,
+                            event_index=orig_idx, num_events=total_events,
+                            duration_ms=(_time.time() - event_start) * 1000,
+                            event_description=identified_event.description,
+                            outcome='error',
+                        )
+                        results.append(EventProcessingResult(
+                            index=orig_idx, success=False,
+                            warning=f"Event {orig_idx+1}: {str(e)}", error=e,
+                        ))
+
+                return EventProcessingResult(
+                    index=group_idx, success=True,
+                )
+
+            except Exception as e:
+                # Batch extraction failed for the whole group — fall back to per-event
+                logger.warning(
+                    f"Session {session_id}: Group '{category}' batch extraction "
+                    f"failed ({e}), falling back to per-event"
+                )
+                capture_agent_error("extraction_batch", e, {
+                    'session_id': session_id, 'group': category,
+                })
+                for orig_idx, identified_event in indexed_events:
+                    event_span_id = str(_uuid.uuid4())
+                    event_start = _time.time()
+                    try:
+                        extracted_event = agent_2.execute(
+                            identified_event.raw_text,
+                            identified_event.description,
+                            document_context=identified_event.document_context,
+                            surrounding_context=identified_event.surrounding_context,
+                            input_type=identified_event.input_type,
+                        )
+                        calendar_event = resolve_temporal(
+                            extracted_event, user_timezone=timezone
+                        )
+                        if use_personalization:
+                            calendar_event = agent_3.execute(
+                                event=calendar_event,
+                                discovered_patterns=patterns,
+                                historical_events=historical_events,
+                                user_id=user_id
+                            )
+                        with db_lock:
+                            EventService.create_dropcal_event(
+                                user_id=user_id, session_id=session_id,
+                                summary=calendar_event.summary,
+                                start_time=calendar_event.start.dateTime,
+                                end_time=calendar_event.end.dateTime if calendar_event.end else None,
+                                start_date=calendar_event.start.date,
+                                end_date=calendar_event.end.date if calendar_event.end else None,
+                                is_all_day=calendar_event.start.date is not None,
+                                description=calendar_event.description,
+                                location=calendar_event.location,
+                                calendar_name=calendar_event.calendar,
+                                color_id=calendar_event.colorId,
+                                original_input=identified_event.raw_text,
+                                extracted_facts=calendar_event.model_dump(),
+                                system_suggestion=calendar_event.model_dump(),
+                                recurrence=calendar_event.recurrence,
+                                attendees=calendar_event.attendees
+                            )
+                        capture_event_span(
+                            session_id=session_id, span_id=event_span_id,
+                            event_index=orig_idx, num_events=total_events,
+                            duration_ms=(_time.time() - event_start) * 1000,
+                            event_description=identified_event.description,
+                        )
+                    except Exception as inner_e:
+                        logger.error(
+                            f"Fallback error on event {orig_idx+1} in session "
+                            f"{session_id}: {inner_e}\n{traceback.format_exc()}"
+                        )
+                        capture_agent_error("extraction", inner_e, {
+                            'session_id': session_id, 'event_index': orig_idx,
+                        })
+
+                return EventProcessingResult(
+                    index=group_idx, success=False,
+                    warning=f"Group '{category}' fell back to per-event",
+                )
+
+        # Dispatch groups in parallel
+        group_list = list(groups.items())
+        batch_result = process_events_parallel(
+            events=group_list,
+            process_single_event=lambda idx, item: process_single_group(idx, item),
+        )
+
+        if batch_result.warnings:
+            logger.warning(
+                f"Session {session_id}: {len(batch_result.warnings)} group(s) "
+                f"had issues: {batch_result.warnings}"
+            )
+
+    def _process_events_per_event(
+        self,
+        session_id: str,
+        user_id: str,
+        events: list,
+        timezone: str,
+        is_guest: bool,
+        agent_2,
+        agent_3,
+        patterns,
+        historical_events,
+        use_personalization: bool,
+        db_lock,
+        _parent_input_type,
+        _parent_pipeline,
+    ) -> None:
+        """Legacy per-event processing (used for small batches and fallback)."""
+
         def process_single_event(idx, event):
             import uuid as _uuid
-            # Create a unique span ID for this event — used as parent for
-            # extraction and personalization generations within this event.
             event_span_id = str(_uuid.uuid4())
             event_start = _time.time()
 
-            # Propagate tracking context to this worker thread + set event_index
             set_tracking_context(
                 distinct_id=user_id,
                 trace_id=session_id,
@@ -326,9 +586,6 @@ class SessionProcessor:
                 parent_id=event_span_id,
             )
             try:
-                # Agent 2: Extract facts with NL temporal expressions
-                # Forward context layers from identification (LangExtract
-                # populates these; old pipeline leaves them as None).
                 extracted_event = agent_2.execute(
                     event.raw_text,
                     event.description,
@@ -337,12 +594,10 @@ class SessionProcessor:
                     input_type=event.input_type,
                 )
 
-                # Deterministic temporal resolution: NL → ISO 8601 via Duckling
                 calendar_event = resolve_temporal(
                     extracted_event, user_timezone=timezone
                 )
 
-                # Agent 3: Personalize (if patterns available)
                 if use_personalization:
                     calendar_event = agent_3.execute(
                         event=calendar_event,
@@ -351,7 +606,6 @@ class SessionProcessor:
                         user_id=user_id
                     )
 
-                # DB write with lock to avoid race condition on event_ids
                 with db_lock:
                     EventService.create_dropcal_event(
                         user_id=user_id,
@@ -364,7 +618,7 @@ class SessionProcessor:
                         is_all_day=calendar_event.start.date is not None,
                         description=calendar_event.description,
                         location=calendar_event.location,
-                        calendar_name=calendar_event.calendar,  # provider calendar ID (DB column is named calendar_name)
+                        calendar_name=calendar_event.calendar,
                         color_id=calendar_event.colorId,
                         original_input=event.raw_text,
                         extracted_facts=calendar_event.model_dump(),
@@ -373,19 +627,15 @@ class SessionProcessor:
                         attendees=calendar_event.attendees
                     )
 
-                # Capture event span with total duration
                 capture_event_span(
-                    session_id=session_id,
-                    span_id=event_span_id,
-                    event_index=idx,
-                    num_events=len(events),
+                    session_id=session_id, span_id=event_span_id,
+                    event_index=idx, num_events=len(events),
                     duration_ms=(_time.time() - event_start) * 1000,
                     event_description=event.description,
                 )
 
                 return EventProcessingResult(
-                    index=idx, success=True,
-                    calendar_event=calendar_event
+                    index=idx, success=True, calendar_event=calendar_event
                 )
 
             except Exception as e:
@@ -394,22 +644,17 @@ class SessionProcessor:
                     f"{e}\n{traceback.format_exc()}"
                 )
                 capture_event_span(
-                    session_id=session_id,
-                    span_id=event_span_id,
-                    event_index=idx,
-                    num_events=len(events),
+                    session_id=session_id, span_id=event_span_id,
+                    event_index=idx, num_events=len(events),
                     duration_ms=(_time.time() - event_start) * 1000,
-                    event_description=event.description,
-                    outcome='error',
+                    event_description=event.description, outcome='error',
                 )
                 capture_agent_error("extraction", e, {
-                    'session_id': session_id,
-                    'event_index': idx,
+                    'session_id': session_id, 'event_index': idx,
                 })
                 return EventProcessingResult(
                     index=idx, success=False,
-                    warning=f"Event {idx+1}: {str(e)}",
-                    error=e,
+                    warning=f"Event {idx+1}: {str(e)}", error=e,
                 )
 
         batch_result = process_events_parallel(

@@ -44,21 +44,34 @@ The event title. This is what the user sees at a glance on their calendar.
 ### temporal (REQUIRED)
 Extract temporal information as natural language strings. Do NOT convert to ISO timestamps, do NOT compute dates, do NOT calculate offsets. Extract what is stated.
 
-**date_text**: The date as stated in the text. Preserve the original phrasing.
-- "next Tuesday" → "next Tuesday"
-- "February 15" → "February 15"
-- "tomorrow" → "tomorrow"
-- "the 25th" → "the 25th"
-- "this Saturday" → "this Saturday"
-- "March 3, 2026" → "March 3, 2026"
-- For multi-day events, this is the START date: "March 3-5" → date_text: "March 3"
-- null if no date is mentioned at all
+**date_text**: The date expressed so that there is NO ambiguity about which specific date is meant. The downstream resolver parses this string literally — if the year is unclear, the date will be resolved incorrectly.
 
-**YEAR CONVENTION:** If date_text has no year, the downstream resolver assumes the CURRENT year (provided below). If the context indicates a different year (e.g., document says "Spring 2027", or the text says "January 2027"), you MUST include the year in date_text and end_date_text: "January 28, 2027". If the year matches the current year or is not specified, just write the date normally without a year: "January 28".
+**YEAR RULE:** Every date_text (and end_date_text) must unambiguously specify which year the date falls in. Relative expressions naturally do this. Absolute dates (month + day) do NOT — they need a year or a relative anchor.
 
-**end_date_text**: Only for multi-day events where an end date is explicitly stated.
-- "March 3-5" → end_date_text: "March 5"
-- "this weekend" → end_date_text: "Sunday" (if context implies multi-day)
+Acceptable (unambiguous):
+- "tomorrow" — relative, no year ambiguity
+- "next Tuesday" — relative, clear
+- "last Friday" — relative, clear
+- "this Saturday" — relative, clear
+- "March 3, 2026" — explicit year
+- "the 26th of this month" — relative, both month and year are clear
+- "January 28 this year" — relative anchor makes year clear
+- "February 25 next year" — relative anchor makes year clear
+
+NOT acceptable (ambiguous):
+- "February 25" — which year? Must be "February 25, 2026" or "February 25 this year"
+- "January 28" — which year? Must be "January 28, 2026" or "January 28 this year"
+- "the 25th" — which month and year? Only acceptable if obvious from immediate context
+
+You may have to infer a little from wider input context, e.g., if a syllabus header says "Spring 2026", that is likely the year for all dates, unless explicitly indicated otherwise: "January 28, 2026", "February 25, 2026", etc.
+
+BUT, if there is genuinely no date information (e.g., "I want to fly to Barcelona" with no date context) → null. Do NOT guess or invent dates.
+
+For multi-day events, this is the START date: "March 3-5, 2026" → date_text: "March 3, 2026"
+
+**end_date_text**: Only for multi-day events where an end date is explicitly stated. Same year rule applies.
+- "March 3-5, 2026" → end_date_text: "March 5, 2026"
+- "this weekend" → end_date_text: "Sunday" (relative, unambiguous)
 - Same-day events → null
 
 **start_time_text**: Start time as stated. null for all-day events.
@@ -215,9 +228,9 @@ Input: "Team meeting tomorrow at 2pm in Conference Room B. Bring the report."
 → location: "Conference Room B"
 → description: "Bring the report"
 
-Input: "MATH 0180 midterm February 25 at 6:30pm, 90 minutes, closed-book"
+Input: "MATH 0180 midterm February 25 at 6:30pm, 90 minutes, closed-book" (document context: "MATH 0180 — Spring 2026")
 → summary: "MATH 0180 Midterm"
-→ temporal: date_text="February 25", start_time_text="6:30pm", duration_text="90 minutes", is_all_day=false, temporal_confidence=1.0, original_temporal_text="February 25 at 6:30pm, 90 minutes"
+→ temporal: date_text="February 25, 2026", start_time_text="6:30pm", duration_text="90 minutes", is_all_day=false, temporal_confidence=1.0, original_temporal_text="February 25 at 6:30pm, 90 minutes"
 → description: "Closed-book exam"
 
 Input: "Homework due Tuesdays at 9pm"
@@ -225,9 +238,9 @@ Input: "Homework due Tuesdays at 9pm"
 → temporal: date_text="Tuesday", start_time_text="9pm", is_all_day=false, is_recurring=true, recurrence_pattern="every Tuesday", temporal_confidence=1.0, original_temporal_text="Tuesdays at 9pm"
 → recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=TU"]
 
-Input: "Mom's birthday March 15"
+Input: "Mom's birthday March 15" (no year context)
 → summary: "Mom's Birthday"
-→ temporal: date_text="March 15", is_all_day=true, temporal_confidence=1.0, original_temporal_text="March 15"
+→ temporal: date_text="March 15 this year", is_all_day=true, temporal_confidence=0.9, uncertainty_flags=["no_year"], original_temporal_text="March 15", extraction_reasoning="No year stated — using 'this year' as default"
 
 Input: "Team standup 9am on Zoom https://zoom.us/j/123, invite sarah@co.com. Add to work calendar"
 → summary: "Team Standup"
@@ -248,8 +261,8 @@ Input: "Dinner with Sarah 7-9pm Friday at Gracie's"
 → location: "Gracie's"
 → people: ["Sarah"]
 
-Input: "Lab sections MWF 2-4pm in Barus & Holley 141, starting Jan 27 through May 8"
+Input: "Lab sections MWF 2-4pm in Barus & Holley 141, starting Jan 27 through May 8" (document context: "Spring 2026 Course Schedule")
 → summary: "Lab Section"
-→ temporal: date_text="January 27", start_time_text="2pm", end_time_text="4pm", is_all_day=false, is_recurring=true, recurrence_pattern="every Monday, Wednesday, and Friday", temporal_confidence=1.0, original_temporal_text="MWF 2-4pm starting Jan 27 through May 8"
+→ temporal: date_text="January 27, 2026", start_time_text="2pm", end_time_text="4pm", is_all_day=false, is_recurring=true, recurrence_pattern="every Monday, Wednesday, and Friday", temporal_confidence=1.0, original_temporal_text="MWF 2-4pm starting Jan 27 through May 8"
 → location: "Barus & Holley 141"
 → recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260508T235959Z"]
