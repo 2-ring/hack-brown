@@ -16,7 +16,7 @@ export function Footer() {
                 {/* Center: Brand + Socials */}
                 <div className="footer-center">
                     <div className="footer-logo">
-                        <WordMark size={24} />
+                        <WordMark size={24} themeOverride="dark" />
                     </div>
                     <div className="footer-socials">
                         <a href="#" className="social-link" aria-label="Twitter">

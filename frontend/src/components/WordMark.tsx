@@ -9,17 +9,22 @@ interface WordMarkProps {
   size?: number
   /** Optional class name for additional styling */
   className?: string
+  /** Optional theme override to force light or dark mode */
+  themeOverride?: 'light' | 'dark'
 }
 
 /**
  * Combined mark + word component that handles theming and scaling.
  * Replaces all instances where Logo and word image are used together.
  */
-export function WordMark({ size = 32, className = '' }: WordMarkProps) {
+export function WordMark({ size = 32, className = '', themeOverride }: WordMarkProps) {
   const { resolvedTheme } = useTheme()
 
+  // Determine effective theme
+  const effectiveTheme = themeOverride || resolvedTheme
+
   // Select word image based on theme
-  const wordImage = resolvedTheme === 'dark' ? wordImageDark : wordImageLight
+  const wordImage = effectiveTheme === 'dark' ? wordImageDark : wordImageLight
 
   // Calculate proportional word height based on mark size
   // Default ratio: 32px mark → 32px word, 48px mark → 38px word
@@ -39,7 +44,10 @@ export function WordMark({ size = 32, className = '' }: WordMarkProps) {
         '--wm-gap': `${gap}px`,
       } as React.CSSProperties}
     >
-      <Logo size={size} />
+      <Logo
+        size={size}
+        color={themeOverride === 'dark' ? '#ffffff' : undefined}
+      />
       <img
         src={wordImage}
         alt="DropCal"

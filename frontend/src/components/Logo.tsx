@@ -1,13 +1,14 @@
 interface LogoProps {
   size?: number
   className?: string
+  color?: string
 }
 
 /**
  * DropCal logo component - uses theme-aware primary color
  * Defined once, reused throughout the app
  */
-export function Logo({ size = 32, className }: LogoProps) {
+export function Logo({ size = 32, className, color }: LogoProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -15,7 +16,7 @@ export function Logo({ size = 32, className }: LogoProps) {
       height={size}
       viewBox="0 0 256 256"
       className={className}
-      style={{ color: 'var(--primary)' }}
+      style={{ color: color || 'var(--primary)' }}
     >
       <path
         fill="currentColor"

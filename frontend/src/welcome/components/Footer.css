@@ -1,5 +1,6 @@
 .footer-section {
-    background-color: var(--background);
+    background-color: var(--primary-color, #1170C5);
+    border-radius: 80px 80px 0 0;
     border-top: none;
     padding: 32px 24px;
     width: 100%;
@@ -30,9 +31,9 @@
     left: 8px;
     font-family: sans-serif;
     font-size: 11px;
-    opacity: 0.5;
+    opacity: 0.8;
     z-index: 0;
-    color: var(--text-primary);
+    color: rgba(255, 255, 255, 0.6);
     /* Ensure visible in both themes if needed, or inherit */
 }
 
@@ -63,7 +64,7 @@
 }
 
 .social-link {
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.8);
     font-size: 20px;
     transition: all 0.2s ease;
     display: flex;
@@ -72,7 +73,7 @@
 }
 
 .social-link:hover {
-    color: var(--primary);
+    color: #ffffff;
     transform: translateY(-2px);
 }
 
@@ -89,19 +90,19 @@
 
 .footer-legal-link {
     font-size: 12px;
-    color: var(--text-tertiary);
+    color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .footer-legal-link:hover {
-    color: var(--text-primary);
+    color: #ffffff;
     text-decoration: underline;
 }
 
 .footer-legal-divider {
     font-size: 10px;
-    color: var(--border);
+    color: rgba(255, 255, 255, 0.3);
 }
 
 /* Responsive */

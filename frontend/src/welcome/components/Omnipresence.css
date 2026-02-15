@@ -43,32 +43,30 @@
     gap: 10px;
     padding: 10px 24px;
 
-    /* Design update: Theme background, Grey border */
-    background-color: var(--background);
-    border: 2px solid var(--text-secondary);
+    /* Design update: Transparent background, Thick Primary Text Color border */
+    background-color: transparent;
+    border: 3px solid var(--text-primary);
     border-radius: 9999px;
     /* Pill */
 
     color: var(--text-primary);
-    /* Dark text on light background */
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
 
     /* Negative margin for overlap */
-    margin-left: -2px;
+    margin-left: -3px;
+    /* Equal to border width */
 
     position: relative;
     /* For stacking context */
     z-index: 1;
 
-    transition: transform 0.2s ease, z-index 0s, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, z-index 0s;
 }
 
 .platform-chip:hover {
     z-index: 10;
     transform: translateY(-2px);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
     background-color: var(--background);
 }
 
@@ -79,14 +77,8 @@
 .platform-icon {
     width: 20px;
     height: 20px;
-    color: #FFFBEB;
-    /* Icon matches border/text */
-}
-
-.platform-icon-windows {
-    width: 20px;
-    height: 20px;
-    /* No color override, use SVG colors */
+    color: currentColor;
+    /* Inherit form parent (var(--text-primary)) */
 }
 
 .omnipresence-title {
