@@ -159,78 +159,24 @@
 
 /* 
  * Flowing Sine Path Animation 
- * Using CSS Offset Path
+ * Now handled by FlowingSineWave component
  */
 
-.floating-icons-container {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 5;
-    overflow: visible;
-}
-
-.flow-icon-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 64px;
-    height: 64px;
-
-    /* Define the path: Extended S-curve to ensure spacing */
-    /* 
-       Start (-400, 650) -> Extended start off-screen
-       CP1 (0, 950) -> Trough
-       CP2 (1000, 50) -> Crest
-       End (2000, 350) -> Extended end off-screen
-       Approx Length: 2600px
-    */
-    offset-path: path('M -400 650 C 0 950, 1000 50, 2000 350');
-
-    offset-rotate: auto;
-    /* Follows the curve */
-
-    animation: move-along-path 45s linear infinite;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    /* Performance Optimizations */
-    will-change: offset-distance, transform;
-    transform: translateZ(0);
-    /* Force GPU */
-    backface-visibility: hidden;
-    perspective: 1000px;
-    contain: layout style;
-}
-
-@keyframes move-along-path {
-    from {
-        offset-distance: 0%;
-    }
-
-    to {
-        offset-distance: 100%;
-    }
-}
-
-.flow-icon {
-    width: 56px;
-    height: 56px;
+.omnipresence-icon-card {
+    width: 100%;
+    height: 100%;
     background: var(--background-elevated);
     border: 1px solid var(--border-light);
-    border-radius: 14px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.flow-icon svg {
-    width: 28px;
-    height: 28px;
-    /* Colors handled by inline styles in React, or we can override here if needed */
+.omnipresence-icon-card svg {
+    width: 36px;
+    height: 36px;
 }
 
 

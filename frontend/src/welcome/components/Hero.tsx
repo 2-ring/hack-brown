@@ -149,13 +149,7 @@ const Hero = () => {
                             viewBox="0 0 400 200"
                             preserveAspectRatio="none"
                         >
-                            <defs>
-                                <linearGradient id="gradientPath" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
-                                    <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.8" />
-                                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                                </linearGradient>
-                            </defs>
+
 
                             {/* Path from Input (Left) to Center */}
                             {/* Assuming roughly center-left to center */}
@@ -163,7 +157,7 @@ const Hero = () => {
                                 d="M 50,100 C 120,100 120,100 180,100"
                                 // Bezier curve: start (50,100), control1, control2, end (180,100) -> Center x is ~200
                                 fill="none"
-                                stroke="url(#gradientPath)"
+                                stroke="var(--primary)"
                                 strokeWidth="2"
                                 strokeDasharray="4 4"
                                 initial={{ strokeDashoffset: 0 }}
@@ -176,7 +170,7 @@ const Hero = () => {
                             <motion.path
                                 d="M 220,100 C 280,100 280,100 350,100"
                                 fill="none"
-                                stroke="url(#gradientPath)"
+                                stroke="var(--primary)"
                                 strokeWidth="2"
                                 strokeDasharray="4 4"
                                 initial={{ strokeDashoffset: 0 }}
@@ -194,14 +188,7 @@ const Hero = () => {
                             <div className="dropcal-icon">
                                 <CalendarBlank weight="duotone" />
                             </div>
-                            <motion.div
-                                className="pulse-ring"
-                                animate={{
-                                    scale: [1, 1.5],
-                                    opacity: [0.6, 0]
-                                }}
-                                transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
-                            />
+
                         </motion.div>
                     </div>
 

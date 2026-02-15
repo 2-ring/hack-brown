@@ -1,0 +1,49 @@
+.flowing-sine-wave-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    overflow: visible;
+}
+
+.fsw-item-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    /* Use dynamic variables passed from React */
+    offset-path: var(--path);
+    offset-rotate: auto;
+
+    animation: fsw-move-along-path var(--duration) linear infinite;
+    animation-delay: var(--delay);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Performance Optimizations */
+    will-change: offset-distance, transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    contain: layout style;
+}
+
+@keyframes fsw-move-along-path {
+    from {
+        offset-distance: 0%;
+    }
+
+    to {
+        offset-distance: 100%;
+    }
+}
+
+.fsw-item-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

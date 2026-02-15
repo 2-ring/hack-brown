@@ -12,18 +12,7 @@
     padding: 120px 20px;
 }
 
-.hero-bg-orb {
-    position: absolute;
-    top: 20%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, var(--primary-faint) 0%, rgba(17, 112, 197, 0) 70%);
-    filter: blur(80px);
-    z-index: 0;
-    pointer-events: none;
-}
+display: none;
 
 .hero-content {
     position: relative;
@@ -39,7 +28,7 @@
 .hero-headline {
     font-family: 'Chillax', sans-serif;
     /* Fallback to sans-serif if Chillax not loaded */
-    font-size: clamp(40px, 5vw, 72px);
+    font-size: clamp(32px, 4vw, 56px);
     line-height: 1.05;
     letter-spacing: -0.02em;
     font-weight: 700;
@@ -52,11 +41,8 @@
 }
 
 .hero-headline .gradient-text {
-    background: linear-gradient(90deg, var(--primary), var(--primary-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    color: transparent;
+    /* Gradient removed */
+    color: var(--primary);
 }
 
 .hero-subtext {
@@ -134,7 +120,7 @@
 .dropcal-icon {
     width: 72px;
     height: 72px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    background: var(--primary);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -143,7 +129,7 @@
     font-size: 32px;
     position: relative;
     z-index: 2;
-    box-shadow: 0 10px 30px -10px var(--shadow-heavy);
+    /* Box shadow removed */
 }
 
 .pulse-ring {

@@ -22,7 +22,7 @@ export function NavBar() {
             <nav className={`welcome-nav ${isScrolled ? 'scrolled' : ''}`}>
                 <div className="nav-container">
                     <div className="nav-logo" onClick={() => navigate('/')}>
-                        <WordMark size={28} />
+                        <WordMark size={36} />
                     </div>
 
                     {/* Center links removed as per user request */}
