@@ -97,6 +97,9 @@
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    /* Ensure icon and text are aligned */
 }
 
 .nav-cta-button:hover {

@@ -1,15 +1,18 @@
 .top-bar {
   display: block;
   width: 100%;
-  height: 40px;
-  background-color: rgba(17, 112, 197, 0.1); /* Subtle accent tint */
+  height: 44px;
+  /* Thicker */
+  background-color: var(--primary);
+  /* Solid color based on feedback */
   text-decoration: none;
-  border-bottom: 1px solid rgba(17, 112, 197, 0.15);
+  border-bottom: none;
   transition: background-color 0.2s ease;
 }
 
 .top-bar:hover {
-  background-color: rgba(17, 112, 197, 0.15);
+  background-color: var(--primary-dark, #0d5a9e);
+  /* Slightly darker on hover */
 }
 
 .top-bar-content {
@@ -21,18 +24,27 @@
   justify-content: center;
   gap: 8px;
   padding: 0 24px;
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: 14px;
+  /* Slightly larger */
+  color: white;
+  /* White text */
 }
 
 .top-bar-text {
-  opacity: 0.9;
+  opacity: 1;
+  font-weight: 500;
+  /* Bolder sections */
 }
 
 .top-bar-link {
   display: flex;
   align-items: center;
-  gap: 2px;
-  font-weight: 500;
-  color: var(--primary-color);
+  gap: 4px;
+  font-weight: 700;
+  /* Bold CTA */
+  color: white;
+  /* White text */
+  text-decoration: underline;
+  /* Optional: Reference probably didn't have underline but bold is key */
+  text-decoration-thickness: 2px;
 }

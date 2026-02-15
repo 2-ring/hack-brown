@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { TopBar } from './components/TopBar'
 import { NavBar } from './components/NavBar'
 import Hero from './components/Hero'
@@ -10,8 +9,6 @@ import { Footer } from './components/Footer'
 import './Welcome.css'
 
 export function Welcome() {
-  const navigate = useNavigate()
-
   return (
     <div className="welcome">
       <TopBar />

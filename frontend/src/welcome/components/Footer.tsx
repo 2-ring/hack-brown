@@ -1,5 +1,4 @@
 
-import { Link } from 'react-router-dom'
 import { WordMark } from '../../components/WordMark'
 import { TwitterLogo, InstagramLogo, LinkedinLogo } from '@phosphor-icons/react'
 import './Footer.css'
@@ -34,9 +33,7 @@ export function Footer() {
 
                 {/* Right: Legal */}
                 <div className="footer-right">
-                    <Link to="/privacy" className="footer-legal-link">Privacy</Link>
-                    <span className="footer-legal-divider">•</span>
-                    <Link to="/terms" className="footer-legal-link">Terms</Link>
+                    {/* Legal links handled by global footer */}
                 </div>
 
             </div>

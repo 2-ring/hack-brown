@@ -44,22 +44,25 @@ const FlowIcon = ({ index, total, children, color = 'var(--text-primary)' }: { i
 
 export function Omnipresence() {
 
-    // Icon definition
+    // Icon definition - Neutral Duotone
+    // User requested "secondary text color duo tone" and "no colors".
+    const NEUTRAL_COLOR = 'var(--text-secondary)';
+
     const iconBase = [
-        { Icon: Envelope, color: '#EA4335' },
-        { Icon: ChatCircleText, color: '#34A853' },
-        { Icon: Camera, color: '#FBBC04' },
-        { Icon: FileText, color: '#4285F4' },
-        { Icon: Microphone, color: '#F97316' },
-        { Icon: LinkIcon, color: '#A855F7' },
-        { Icon: WhatsappLogo, color: '#25D366' },
-        { Icon: SlackLogo, color: '#4A154B' },
-        { Icon: FigmaLogo, color: '#F24E1E' },
-        { Icon: NotionLogo, color: '#ffffff' },
-        { Icon: SpotifyLogo, color: '#1DB954' },
-        { Icon: SoundcloudLogo, color: '#FF5500' },
-        { Icon: TwitchLogo, color: '#9146FF' },
-        { Icon: DiscordLogo, color: '#5865F2' },
+        { Icon: Envelope },
+        { Icon: ChatCircleText },
+        { Icon: Camera },
+        { Icon: FileText },
+        { Icon: Microphone },
+        { Icon: LinkIcon },
+        { Icon: WhatsappLogo },
+        { Icon: SlackLogo },
+        { Icon: FigmaLogo },
+        { Icon: NotionLogo },
+        { Icon: SpotifyLogo },
+        { Icon: SoundcloudLogo },
+        { Icon: TwitchLogo },
+        { Icon: DiscordLogo },
     ]
 
     // Create a density of icons.
@@ -80,7 +83,7 @@ export function Omnipresence() {
         <section className="omnipresence-section">
             <div className="floating-icons-container">
                 {flowIcons.map((item, i) => (
-                    <FlowIcon key={i} index={i} total={TOTAL_ICONS} color={item.color}>
+                    <FlowIcon key={i} index={i} total={TOTAL_ICONS} color={NEUTRAL_COLOR}>
                         <item.Icon weight="duotone" />
                     </FlowIcon>
                 ))}

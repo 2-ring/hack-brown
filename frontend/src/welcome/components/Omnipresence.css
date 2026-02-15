@@ -1,8 +1,13 @@
 .omnipresence-section {
     position: relative;
-    width: 100%;
-    padding: 160px 24px;
-    background-color: var(--background-secondary);
+    /* Brand Styling: Rounded Blue Container */
+    width: calc(100% - 48px);
+    margin: 24px auto;
+    border-radius: 80px;
+    padding: 120px 24px;
+    background-color: var(--primary-color, #1170C5);
+    color: #ffffff;
+    /* White text on blue bg */
     overflow: hidden;
 }
 
@@ -32,17 +37,18 @@
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background-color: var(--background-elevated);
-    border: 1px solid var(--border-light);
-    color: var(--text-secondary);
+    /* Light translucent background for chips on blue */
+    background-color: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
     font-size: 13px;
     font-weight: 500;
     transition: all 0.3s ease;
 }
 
 .platform-chip:hover {
-    background-color: var(--background-hover);
-    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
 }
 
 .platform-chip:first-child {
@@ -58,28 +64,29 @@
 }
 
 .platform-chip:not(:first-child):not(:last-child) {
-    border-left: 1px solid var(--border-light);
-    border-right: 1px solid var(--border-light);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .platform-icon {
     width: 16px;
     height: 16px;
-    opacity: 0.8;
+    opacity: 0.9;
+    color: #ffffff;
 }
 
 .omnipresence-title {
     font-family: var(--display-font), var(--font-serif, serif);
     font-size: 48px;
     line-height: 1.1;
-    color: var(--text-primary);
+    color: #ffffff;
     margin-bottom: 24px;
 }
 
 .omnipresence-subtext {
     font-size: 17px;
     line-height: 1.6;
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.9);
     max-width: 460px;
     margin-bottom: 40px;
 }
@@ -88,9 +95,9 @@
     display: inline-flex;
     align-items: center;
     padding: 12px 28px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 12px;
-    color: var(--text-primary);
+    color: #ffffff;
     font-size: 14px;
     font-weight: 500;
     background: transparent;
@@ -99,9 +106,9 @@
 }
 
 .omnipresence-cta:hover {
-    border-color: var(--text-secondary);
+    border-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
     transform: translateY(-1px);
-    background-color: var(--background-hover);
 }
 
 /* Right Visual */
@@ -118,10 +125,13 @@
     position: relative;
     width: 300px;
     height: 600px;
-    background: var(--background);
+    background: #ffffff;
+    /* Phone frame usually needs to stand out, white or black. White frame looks clean on blue. */
     border-radius: 48px;
-    border: 8px solid var(--border);
-    box-shadow: 0 25px 50px -12px var(--shadow-heavy);
+    border: 8px solid #f3f4f6;
+    /* Light gray border for phone frame */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    /* Stronger shadow */
     z-index: 20;
     overflow: hidden;
 }
@@ -129,7 +139,7 @@
 .phone-screen {
     width: 100%;
     height: 100%;
-    background: var(--background-secondary);
+    background: #ffffff;
     position: relative;
     overflow: hidden;
 }
@@ -141,7 +151,7 @@
     transform: translateX(-50%);
     width: 120px;
     height: 24px;
-    background: var(--border);
+    background: #f3f4f6;
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;
     z-index: 20;
@@ -185,6 +195,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    /* Performance Optimizations */
+    will-change: offset-distance, transform;
+    transform: translateZ(0);
+    /* Force GPU */
+    backface-visibility: hidden;
+    perspective: 1000px;
+    contain: layout style;
 }
 
 @keyframes move-along-path {
@@ -207,13 +225,12 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    /* Counter-rotate slightly if needed, or let it follow the path natural rotation */
 }
 
 .flow-icon svg {
     width: 28px;
     height: 28px;
-    color: var(--text-primary);
+    /* Colors handled by inline styles in React, or we can override here if needed */
 }
 
 
@@ -228,20 +245,27 @@
 .app-header-ph {
     width: 40%;
     height: 8px;
-    background: var(--border-light);
+    background: #f3f4f6;
     border-radius: 4px;
 }
 
 .app-card-ph {
     width: 100%;
     height: 80px;
-    background: var(--background);
+    background: #f9fafb;
     border-radius: 12px;
-    box-shadow: var(--shadow-light);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
+    .omnipresence-section {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+        padding: 80px 24px;
+    }
+
     .omnipresence-container {
         flex-direction: column;
         padding: 0;
@@ -257,7 +281,7 @@
         overflow: visible;
     }
 
-    /* Adjust path for mobile - keep the dip-rise-crest logic but tighter */
+    /* Adjust path for mobile */
     .flow-icon-wrapper {
         offset-path: path('M -50 450 C 100 650, 400 50, 600 150');
     }

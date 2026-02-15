@@ -6,10 +6,10 @@ export function TopBar() {
         <a href="#" className="top-bar" onClick={(e) => e.preventDefault()}>
             <div className="top-bar-content">
                 <span className="top-bar-text">
-                    Join the beta — early access to one-click scheduling.
+                    <strong>Join the beta waitlist</strong> for early access.
                 </span>
                 <span className="top-bar-link">
-                    Join now <CaretRight weight="bold" size={12} />
+                    Join now <CaretRight weight="bold" size={14} />
                 </span>
             </div>
         </a>

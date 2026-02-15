@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { List, X, Mailbox, FingerprintSimple } from '@phosphor-icons/react'
+import { List, X, Mailbox, FingerprintSimple, Flask } from '@phosphor-icons/react'
 import { WordMark } from '../../components/WordMark'
 import './NavBar.css'
 
@@ -42,7 +42,8 @@ export function NavBar() {
                             Log In
                         </button>
                         <button className="nav-cta-button" onClick={() => navigate('/')}>
-                            Join the Beta
+                            <Flask size={20} weight="duotone" style={{ marginRight: '8px' }} />
+                            Join Beta
                         </button>
 
                         <button
