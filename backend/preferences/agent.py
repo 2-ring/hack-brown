@@ -11,6 +11,7 @@ Applies user's learned preferences to a CalendarEvent using:
 
 import statistics
 import logging
+import time as _time
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 from typing import List, Dict, Optional
@@ -22,7 +23,7 @@ from core.base_agent import BaseAgent
 from core.prompt_loader import load_prompt
 from extraction.models import CalendarEvent, CalendarDateTime
 from preferences.similarity import ProductionSimilaritySearch
-from config.posthog import get_invoke_config
+from config.posthog import capture_llm_generation
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +54,13 @@ class PersonalizationAgent(BaseAgent):
 
     def __init__(self, llm: ChatAnthropic):
         super().__init__("Agent3_Personalization")
-        # Copy LLM and set descriptive name for PostHog traces
-        # (avoids showing "ChatOpenAI" in trace tree)
-        self.llm = llm.model_copy()
-        self.llm.name = "Agent 3: Personalization"
+        self.llm = llm
         self.similarity_search = None
+
+        # Resolve provider/model for manual PostHog capture
+        from config.text import get_text_provider, get_model_specs
+        self._provider = get_text_provider('agent_3_preferences')
+        self._model_name = get_model_specs(self._provider)['model_name']
 
     def execute(
         self,
@@ -139,13 +142,32 @@ class PersonalizationAgent(BaseAgent):
 
         # Build dynamic output model — only includes fields LLM is allowed to set
         output_model = self._build_output_model(show_calendar_section, show_temporal_section)
-        structured_llm = self.llm.with_structured_output(output_model)
+        structured_llm = self.llm.with_structured_output(output_model, include_raw=True)
 
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content="Apply personalization to this event."),
         ]
-        result = structured_llm.invoke(messages, config=get_invoke_config("personalization"))
+        start = _time.time()
+        raw_result = structured_llm.invoke(messages)
+        duration_ms = (_time.time() - start) * 1000
+        result = raw_result['parsed']
+
+        # Manual PostHog capture (flat — no chain wrapper)
+        input_tokens = None
+        output_tokens = None
+        try:
+            usage = raw_result['raw'].usage_metadata
+            input_tokens = usage.get('input_tokens')
+            output_tokens = usage.get('output_tokens')
+        except (AttributeError, TypeError):
+            pass
+        capture_llm_generation(
+            "personalization", self._model_name, self._provider, duration_ms,
+            input_tokens=input_tokens, output_tokens=output_tokens,
+            input_content=event.model_dump_json(),
+            output_content=result.model_dump_json() if hasattr(result, 'model_dump_json') else str(result),
+        )
 
         # Merge LLM output into original event (preserves all untouched fields)
         event.summary = result.summary

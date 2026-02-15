@@ -7,6 +7,7 @@ Uses Instructor for automatic Pydantic validation retries.
 """
 
 import time as _time
+from datetime import date
 from typing import List, Optional
 
 from core.base_agent import BaseAgent
@@ -140,6 +141,14 @@ class EventExtractionAgent(BaseAgent):
             f"[EVENT DESCRIPTION]\n"
             f"{description}\n"
             f"[/EVENT DESCRIPTION]"
+        )
+
+        # Current date for year convention (resolver assumes current year when no year in date_text)
+        today = date.today()
+        parts.append(
+            f"[CURRENT DATE]\n"
+            f"Today is {today.strftime('%B %d, %Y')} ({today.strftime('%A')}). Current year: {today.year}\n"
+            f"[/CURRENT DATE]"
         )
 
         parts.append("Extract the event details and temporal expressions.")

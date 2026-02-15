@@ -6,12 +6,13 @@ Returns only the events that need to change (edit or delete).
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+import time as _time
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from core.base_agent import BaseAgent
 from core.prompt_loader import load_prompt
 from extraction.models import ModificationResult
-from config.posthog import get_invoke_config
+from config.posthog import capture_llm_generation
 
 
 class EventModificationAgent(BaseAgent):
@@ -22,11 +23,13 @@ class EventModificationAgent(BaseAgent):
 
     def __init__(self, llm):
         super().__init__("Agent4_EventModification")
-        # Copy LLM and set descriptive name for PostHog traces
-        named_llm = llm.model_copy()
-        named_llm.name = "Agent 4: Modification"
-        self.llm = named_llm.with_structured_output(ModificationResult)
+        self.llm = llm.with_structured_output(ModificationResult, include_raw=True)
         self._prompt_path = "modification/prompts/modification.txt"
+
+        # Resolve provider/model for manual PostHog capture
+        from config.text import get_text_provider, get_model_specs
+        self._provider = get_text_provider('agent_4_modification')
+        self._model_name = get_model_specs(self._provider)['model_name']
 
     def execute(
         self,
@@ -76,6 +79,25 @@ class EventModificationAgent(BaseAgent):
             HumanMessage(content=f"EVENTS:\n{events_block}{calendars_block}\n\nINSTRUCTION:\n{instruction}"),
         ]
 
-        result = self.llm.invoke(messages, config=get_invoke_config("modification"))
+        start = _time.time()
+        raw_result = self.llm.invoke(messages)
+        duration_ms = (_time.time() - start) * 1000
+        result = raw_result['parsed']
+
+        # Manual PostHog capture (flat — no chain wrapper)
+        input_tokens = None
+        output_tokens = None
+        try:
+            usage = raw_result['raw'].usage_metadata
+            input_tokens = usage.get('input_tokens')
+            output_tokens = usage.get('output_tokens')
+        except (AttributeError, TypeError):
+            pass
+        capture_llm_generation(
+            "modification", self._model_name, self._provider, duration_ms,
+            input_tokens=input_tokens, output_tokens=output_tokens,
+            input_content=instruction,
+            output_content=result.model_dump_json(),
+        )
 
         return result

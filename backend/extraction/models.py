@@ -69,11 +69,6 @@ class TemporalExtraction(BaseModel):
         description="Natural language recurrence pattern: 'every Tuesday and Thursday', 'weekly', 'daily'. "
                     "None if not recurring."
     )
-    explicit_year: Optional[int] = Field(
-        default=None,
-        description="Year ONLY if explicitly stated in the text: 2026, 2027, etc. "
-                    "None if no year is mentioned (resolver assumes current year)."
-    )
     explicit_timezone: Optional[str] = Field(
         default=None,
         description="Timezone ONLY if explicitly stated in text: 'EST', 'Pacific', 'UTC', 'ET'. "
@@ -194,6 +189,37 @@ class IdentificationResult(BaseModel):
     )
     has_events: bool = Field(
         description="True if any events were found, False if no events at all"
+    )
+
+
+# ============================================================================
+# CONSOLIDATE Stage: Grouping + Dedup
+# ============================================================================
+
+class EventGroupAssignment(BaseModel):
+    """Assignment of an event to a group, with optional removal."""
+    event_index: int = Field(description="0-based index of the event in the input list")
+    category: str = Field(description="Free-form group name (e.g. 'lectures', 'homework', 'exams'). LLM decides what groups make sense for the input.")
+    keep: bool = Field(default=True, description="False if this event is a duplicate and should be removed")
+    removal_reason: Optional[str] = Field(default=None, description="Why the event was removed (e.g. 'Duplicate of event 3'). Only set when keep=False.")
+
+
+class ConsolidationResult(BaseModel):
+    """Output of the CONSOLIDATE stage — grouping, dedup, and cross-event context."""
+    assignments: List[EventGroupAssignment] = Field(
+        description="One assignment per input event. Every event must appear exactly once."
+    )
+    cross_event_context: str = Field(
+        description="Short blurb highlighting inter-event dependencies, conflicts, and cancellations. "
+                    "E.g. 'Long weekend Feb 16 cancels MWF lecture. Midterm Feb 27 uses lecture slot.'"
+    )
+    notes: Optional[str] = Field(default=None, description="Any observations about the event set")
+
+
+class ExtractedEventBatch(BaseModel):
+    """STRUCTURE stage batch output — one ExtractedEvent per input event."""
+    events: List['ExtractedEvent'] = Field(
+        description="One ExtractedEvent per input event, in the same order as the input list."
     )
 
 

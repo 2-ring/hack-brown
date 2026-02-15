@@ -54,6 +54,8 @@ Extract temporal information as natural language strings. Do NOT convert to ISO 
 - For multi-day events, this is the START date: "March 3-5" → date_text: "March 3"
 - null if no date is mentioned at all
 
+**YEAR CONVENTION:** If date_text has no year, the downstream resolver assumes the CURRENT year (provided below). If the context indicates a different year (e.g., document says "Spring 2027", or the text says "January 2027"), you MUST include the year in date_text and end_date_text: "January 28, 2027". If the year matches the current year or is not specified, just write the date normally without a year: "January 28".
+
 **end_date_text**: Only for multi-day events where an end date is explicitly stated.
 - "March 3-5" → end_date_text: "March 5"
 - "this weekend" → end_date_text: "Sunday" (if context implies multi-day)

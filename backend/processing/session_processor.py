@@ -23,7 +23,8 @@ from extraction.langextract_identifier import identify_events_langextract
 from config.langextract import PASSES_SIMPLE, PASSES_COMPLEX
 from config.posthog import (
     set_tracking_context, flush_posthog, capture_agent_error,
-    capture_pipeline_trace, capture_phase_span, get_tracking_property,
+    capture_pipeline_trace, capture_event_span,
+    get_tracking_property,
 )
 import time as _time
 
@@ -306,6 +307,12 @@ class SessionProcessor:
         _parent_pipeline = get_tracking_property('pipeline')
 
         def process_single_event(idx, event):
+            import uuid as _uuid
+            # Create a unique span ID for this event — used as parent for
+            # extraction and personalization generations within this event.
+            event_span_id = str(_uuid.uuid4())
+            event_start = _time.time()
+
             # Propagate tracking context to this worker thread + set event_index
             set_tracking_context(
                 distinct_id=user_id,
@@ -316,6 +323,7 @@ class SessionProcessor:
                 num_events=len(events),
                 has_personalization=use_personalization,
                 event_index=idx,
+                parent_id=event_span_id,
             )
             try:
                 # Agent 2: Extract facts with NL temporal expressions
@@ -365,6 +373,16 @@ class SessionProcessor:
                         attendees=calendar_event.attendees
                     )
 
+                # Capture event span with total duration
+                capture_event_span(
+                    session_id=session_id,
+                    span_id=event_span_id,
+                    event_index=idx,
+                    num_events=len(events),
+                    duration_ms=(_time.time() - event_start) * 1000,
+                    event_description=event.description,
+                )
+
                 return EventProcessingResult(
                     index=idx, success=True,
                     calendar_event=calendar_event
@@ -374,6 +392,15 @@ class SessionProcessor:
                 logger.error(
                     f"Error processing event {idx+1} in session {session_id}: "
                     f"{e}\n{traceback.format_exc()}"
+                )
+                capture_event_span(
+                    session_id=session_id,
+                    span_id=event_span_id,
+                    event_index=idx,
+                    num_events=len(events),
+                    duration_ms=(_time.time() - event_start) * 1000,
+                    event_description=event.description,
+                    outcome='error',
                 )
                 capture_agent_error("extraction", e, {
                     'session_id': session_id,
@@ -438,8 +465,6 @@ class SessionProcessor:
             title_thread.start()
 
             # Phase 1: Event Identification (LangExtract)
-            phase1_start = _time.time()
-
             from config.complexity import InputComplexityAnalyzer, ComplexityLevel
             complexity_for_passes = InputComplexityAnalyzer.analyze(text, input_type='text')
             passes = PASSES_COMPLEX if complexity_for_passes.level == ComplexityLevel.COMPLEX else PASSES_SIMPLE
@@ -455,17 +480,6 @@ class SessionProcessor:
                     'is_guest': is_guest,
                 },
                 input_type=input_type,
-            )
-
-            phase1_ms = (_time.time() - phase1_start) * 1000
-
-            capture_phase_span(
-                'identification', session_id, phase1_ms,
-                outcome='success' if identification_result.has_events else 'no_events',
-                properties={
-                    'num_events_found': identification_result.num_events,
-                    'input_length': len(text),
-                },
             )
 
             # Check if any events were found
@@ -498,7 +512,6 @@ class SessionProcessor:
             is_guest = session.get('guest_mode', False)
             timezone = self._get_user_timezone(user_id)
 
-            phase2_start = _time.time()
             self._process_events_for_session(
                 session_id=session_id,
                 user_id=user_id,
@@ -507,15 +520,6 @@ class SessionProcessor:
                 is_guest=is_guest,
                 agent_2=agent_2,
                 agent_3=agent_3,
-            )
-            phase2_ms = (_time.time() - phase2_start) * 1000
-
-            capture_phase_span(
-                'processing', session_id, phase2_ms,
-                properties={
-                    'num_events': identification_result.num_events,
-                    'has_personalization': get_tracking_property('has_personalization', False),
-                },
             )
 
             # Mark session as complete
@@ -619,8 +623,6 @@ class SessionProcessor:
             title_thread.start()
 
             # Phase 1: Event Identification
-            phase1_start = _time.time()
-
             if requires_vision:
                 # Image inputs: use Agent 1 with vision (LangExtract is text-only)
                 identification_result = identify_events_chunked(
@@ -655,17 +657,6 @@ class SessionProcessor:
                     input_type=input_type,
                 )
 
-            phase1_ms = (_time.time() - phase1_start) * 1000
-
-            capture_phase_span(
-                'identification', session_id, phase1_ms,
-                outcome='success' if identification_result.has_events else 'no_events',
-                properties={
-                    'num_events_found': identification_result.num_events,
-                    'input_length': len(text),
-                },
-            )
-
             # Check if any events were found
             if not identification_result.has_events:
                 logger.warning(f"No events found in file session {session_id}")
@@ -696,7 +687,6 @@ class SessionProcessor:
             is_guest = session.get('guest_mode', False)
             timezone = self._get_user_timezone(user_id)
 
-            phase2_start = _time.time()
             self._process_events_for_session(
                 session_id=session_id,
                 user_id=user_id,
@@ -705,15 +695,6 @@ class SessionProcessor:
                 is_guest=is_guest,
                 agent_2=agent_2,
                 agent_3=agent_3,
-            )
-            phase2_ms = (_time.time() - phase2_start) * 1000
-
-            capture_phase_span(
-                'processing', session_id, phase2_ms,
-                properties={
-                    'num_events': identification_result.num_events,
-                    'has_personalization': get_tracking_property('has_personalization', False),
-                },
             )
 
             # Mark session as complete

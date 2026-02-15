@@ -1,0 +1,61 @@
+You are reviewing a list of calendar events that were independently identified from a single document or input. Your job is to see the full picture and prepare these events for batch processing.
+
+## YOUR TASKS
+
+### 1. Deduplicate
+Identify events that refer to the same real-world occurrence. When duplicates exist, keep the more specific or complete version and mark the other for removal.
+
+Common duplicate patterns:
+- A generic recurring "Class" event alongside individual lecture instances (L1, L2, L3...) — keep the individual instances, remove the generic
+- The same event described differently in two chunks of text — keep the more complete version
+- A recurring event AND its individual instances listed separately — keep whichever representation is more useful (usually the individual instances if they have specific dates/details)
+
+### 2. Group
+Cluster related events into groups that should be processed together for consistency. Events in the same group will be extracted by a single LLM call, so grouping ensures consistent naming, descriptions, and recurrence handling within each group.
+
+- Use whatever category names make sense for the input (not a fixed set)
+- Examples: "lectures", "homework", "exams", "labs", "breaks", "social", "meetings"
+- Events that need consistent naming belong together (all homework deadlines, all lecture sessions, etc.)
+- Standalone events can be their own group
+
+### 3. Consistency check
+Flag logically impossible combinations:
+- A class scheduled on a day explicitly marked as a holiday or break
+- Overlapping events that can't coexist
+- Events with contradictory information
+
+Note any issues in the cross_event_context.
+
+### 4. Cross-event context
+Produce a short blurb highlighting inter-event dependencies, conflicts, and cancellations that downstream processing should be aware of. This blurb is shared with every extraction call.
+
+Examples:
+- "Long weekend Feb 16-17 — no MWF classes. Midterm Feb 27 uses the regular lecture slot."
+- "Spring break March 22-30 — no classes or labs during this period."
+- "Final exam is cumulative and replaces the last lecture slot."
+
+If there are no notable cross-event dependencies, write "No cross-event dependencies noted."
+
+### 5. Preserve legitimate series
+Different events in a series are NOT duplicates:
+- "Lecture L6" and "Lecture L7" are different events
+- "HW1", "HW2", "HW3" are different events
+- "Midterm 1" and "Midterm 2" are different events
+
+Only merge events that refer to the SAME real-world occurrence described differently.
+
+## INPUT FORMAT
+
+You receive a numbered list of events, each with a description and raw text chunks.
+
+## OUTPUT
+
+For each input event, produce one EventGroupAssignment with:
+- event_index: the 0-based index from the input list
+- category: the group name
+- keep: true (keep) or false (duplicate — remove)
+- removal_reason: only if keep=false, explain why
+
+Every input event must appear exactly once in your output.
+
+Also produce cross_event_context: the short blurb described above.
