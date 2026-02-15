@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react'
-import './FlowingSineWave.css'
-import { PathDescriptor, resolvePath } from './pathUtils'
+import './FlowPath.css'
+import type { PathDescriptor } from './pathUtils'
+import { resolvePath } from './pathUtils'
 
-interface FlowingSineWaveProps {
+interface FlowPathProps {
     /** List of icon elements to rotate through */
     icons: React.ReactNode[];
     /** Size of each icon in pixels (width/height) */
@@ -19,7 +20,7 @@ interface FlowingSineWaveProps {
     className?: string;
 }
 
-export function FlowingSineWave({
+export function FlowPath({
     icons,
     iconSize,
     gap,
@@ -27,7 +28,7 @@ export function FlowingSineWave({
     pathLength: pathLengthOverride,
     duration,
     className = ''
-}: FlowingSineWaveProps) {
+}: FlowPathProps) {
 
     // Resolve path descriptor to SVG path string + measured length
     const resolved = useMemo(() => resolvePath(path), [path])
@@ -54,11 +55,11 @@ export function FlowingSineWave({
     }, [icons, capacity, duration])
 
     return (
-        <div className={`flowing-sine-wave-container ${className}`}>
+        <div className={`flow-path-container ${className}`}>
             {displayItems.map((item) => (
                 <div
                     key={item.id}
-                    className="fsw-item-wrapper"
+                    className="fp-item-wrapper"
                     style={{
                         width: `${iconSize}px`,
                         height: `${iconSize}px`,
@@ -68,7 +69,7 @@ export function FlowingSineWave({
                         '--delay': `${item.delay}s`,
                     } as React.CSSProperties}
                 >
-                    <div className="fsw-item-content">
+                    <div className="fp-item-content">
                         {item.content}
                     </div>
                 </div>

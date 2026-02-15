@@ -17,6 +17,9 @@ CREATE TABLE users (
   google_refresh_token TEXT,
   token_expires_at TIMESTAMPTZ,
 
+  -- User timezone
+  timezone VARCHAR(100) DEFAULT 'America/New_York',
+
   -- User preferences (JSONB for flexibility)
   preferences JSONB DEFAULT '{
     "defaultCalendarId": null,

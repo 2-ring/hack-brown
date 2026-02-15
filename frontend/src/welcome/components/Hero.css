@@ -256,6 +256,30 @@
     font-weight: 600;
 }
 
+/* Flowing path icon cards */
+.hero-flow-icon-card {
+    width: 100%;
+    height: 100%;
+    background: var(--background-elevated);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px var(--shadow-light);
+}
+
+.hero-flow-icon-card svg {
+    width: 26px;
+    height: 26px;
+    color: var(--text-secondary);
+}
+
+.hero-flow-left,
+.hero-flow-right {
+    opacity: 0.45;
+}
+
 @media (max-width: 768px) {
     .hero-headline {
         font-size: 40px;

@@ -123,7 +123,7 @@ class AudioProcessor(BaseInputProcessor):
 
             # Transcribe
             payload = {"buffer": buffer_data}
-            response = self.client.listen.rest.v("1").transcribe_file(payload, options)
+            response = self.client.listen.v1.media.transcribe_file(payload, options)
 
             # Extract transcript
             if hasattr(response, 'results') and response.results.channels:
@@ -272,7 +272,7 @@ class AudioProcessor(BaseInputProcessor):
             }
 
             payload = {"buffer": buffer_data}
-            response = self.client.listen.rest.v("1").transcribe_file(payload, options)
+            response = self.client.listen.v1.media.transcribe_file(payload, options)
 
             if hasattr(response, 'results') and response.results.channels:
                 channel = response.results.channels[0]

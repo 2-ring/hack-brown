@@ -1,5 +1,5 @@
 import './Omnipresence.css'
-import { FlowingSineWave } from './FlowingSineWave'
+import { FlowPath } from './FlowPath'
 import {
     Envelope,
     ChatCircleText,
@@ -97,7 +97,7 @@ export function Omnipresence() {
 
     return (
         <section className="omnipresence-section">
-            <FlowingSineWave
+            <FlowPath
                 icons={iconNodes}
                 iconSize={ICON_SIZE}
                 gap={GAP}

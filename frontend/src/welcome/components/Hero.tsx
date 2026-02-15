@@ -13,6 +13,8 @@ import {
 } from '@phosphor-icons/react';
 import { CTAButton } from './CTAButton';
 import { AppIcon } from '../AppIcon';
+import { FlowPath } from './FlowPath';
+import type { Point } from './pathUtils';
 import './Hero.css';
 
 // Input Data
@@ -45,9 +47,53 @@ const Hero = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // Flowing path icons (input types)
+    const flowIcons = [FilePdf, ImageIcon, Envelope, Microphone, ChatCircleText, Notepad].map(
+        (Icon, i) => (
+            <div key={i} className="hero-flow-icon-card">
+                <Icon weight="duotone" />
+            </div>
+        )
+    );
+
+    // Left path: off-screen left → under the icon (center)
+    const leftPath: Point[] = [
+        { x: -100, y: 200 },
+        { x: 200, y: 480 },
+        { x: 500, y: 250 },
+        { x: 750, y: 450 },
+        { x: 960, y: 540 },
+    ];
+
+    // Right path: under the icon (center) → off-screen right
+    const rightPath: Point[] = [
+        { x: 960, y: 540 },
+        { x: 1170, y: 300 },
+        { x: 1400, y: 480 },
+        { x: 1700, y: 280 },
+        { x: 2060, y: 400 },
+    ];
+
     return (
         <section className="welcome-hero-section">
             <div className="hero-bg-orb" />
+
+            <FlowPath
+                icons={flowIcons}
+                iconSize={52}
+                gap={16}
+                path={leftPath}
+                duration={30}
+                className="hero-flow-left"
+            />
+            <FlowPath
+                icons={flowIcons}
+                iconSize={52}
+                gap={16}
+                path={rightPath}
+                duration={30}
+                className="hero-flow-right"
+            />
 
             <div className="hero-content">
                 <h1 className="hero-headline">

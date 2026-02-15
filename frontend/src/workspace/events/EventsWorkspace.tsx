@@ -57,7 +57,6 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
   const [editedEvents, setEditedEvents] = useState<(CalendarEvent | null)[]>(events)
   const [activeLoading, setActiveLoading] = useState<LoadingStateConfig | null>(null)
-  const [skeletonEventIds, setSkeletonEventIds] = useState<Set<string>>(new Set())
   const [isScrollable, setIsScrollable] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const pendingEditRef = useRef<CalendarEvent | null>(null)
@@ -266,26 +265,19 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
         setIsChatExpanded(false)
 
         if (affectedIds.size > 0) {
-          // Show skeleton for edited events briefly
-          setSkeletonEventIds(affectedIds)
-
-          // Phase 2: After a short delay, swap in the real edited data
-          setTimeout(() => {
-            setEditedEvents(prev => {
-              const updated = prev.map(event => {
-                if (!event?.id) return event
-                // Find the edited version by matching id
-                for (const [, edited] of editMap) {
-                  if (edited.id === event.id) return edited
-                }
-                return event
-              })
-              const valid = updated.filter((e): e is CalendarEvent => e !== null)
-              onEventsChanged?.(valid)
-              return updated
+          setEditedEvents(prev => {
+            const updated = prev.map(event => {
+              if (!event?.id) return event
+              // Find the edited version by matching id
+              for (const [, edited] of editMap) {
+                if (edited.id === event.id) return edited
+              }
+              return event
             })
-            setSkeletonEventIds(new Set())
-          }, 400)
+            const valid = updated.filter((e): e is CalendarEvent => e !== null)
+            onEventsChanged?.(valid)
+            return updated
+          })
         } else {
           onEventsChanged?.(afterDeletes.filter((e): e is CalendarEvent => e !== null))
         }
@@ -629,8 +621,6 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
                             <Event
                               event={event}
                               index={originalIndex}
-                              isLoading={!!(event.id && skeletonEventIds.has(event.id))}
-        
                               calendars={calendars}
                               formatDate={formatDate}
                               formatTime={formatTime}

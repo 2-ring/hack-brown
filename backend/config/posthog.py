@@ -306,7 +306,7 @@ def capture_pipeline_trace(
         event_properties = {
             '$ai_trace_id': session_id,
             '$ai_session_id': str(session_id),
-            '$ai_span_id': str(uuid.uuid4()),
+            '$ai_span_id': str(session_id),
             '$ai_span_name': f"Pipeline: {input_type}{guest_suffix}",
             '$ai_latency': duration_ms / 1000,
             '$ai_framework': 'dropcal',
@@ -360,7 +360,7 @@ def capture_phase_span(
         event_properties = {
             '$ai_trace_id': session_id,
             '$ai_session_id': str(session_id),
-            '$ai_parent_id': session_id,
+            '$ai_parent_id': str(session_id),
             '$ai_span_id': str(uuid.uuid4()),
             '$ai_span_name': _PHASE_LABELS.get(phase_name, phase_name),
             '$ai_latency': duration_ms / 1000,
@@ -462,7 +462,17 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
         logger.debug(f"PostHog: Failed to capture error event: {e}")
 
 
-def capture_llm_generation(agent_name: str, model: str, provider: str, duration_ms: float = 0, properties: dict = None):
+def capture_llm_generation(
+    agent_name: str,
+    model: str,
+    provider: str,
+    duration_ms: float = 0,
+    properties: dict = None,
+    input_tokens: int = None,
+    output_tokens: int = None,
+    input_content=None,
+    output_content=None,
+):
     """
     Capture a successful LLM generation event for non-LangChain calls (e.g., Instructor).
     Mirrors the $ai_generation events that the LangChain CallbackHandler produces.
@@ -473,6 +483,10 @@ def capture_llm_generation(agent_name: str, model: str, provider: str, duration_
         provider: Provider name (e.g., "grok", "claude")
         duration_ms: Call duration in milliseconds
         properties: Optional additional properties
+        input_tokens: Number of input/prompt tokens (for cost calculation)
+        output_tokens: Number of output/completion tokens (for cost calculation)
+        input_content: Input messages/text (string or list of message dicts)
+        output_content: Output text/JSON (string or dict)
     """
     client = _ensure_client()
     if not client:
@@ -487,6 +501,7 @@ def capture_llm_generation(agent_name: str, model: str, provider: str, duration_
             '$ai_trace_id': trace_id,
             '$ai_session_id': str(trace_id) if trace_id else None,
             '$ai_span_id': str(uuid.uuid4()),
+            '$ai_parent_id': str(trace_id) if trace_id else None,
             '$ai_span_name': _AGENT_LABELS.get(agent_name, agent_name),
             '$ai_provider': provider,
             '$ai_model': model,
@@ -495,6 +510,18 @@ def capture_llm_generation(agent_name: str, model: str, provider: str, duration_
             'environment': _ENVIRONMENT,
             'agent_name': agent_name,
         }
+
+        # Token counts (PostHog calculates costs server-side from tokens + model)
+        if input_tokens is not None:
+            event_properties['$ai_input_tokens'] = input_tokens
+        if output_tokens is not None:
+            event_properties['$ai_output_tokens'] = output_tokens
+
+        # Input/output content for trace inspection
+        if input_content is not None:
+            event_properties['$ai_input'] = input_content
+        if output_content is not None:
+            event_properties['$ai_output'] = output_content
 
         if pipeline:
             event_properties['pipeline'] = pipeline

@@ -69,6 +69,11 @@ class TemporalExtraction(BaseModel):
         description="Natural language recurrence pattern: 'every Tuesday and Thursday', 'weekly', 'daily'. "
                     "None if not recurring."
     )
+    explicit_year: Optional[int] = Field(
+        default=None,
+        description="Year ONLY if explicitly stated in the text: 2026, 2027, etc. "
+                    "None if no year is mentioned (resolver assumes current year)."
+    )
     explicit_timezone: Optional[str] = Field(
         default=None,
         description="Timezone ONLY if explicitly stated in text: 'EST', 'Pacific', 'UTC', 'ET'. "

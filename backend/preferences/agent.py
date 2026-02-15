@@ -53,7 +53,10 @@ class PersonalizationAgent(BaseAgent):
 
     def __init__(self, llm: ChatAnthropic):
         super().__init__("Agent3_Personalization")
-        self.llm = llm  # Structured output bound per-call with dynamic model
+        # Copy LLM and set descriptive name for PostHog traces
+        # (avoids showing "ChatOpenAI" in trace tree)
+        self.llm = llm.model_copy()
+        self.llm.name = "Agent 3: Personalization"
         self.similarity_search = None
 
     def execute(

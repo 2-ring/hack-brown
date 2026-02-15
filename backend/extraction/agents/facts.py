@@ -150,8 +150,11 @@ class EventExtractionAgent(BaseAgent):
         """Call Instructor with provider-appropriate API and capture to PostHog."""
         start = _time.time()
 
+        input_tokens = None
+        output_tokens = None
+
         if self.provider in ('grok', 'openai'):
-            result = self.instructor_client.chat.completions.create(
+            result, completion = self.instructor_client.chat.completions.create_with_completion(
                 model=self.model_name,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -160,8 +163,13 @@ class EventExtractionAgent(BaseAgent):
                 response_model=ExtractedEvent,
                 max_retries=self.max_retries,
             )
+            try:
+                input_tokens = completion.usage.prompt_tokens
+                output_tokens = completion.usage.completion_tokens
+            except (AttributeError, TypeError):
+                pass
         else:  # claude
-            result = self.instructor_client.messages.create(
+            result, completion = self.instructor_client.messages.create_with_completion(
                 model=self.model_name,
                 system=system_prompt,
                 messages=[
@@ -171,8 +179,19 @@ class EventExtractionAgent(BaseAgent):
                 max_retries=self.max_retries,
                 max_tokens=4096,
             )
+            try:
+                input_tokens = completion.usage.input_tokens
+                output_tokens = completion.usage.output_tokens
+            except (AttributeError, TypeError):
+                pass
 
         duration_ms = (_time.time() - start) * 1000
-        capture_llm_generation("extraction", self.model_name, self.provider, duration_ms)
+        capture_llm_generation(
+            "extraction", self.model_name, self.provider, duration_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_content=user_message,
+            output_content=result.model_dump_json(),
+        )
 
         return result

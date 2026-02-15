@@ -22,7 +22,10 @@ class EventModificationAgent(BaseAgent):
 
     def __init__(self, llm):
         super().__init__("Agent4_EventModification")
-        self.llm = llm.with_structured_output(ModificationResult)
+        # Copy LLM and set descriptive name for PostHog traces
+        named_llm = llm.model_copy()
+        named_llm.name = "Agent 4: Modification"
+        self.llm = named_llm.with_structured_output(ModificationResult)
         self._prompt_path = "modification/prompts/modification.txt"
 
     def execute(
