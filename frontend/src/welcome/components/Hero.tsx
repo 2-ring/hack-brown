@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -52,8 +52,8 @@ const Hero = () => {
 
             <div className="hero-content">
                 <h1 className="hero-headline">
-                    <span>Drop it in.</span>
-                    <span className="gradient-text">It's on your calendar.</span>
+                    <span>Drop anything straight</span>
+                    <span className="gradient-text">into your calendar.</span>
                 </h1>
 
                 <p className="hero-subtext">
@@ -83,7 +83,6 @@ const Hero = () => {
                             // relative to the active index.
 
                             const isActive = index === activeIndex;
-                            const distance = Math.abs(index - activeIndex);
                             // Wrap distance for cyclic effect logic if we wanted a true carousel visual, 
                             // but purely linear list with highlight is easier to parse.
 
