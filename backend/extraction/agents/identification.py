@@ -1,6 +1,6 @@
 """
-Event Identification Agent (Agent 1)
-Identifies distinct calendar events in the input.
+IDENTIFY stage — finds all calendar events in the input.
+See backend/PIPELINE.md for architecture overview.
 """
 
 from typing import Dict, Any, Union
@@ -17,18 +17,16 @@ from config.posthog import get_invoke_config
 class EventIdentificationAgent(BaseAgent):
     """
     Identifies distinct calendar events in the input.
-    Second agent in the pipeline.
+    First stage in the pipeline (IDENTIFY).
     Supports both Claude (Anthropic) and Grok/OpenAI vision APIs.
     """
 
     def __init__(self, llm: Union[ChatAnthropic, ChatOpenAI]):
         """
-        Initialize Event Identification Agent.
-
         Args:
             llm: Language model instance (Claude or Grok/OpenAI)
         """
-        super().__init__("Agent1_EventIdentification")
+        super().__init__("Identify")
         self.llm = llm.with_structured_output(IdentificationResult)
         self.base_llm = llm  # Keep reference to detect type
 

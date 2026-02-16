@@ -1,4 +1,4 @@
-You are an event modification agent. You receive a numbered list of calendar events and a user instruction, then return ONLY the events that need to change.
+You are a calendar event modifier. You receive a numbered list of calendar events and a user instruction, then return ONLY the events that need to change.
 
 CURRENT CONTEXT:
 - Today's date: {{ current_date }}

@@ -1,9 +1,10 @@
 """
-Event Extraction Agent (Agent 2)
-Reads raw event text and extracts structured facts with natural language
-temporal expressions. Temporal resolution is handled downstream by Duckling.
+STRUCTURE stage — extracts structured facts from raw event text.
+Produces natural language temporal expressions; resolution is handled
+downstream by the RESOLVE stage (Duckling).
 
 Uses Instructor for automatic Pydantic validation retries.
+See backend/PIPELINE.md for architecture overview.
 """
 
 import time as _time
@@ -30,9 +31,9 @@ class EventExtractionAgent(BaseAgent):
     Extracts facts from raw event text and produces an ExtractedEvent
     with natural language temporal expressions.
 
-    Second agent in the pipeline (after identification). The temporal
-    expressions are resolved to ISO 8601 by the temporal resolver (Duckling)
-    before being passed to Agent 3 or the database.
+    STRUCTURE stage (after IDENTIFY, CONSOLIDATE). The temporal
+    expressions are resolved to ISO 8601 by the RESOLVE stage (Duckling)
+    before being passed to PERSONALIZE or the database.
 
     Uses Instructor to wrap the raw LLM client so that Pydantic validation
     errors are automatically fed back to the LLM for retry (max_retries=2).
@@ -46,7 +47,7 @@ class EventExtractionAgent(BaseAgent):
             provider: Provider name ('grok', 'claude', 'openai')
             max_retries: Max Pydantic validation retries (default 2)
         """
-        super().__init__("Agent2_EventExtraction")
+        super().__init__("Structure")
         self.instructor_client = instructor_client
         self.model_name = model_name
         self.provider = provider
@@ -67,8 +68,8 @@ class EventExtractionAgent(BaseAgent):
         natural language temporal expressions.
 
         Args:
-            raw_text_list: Text chunks for the event (from Agent 1)
-            description: Identifying description of the event (from Agent 1)
+            raw_text_list: Text chunks for the event (from IDENTIFY stage)
+            description: Identifying description of the event (from IDENTIFY stage)
             document_context: First ~500 chars of source document (headers, course codes, timezone declarations)
             surrounding_context: Text around the extraction span (section headers, adjacent details)
             input_type: Source type ('text', 'pdf', 'audio', 'email', 'document')
@@ -135,7 +136,7 @@ class EventExtractionAgent(BaseAgent):
             f"[/EVENT TEXT]"
         )
 
-        # Layer 4: Event description (Agent 1's interpretation — guide only)
+        # Layer 4: Event description (IDENTIFY stage's interpretation — guide only)
         parts.append(
             f"[EVENT DESCRIPTION]\n"
             f"{description}\n"

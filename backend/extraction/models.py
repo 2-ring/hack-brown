@@ -11,15 +11,15 @@ import pytz
 
 
 # ============================================================================
-# Agent 2 Temporal Output: Natural Language Temporal Extraction
+# STRUCTURE Stage: Natural Language Temporal Extraction
 # ============================================================================
 
 class TemporalExtraction(BaseModel):
     """
-    Natural language temporal expression extracted by Agent 2.
+    Natural language temporal expression extracted by the STRUCTURE stage.
     Resolved deterministically to CalendarDateTime by the temporal resolver (Duckling).
 
-    Agent 2 extracts ONLY what is stated (explicitly or implicitly) in the text.
+    STRUCTURE stage extracts ONLY what is stated (explicitly or implicitly) in the text.
     If temporal information is omitted from the input, the field stays None.
     """
     date_text: Optional[str] = Field(
@@ -98,7 +98,7 @@ class TemporalExtraction(BaseModel):
 
 class ExtractedEvent(BaseModel):
     """
-    Agent 2 output model. Contains all semantic fields of a calendar event,
+    STRUCTURE stage output model. Contains all semantic fields of a calendar event,
     but with natural language temporal expressions (TemporalExtraction) instead
     of resolved ISO 8601 CalendarDateTime.
 
@@ -116,9 +116,9 @@ class ExtractedEvent(BaseModel):
     people: Optional[List[str]] = Field(default=None, description="People mentioned by name")
     instructions: Optional[str] = Field(default=None, description="User's explicit requests: 'remind me 1 hour before', 'high priority'")
 
-    # Set by extraction (if explicit) or personalization agent
+    # Set by STRUCTURE (if explicit) or PERSONALIZE stage
     calendar: Optional[str] = Field(default=None, description="Target calendar name from user instructions. None = primary calendar.")
-    colorId: Optional[str] = Field(default=None, description="Always None from Agent 2. Set by personalization agent.")
+    colorId: Optional[str] = Field(default=None, description="Always None from STRUCTURE. Set by PERSONALIZE stage.")
 
     @field_validator('summary')
     @classmethod
@@ -157,7 +157,7 @@ class ExtractedEvent(BaseModel):
 
 
 # ============================================================================
-# Agent 1: Event Identification
+# IDENTIFY Stage: Event Identification
 # ============================================================================
 
 class IdentifiedEvent(BaseModel):
@@ -173,7 +173,7 @@ class IdentifiedEvent(BaseModel):
     )
 
     # Context fields — populated post-identification (not by LLM).
-    # Carry document-level and local context to Agent 2 for richer extraction.
+    # Carry document-level and local context to STRUCTURE stage for richer extraction.
     document_context: Optional[str] = None
     surrounding_context: Optional[str] = None
     input_type: Optional[str] = None
@@ -224,7 +224,7 @@ class ExtractedEventBatch(BaseModel):
 
 
 # ============================================================================
-# Agent 2: Semantic Fact Extraction
+# STRUCTURE Stage: Semantic Fact Extraction
 # ============================================================================
 
 class RecurrenceInfo(BaseModel):
@@ -251,7 +251,7 @@ class ExtractedFacts(BaseModel):
     recurrence: RecurrenceInfo = Field(description="Recurrence pattern information")
     calendar: Optional[str] = Field(
         default=None,
-        description="Calendar display name from user's instructions (e.g. 'Classes', 'Work'). Agent 3 resolves this to a provider calendar ID. If None, primary calendar is used."
+        description="Calendar display name from user's instructions (e.g. 'Classes', 'Work'). PERSONALIZE stage resolves this to a provider calendar ID. If None, primary calendar is used."
     )
 
     @field_validator('title')
@@ -327,7 +327,7 @@ class ExtractedFacts(BaseModel):
 
 
 # ============================================================================
-# Agent 2 Output / Pipeline Standard Model
+# Pipeline Standard Model
 # ============================================================================
 
 class CalendarDateTime(BaseModel):
@@ -416,12 +416,12 @@ class CalendarEvent(BaseModel):
     """
     Unified calendar event model — the standard output for the extraction pipeline.
 
-    Produced by Agent 2 (extraction), optionally enhanced by Agent 3 (personalization),
-    consumed by Agent 4 (modification) and the calendar write layer.
+    Produced by STRUCTURE, optionally enhanced by PERSONALIZE, consumed by MODIFY
+    and the calendar write layer.
     """
     summary: str = Field(description="Event title — clean, descriptive, and scannable")
     start: CalendarDateTime = Field(description="Start date/time")
-    end: Optional[CalendarDateTime] = Field(default=None, description="End date/time. None when not explicitly stated (Agent 3 infers later).")
+    end: Optional[CalendarDateTime] = Field(default=None, description="End date/time. None when not explicitly stated (PERSONALIZE infers later).")
     location: Optional[str] = Field(default=None, description="Physical location (standardized)")
     description: Optional[str] = Field(default=None, description="Event description/notes")
     recurrence: Optional[List[str]] = Field(default=None, description="RRULE strings for recurring events")
@@ -432,9 +432,9 @@ class CalendarEvent(BaseModel):
     people: Optional[List[str]] = Field(default=None, description="People mentioned by name")
     instructions: Optional[str] = Field(default=None, description="User's explicit requests: 'remind me 1 hour before', 'high priority'")
 
-    # Set by extraction (if explicit) or personalization agent
+    # Set by STRUCTURE (if explicit) or PERSONALIZE stage
     calendar: Optional[str] = Field(default=None, description="Target calendar ID (provider calendar ID). None = primary calendar.")
-    colorId: Optional[str] = Field(default=None, description="Calendar color ID. Set by personalization agent.")
+    colorId: Optional[str] = Field(default=None, description="Calendar color ID. Set by PERSONALIZE stage.")
 
     @field_validator('summary')
     @classmethod
@@ -492,7 +492,7 @@ class CalendarEvent(BaseModel):
 
 
 # ============================================================================
-# Agent 4: Event Modification
+# MODIFY: Event Modification
 # ============================================================================
 
 class EventAction(BaseModel):
@@ -508,7 +508,7 @@ class EventAction(BaseModel):
 
 
 class ModificationResult(BaseModel):
-    """Result of the multi-event modification agent."""
+    """Result of the multi-event modification."""
     actions: List[EventAction] = Field(
         default_factory=list,
         description="List of modifications. Only include events that should change. Events not listed are kept as-is."

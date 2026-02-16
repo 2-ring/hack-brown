@@ -44,7 +44,7 @@ def identify_events_langextract(
             If None, defaults to PASSES_SIMPLE.
         tracking_context: Optional dict for PostHog tracking.
         input_type: Source type ('text', 'pdf', 'audio', 'email', 'document').
-            Forwarded to IdentifiedEvent for Agent 2 context.
+            Forwarded to IdentifiedEvent for STRUCTURE stage context.
 
     Returns:
         IdentificationResult with identified events.
@@ -147,11 +147,11 @@ def _map_extractions_to_events(result, input_type: str = 'text') -> list:
 
     IdentifiedEvent gets:
       - raw_text: List[str]           (the verbatim span)
-      - description: str              (LLM-generated summary from Agent 1)
+      - description: str              (LLM-generated summary from IDENTIFY)
       - confidence: str
       - document_context: str | None  (first ~500 chars — headers, course names, timezone)
       - surrounding_context: str | None (text around the span — section headers, adjacent details)
-      - input_type: str | None        (source type signal for Agent 2)
+      - input_type: str | None        (source type signal for STRUCTURE stage)
     """
     events = []
 

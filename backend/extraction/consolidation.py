@@ -2,7 +2,7 @@
 CONSOLIDATE stage — groups events, removes duplicates, produces cross-event context.
 
 Single lightweight LLM call that sees all identified events holistically.
-Runs after IDENTIFY (LangExtract / Agent 1), before STRUCTURE (Agent 2).
+Runs after IDENTIFY (LangExtract), before STRUCTURE.
 
 See backend/PIPELINE.md for architecture overview.
 """

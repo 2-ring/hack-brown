@@ -8,7 +8,7 @@ Turn messy text, images, audio, PDFs, and emails into calendar events. Drop it i
 
 Three-app monorepo:
 
-- `backend/` — Flask API, multi-agent LangChain pipeline, Supabase PostgreSQL
+- `backend/` — Flask API, 5-stage AI pipeline (IDENTIFY → CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE), Supabase PostgreSQL
 - `frontend/` — React + Vite + TypeScript
 - `mobile/` — Expo / React Native
 

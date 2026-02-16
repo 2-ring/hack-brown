@@ -1,40 +1,41 @@
 # DropCal
 
-Converts messy text, images, audio, PDFs, and emails into calendar events via a multi-agent AI pipeline. Three-app monorepo: `backend/` (Flask/Python), `frontend/` (React/Vite/TypeScript), `mobile/` (Expo/React Native).
+Converts messy text, images, audio, PDFs, and emails into calendar events via a 5-stage AI pipeline. Three-app monorepo: `backend/` (Flask/Python), `frontend/` (React/Vite/TypeScript), `mobile/` (Expo/React Native).
 
 Production: dropcal.ai (frontend) / api.dropcal.ai (backend)
 
 ## Architecture
 
-### Agent Pipeline
+### Pipeline
 
-The core is a 3-agent LangChain pipeline, plus a separate modification agent for user edits. Each agent inherits from `BaseAgent` (`backend/core/base_agent.py`), uses `.with_structured_output(PydanticModel)` for typed returns, and loads prompts from a `prompts/` directory relative to its own file.
+The core is a 5-stage pipeline. See `backend/PIPELINE.md` for the full architecture. Each stage inherits from `BaseAgent` (`backend/core/base_agent.py`), uses `.with_structured_output(PydanticModel)` or Instructor for typed returns, and loads prompts from a `prompts/` directory relative to its own file.
 
 ```
-Input → Agent 1 (Identification) → Agent 2 (Extraction) → Temporal Resolver → Agent 3 (Preferences, conditional)
-                                         ↕ parallel per event
+IDENTIFY → CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE
+                              ↕ per-group parallel
 
-Modification Agent ← user edits (separate from pipeline)
+MODIFY ← user edits (separate from pipeline)
 ```
 
-| Agent | File | Input → Output | Job |
+| Stage | File | Input → Output | Job |
 |-------|------|---------------|-----|
-| 1 - Identification | `extraction/agents/identification.py` | raw text/image → `IdentificationResult` | Find all events in input |
-| 2 - Extraction | `extraction/agents/facts.py` | per-event raw_text → `ExtractedEvent` (NL temporal) | Extract facts as natural language (no date math) |
-| Temporal Resolver | `extraction/temporal_resolver.py` | `ExtractedEvent` → `CalendarEvent` (ISO 8601) | Deterministic date resolution via Duckling |
-| 3 - Preferences | `preferences/agent.py` | `CalendarEvent` + patterns → personalized `CalendarEvent` | Apply learned preferences |
-| Modification | `modification/agent.py` | user edit request → modified event | Handle user corrections (not part of main pipeline) |
+| IDENTIFY | `extraction/agents/identification.py` | raw text/image → `IdentificationResult` | Find all events in input |
+| CONSOLIDATE | `extraction/consolidation.py` | `List[IdentifiedEvent]` → `ConsolidationResult` | Group, dedup, cross-event context |
+| STRUCTURE | `extraction/agents/facts.py` | per-group events → `List[ExtractedEvent]` (NL temporal) | Extract facts as natural language (no date math) |
+| RESOLVE | `extraction/temporal_resolver.py` | `ExtractedEvent` → `CalendarEvent` (ISO 8601) | Deterministic date resolution via Duckling |
+| PERSONALIZE | `preferences/agent.py` | `CalendarEvent` + patterns → personalized `CalendarEvent` | Apply learned preferences |
+| MODIFY | `modification/agent.py` | user edit request → modified event | Handle user corrections (not part of main pipeline) |
 
-All Pydantic models live in `backend/extraction/models.py`. Agents 2+3 run in parallel per event using threads with a `db_lock` (because `Session.add_event` does read-modify-write).
+All Pydantic models live in `backend/extraction/models.py`. STRUCTURE processes per-group in parallel, then RESOLVE + PERSONALIZE run per-event within each group. Thread-safe DB writes use a `db_lock` (because `Session.add_event` does read-modify-write).
 
 ### LLM Provider Config
 
-`backend/config/text.py` controls which LLM each agent uses. Switch between presets by changing the `CONFIG` line:
+`backend/config/text.py` controls which LLM each pipeline stage uses. Switch between presets by changing the `CONFIG` line:
 - `TextModelConfig.all_grok()` — current default, uses $2.5k xAI credits
 - `TextModelConfig.all_claude()` — production quality (claude-sonnet-4-5)
 - `TextModelConfig.hybrid_optimized()` — Claude for complex tasks, Grok for simple
 
-Each agent can use a different provider. `create_text_model(component)` returns the right LangChain LLM.
+Each stage can use a different provider. `create_text_model(component)` returns the right LangChain LLM.
 
 ### Processing Flow
 
@@ -92,9 +93,9 @@ supabase migration new <name>                  # Create migration
 
 ## Conventions
 
-- **Python**: PascalCase classes, snake_case functions, Pydantic models for all structured LLM output. Agents use `ChatPromptTemplate` → `chain.invoke()`. Flask blueprints for route groups.
+- **Python**: PascalCase classes, snake_case functions, Pydantic models for all structured LLM output. Pipeline stages use `ChatPromptTemplate` → `chain.invoke()` or Instructor. Flask blueprints for route groups.
 - **TypeScript**: PascalCase components, camelCase functions/hooks. API client in `frontend/src/api/backend-client.ts`. Types in `frontend/src/api/types.ts`.
-- **New agents**: Inherit `BaseAgent`, implement `execute()`, add Pydantic model to `extraction/models.py`, put prompt in `prompts/` dir next to agent.
+- **New pipeline stages**: Inherit `BaseAgent`, implement `execute()`, add Pydantic model to `extraction/models.py`, put prompt in `prompts/` dir next to the stage's module.
 - **New calendar providers**: Add `auth.py`, `fetch.py`, `create.py` in `backend/calendars/<provider>/`, register in `factory.py`.
 - **New input processors**: Inherit `BaseInputProcessor`, register in `app.py` via `input_processor_factory.register_processor()`.
 
@@ -102,7 +103,7 @@ supabase migration new <name>                  # Create migration
 
 PostHog tracks LLM costs, latency, token usage, and product analytics. Project ID: 308768. Dashboard: https://us.posthog.com/project/308768
 
-**How it works:** `config/posthog.py` initializes a PostHog client at startup. Before each agent pipeline run, `set_tracking_context(distinct_id, trace_id)` sets the user/trace for the current thread. Every `chain.invoke()` call passes `config=get_invoke_config()` which attaches a PostHog LangChain `CallbackHandler` that automatically captures model, tokens, cost, and latency.
+**How it works:** `config/posthog.py` initializes a PostHog client at startup. Before each pipeline run, `set_tracking_context(distinct_id, trace_id)` sets the user/trace for the current thread. Every `chain.invoke()` call passes `config=get_invoke_config()` which attaches a PostHog LangChain `CallbackHandler` that automatically captures model, tokens, cost, and latency.
 
 **Backend (LLM observability):**
 - `backend/config/posthog.py` — client init, thread-local tracking context, `get_invoke_config()` helper
@@ -124,7 +125,7 @@ curl -H "Authorization: Bearer $POSTHOG_PERSONAL_API_KEY" \
 
 ## Gotchas
 
-- `app.py` initializes ALL agents and services at module import time — heavy startup, but needed for Gunicorn preloading.
+- `app.py` initializes ALL pipeline stages and services at module import time — heavy startup, but needed for Gunicorn preloading.
 - Rate limiting uses Redis in production (`REDIS_URL`), falls back to in-memory in dev.
 - Max file upload: 25MB (`app.config['MAX_CONTENT_LENGTH']`).
 - Backend `sys.path` manipulation at top of `app.py` — imports assume `backend/` is the working directory.

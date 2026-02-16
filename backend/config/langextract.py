@@ -1,12 +1,12 @@
 """
-LangExtract configuration for event identification.
+LangExtract configuration for event identification (IDENTIFY stage).
 Controls model routing (via config/text.py), chunking, multi-pass, and few-shot examples.
 
-Model/provider is read from config/text.py's agent_1_identification setting,
+Model/provider is read from config/text.py's `identify` setting,
 so switching presets (all_grok, all_openai, hybrid_optimized) also switches
 what LangExtract uses. LangExtract only supports OpenAI-compatible providers
-(grok, openai); if agent_1 is set to 'claude', text identification falls back
-to the old LangChain chunked pipeline automatically.
+(grok, openai); if `identify` is set to 'claude', text identification falls back
+to the LangChain chunked pipeline automatically.
 """
 
 import os
@@ -19,7 +19,7 @@ from langextract.factory import ModelConfig
 # ============================================================================
 
 # LangExtract only supports providers with an OpenAI-compatible API.
-# IMPORTANT: agent_1_identification in config/text.py MUST be set to one of
+# IMPORTANT: `identify` in config/text.py MUST be set to one of
 # these providers. There is no fallback — an unsupported provider (e.g. 'claude')
 # will crash the text identification pipeline.
 _LANGEXTRACT_SUPPORTED_PROVIDERS = ('grok', 'openai')
@@ -29,7 +29,7 @@ def get_langextract_config():
     """
     Build LangExtract ModelConfig from centralized text config.
 
-    Reads agent_1_identification from config/text.py and maps it to
+    Reads `identify` from config/text.py and maps it to
     LangExtract's OpenAI provider with the correct model, API key, and base_url.
 
     Returns:
@@ -41,7 +41,7 @@ def get_langextract_config():
     """
     from config.text import get_text_provider, get_model_specs
 
-    provider = get_text_provider('agent_1_identification')
+    provider = get_text_provider('identify')
     if provider not in _LANGEXTRACT_SUPPORTED_PROVIDERS:
         raise ValueError(
             f"LangExtract does not support provider '{provider}'. "
@@ -83,7 +83,7 @@ PASSES_COMPLEX = 2  # Complex inputs: 2 passes (~93% recall vs ~85%)
 MAX_CHAR_BUFFER = 1500  # Characters per chunk (LangExtract default sweet spot)
 MAX_WORKERS = 10        # Parallel chunk processing
 
-# Context windows passed to Agent 2 alongside each extraction span
+# Context windows passed to STRUCTURE stage alongside each extraction span
 DOCUMENT_CONTEXT_CHARS = 500    # Chars from start of document (captures headers, course names, timezone declarations)
 SURROUNDING_CONTEXT_CHARS = 300  # Chars before/after extraction span (captures section headers, adjacent details)
 

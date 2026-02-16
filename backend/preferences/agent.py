@@ -1,12 +1,14 @@
 """
-Agent 3: Personalization & Inference
+PERSONALIZE stage — applies user's learned preferences to a CalendarEvent.
 
-Applies user's learned preferences to a CalendarEvent using:
+Uses:
 - Discovered patterns (calendar summaries)
 - Few-shot learning from similar historical events (with temporal data)
 - Correction learning from past user edits
 - Surrounding events for temporal constraint awareness
 - Location history for location resolution
+
+See backend/PIPELINE.md for architecture overview.
 """
 
 import statistics
@@ -53,13 +55,13 @@ class PersonalizationAgent(BaseAgent):
     """
 
     def __init__(self, llm: ChatAnthropic):
-        super().__init__("Agent3_Personalization")
+        super().__init__("Personalize")
         self.llm = llm
         self.similarity_search = None
 
         # Resolve provider/model for manual PostHog capture
         from config.text import get_text_provider, get_model_specs
-        self._provider = get_text_provider('agent_3_preferences')
+        self._provider = get_text_provider('personalize')
         self._model_name = get_model_specs(self._provider)['model_name']
 
     def execute(

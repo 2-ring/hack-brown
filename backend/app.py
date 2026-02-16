@@ -151,18 +151,18 @@ app.config['MAX_CONTENT_LENGTH'] = FileLimits.MAX_UPLOAD_BYTES
 from config.text import create_text_model, create_text_model_light, print_text_config
 from config.audio import print_audio_config
 
-# Create standard LLM instances for each component
-llm_agent_1 = create_text_model('agent_1_identification')
-llm_agent_2 = create_text_model('agent_2_extraction')
-llm_agent_4 = create_text_model('agent_4_modification')
-llm_agent_3 = create_text_model('agent_3_preferences')
+# Create standard LLM instances for each pipeline stage
+llm_identify = create_text_model('identify')
+llm_structure = create_text_model('structure')
+llm_modify = create_text_model('modify')
+llm_personalize = create_text_model('personalize')
 llm_pattern_discovery = create_text_model('pattern_discovery')
 llm_session_processor = create_text_model('session_processor')
 
 # Create light LLM instances for simple inputs (dynamic complexity routing)
-llm_agent_1_light = create_text_model_light('agent_1_identification')
-llm_agent_2_light = create_text_model_light('agent_2_extraction')
-llm_agent_3_light = create_text_model_light('agent_3_preferences')
+llm_identify_light = create_text_model_light('identify')
+llm_structure_light = create_text_model_light('structure')
+llm_personalize_light = create_text_model_light('personalize')
 
 # Print configuration on startup
 print_text_config()
@@ -182,18 +182,18 @@ pattern_discovery_service = PatternDiscoveryService(llm_pattern_discovery)
 # Initialize Data Collection service
 data_collection_service = DataCollectionService(calendar_service)
 
-# Initialize Agents with their configured models (standard)
-agent_1_identification = EventIdentificationAgent(llm_agent_1)
+# Initialize agents with their configured models (standard)
+identify_agent = EventIdentificationAgent(llm_identify)
 from config.text import create_instructor_client
-_ic, _mn, _pv = create_instructor_client('agent_2_extraction')
-agent_2_extraction = EventExtractionAgent(_ic, _mn, _pv)
-agent_4_modification = EventModificationAgent(llm_agent_4)
-agent_3_personalization = PersonalizationAgent(llm_agent_3)
+_ic, _mn, _pv = create_instructor_client('structure')
+structure_agent = EventExtractionAgent(_ic, _mn, _pv)
+modify_agent = EventModificationAgent(llm_modify)
+personalize_agent = PersonalizationAgent(llm_personalize)
 
 # Initialize light agents for simple inputs (used by /process endpoint)
-agent_1_identification_light = EventIdentificationAgent(llm_agent_1_light)
-_ic_l, _mn_l, _pv_l = create_instructor_client('agent_2_extraction', light=True)
-agent_2_extraction_light = EventExtractionAgent(_ic_l, _mn_l, _pv_l)
+identify_agent_light = EventIdentificationAgent(llm_identify_light)
+_ic_l, _mn_l, _pv_l = create_instructor_client('structure', light=True)
+structure_agent_light = EventExtractionAgent(_ic_l, _mn_l, _pv_l)
 
 # Initialize input processor factory and register all processors
 input_processor_factory = InputProcessorFactory()
@@ -229,8 +229,8 @@ pattern_refresh_service = PatternRefreshService(
 session_processor = SessionProcessor(
     llm_session_processor, input_processor_factory,
     pattern_refresh_service=pattern_refresh_service,
-    llm_light=llm_agent_1_light,
-    llm_personalization_light=llm_agent_3_light,
+    llm_light=llm_identify_light,
+    llm_personalization_light=llm_personalize_light,
 )
 app.session_processor = session_processor
 
@@ -307,7 +307,7 @@ def process_input():
     Unified endpoint for processing all input types and extracting calendar events.
     Handles: text, audio, images, PDFs, and other text files.
 
-    Runs full agent pipeline: Identification → Extraction → Formatting
+    Runs full pipeline: IDENTIFY → CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE
 
     For text input: Send JSON with {"text": "your text here"}
     For file input: Send multipart/form-data with file upload
@@ -406,21 +406,21 @@ def process_input():
     complexity = InputComplexityAnalyzer.analyze(raw_input, input_type=input_type, metadata=metadata)
     if complexity.level == ComplexityLevel.SIMPLE:
         logger.info(f"Process endpoint: SIMPLE ({complexity.reason}) -> light models")
-        active_agent_1 = agent_1_identification_light
-        active_agent_2 = agent_2_extraction_light
+        active_identifier = identify_agent_light
+        active_structurer = structure_agent_light
     else:
         logger.info(f"Process endpoint: COMPLEX ({complexity.reason}) -> standard models")
-        active_agent_1 = agent_1_identification
-        active_agent_2 = agent_2_extraction
+        active_identifier = identify_agent
+        active_structurer = structure_agent
 
-    # Step 3: Run full agent pipeline with validation error handling
+    # Step 3: Run full pipeline with validation error handling
     try:
-        # Agent 1: Event Identification
+        # IDENTIFY: find events
         try:
             if requires_vision:
-                # Image inputs: use Agent 1 with vision (LangExtract is text-only)
+                # Image inputs: use IDENTIFY with vision (LangExtract is text-only)
                 identification_result = identify_events_chunked(
-                    agent=active_agent_1,
+                    agent=active_identifier,
                     raw_input=raw_input,
                     metadata=metadata,
                     requires_vision=True,
@@ -441,7 +441,7 @@ def process_input():
                     },
                 )
         except ValidationError as e:
-            logger.error(f"Validation error in Agent 1 (Identification): {e}")
+            logger.error(f"Validation error in IDENTIFY stage: {e}")
             capture_agent_error("identification", e, {'error_stage': 'validation'})
             return jsonify({
                 'success': False,
@@ -458,12 +458,12 @@ def process_input():
                 'message': 'No calendar events found in input'
             })
 
-        # Step 4: Extract events in parallel with per-event error handling
+        # Step 4: Extract events in per-group parallel with per-event error handling
         def process_single_event_api(idx, event):
-            """Process one event through Agent 2 for /api/process."""
+            """Process one event through STRUCTURE stage for /api/process."""
             try:
                 try:
-                    extracted_event = active_agent_2.execute(
+                    extracted_event = active_structurer.execute(
                         event.raw_text,
                         event.description,
                     )
@@ -486,7 +486,7 @@ def process_input():
                     )
 
                 except ValidationError as e:
-                    logger.error(f"Validation error in Agent 2 (Extraction) for event {idx+1}: {e}")
+                    logger.error(f"Validation error in STRUCTURE stage for event {idx+1}: {e}")
                     capture_agent_error("extraction", e, {'error_stage': 'validation', 'event_index': idx})
                     return EventProcessingResult(
                         index=idx, success=False,
@@ -552,7 +552,7 @@ def process_input():
 @app.route('/edit-event', methods=['POST'])
 def edit_event():
     """
-    Agent 4: Event Modification
+    MODIFY: apply user edits
     Takes a list of calendar events and a natural language edit instruction.
     Returns only the actions needed (edits and deletes).
     """
@@ -588,8 +588,8 @@ def edit_event():
             is_guest=edit_user_id == 'anonymous',
         )
 
-        # Use the Event Modification Agent
-        result = agent_4_modification.execute(events, edit_instruction, calendars=calendars)
+        # Use the MODIFY agent
+        result = modify_agent.execute(events, edit_instruction, calendars=calendars)
 
         return jsonify({
             'success': True,
@@ -855,7 +855,7 @@ def check_event_conflicts():
 @require_auth
 def apply_preferences_endpoint():
     """
-    Agent 3: Apply user preferences to a calendar event.
+    PERSONALIZE: Apply user preferences to a calendar event.
 
     Supports both new pattern format and legacy preferences format.
 
@@ -863,7 +863,7 @@ def apply_preferences_endpoint():
 
     Expects JSON body:
     {
-        "event": {...}  # CalendarEvent from Agent 2
+        "event": {...}  # CalendarEvent from STRUCTURE stage
     }
 
     Returns personalized event with user preferences applied.
@@ -912,7 +912,7 @@ def apply_preferences_endpoint():
         except Exception as e:
             logger.warning(f"Could not fetch historical events: {e}")
 
-        personalized_event = agent_3_personalization.execute(
+        personalized_event = personalize_agent.execute(
             event=event,
             discovered_patterns=patterns,
             historical_events=historical_events,

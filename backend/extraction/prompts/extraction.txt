@@ -206,10 +206,10 @@ Only set if the user explicitly names a calendar.
 
 - "add to work calendar" → "Work"
 - "put this on my Classes calendar" → "Classes"
-- Otherwise → null (let the personalization agent or default handle it)
+- Otherwise → null (let PERSONALIZE or default handle it)
 
 ### colorId
-Leave null — set by the personalization agent.
+Leave null — set by PERSONALIZE stage.
 
 ## CRITICAL RULES
 

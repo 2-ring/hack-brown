@@ -17,8 +17,8 @@ class CorrectionStorageService:
     """
     Manages event corrections storage and retrieval.
 
-    Key decision: Embeds extracted_facts (Agent 2 output) for similarity search,
-    as this is what Agent 3 sees when making formatting decisions.
+    Key decision: Embeds extracted_facts (STRUCTURE output) for similarity search,
+    as this is what PERSONALIZE sees when making formatting decisions.
     """
 
     def __init__(self):
@@ -45,8 +45,8 @@ class CorrectionStorageService:
             user_id: User UUID
             session_id: Session UUID
             original_input: Original messy input text (for context)
-            extracted_facts: Agent 2 output (ExtractedFacts as dict)
-            system_suggestion: Agent 3 output (formatted CalendarEvent)
+            extracted_facts: STRUCTURE output (ExtractedFacts as dict)
+            system_suggestion: PERSONALIZE output (formatted CalendarEvent)
             user_final: User's edited event
 
         Returns:
@@ -65,7 +65,7 @@ class CorrectionStorageService:
             return None
 
         # 2. Generate embedding of extracted_facts
-        # This is what Agent 3 saw, so we search by this
+        # This is what PERSONALIZE saw, so we search by this
         facts_embedding = self._embed_facts(extracted_facts)
 
         # 3. Prepare correction data
@@ -112,7 +112,7 @@ class CorrectionStorageService:
             user_id: User UUID
             session_id: Session UUID
             user_submitted_events: List of events user actually submitted (edited)
-            extracted_facts_list: Optional list of ExtractedFacts from Agent 2
+            extracted_facts_list: Optional list of ExtractedFacts from STRUCTURE
                                   If not provided, will attempt to reconstruct from system_suggestion
 
         Returns:
@@ -162,7 +162,7 @@ class CorrectionStorageService:
         Generate embedding for extracted facts.
 
         Converts ExtractedFacts dict to a text representation that captures
-        the semantic content that Agent 3 sees.
+        the semantic content that PERSONALIZE sees.
         """
         # Convert facts to searchable text
         facts_text = self._facts_to_text(facts)
@@ -221,7 +221,7 @@ class CorrectionStorageService:
         """
         Reconstruct ExtractedFacts from system_suggestion.
 
-        This is a fallback when we don't have the original Agent 2 output.
+        This is a fallback when we don't have the original STRUCTURE output.
         Not perfect, but allows the system to work without storing intermediate facts.
         """
         facts = {}

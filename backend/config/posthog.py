@@ -83,7 +83,7 @@ _AUTO_INCLUDE_ATTRS = (
     'input_type',           # text, image, audio, pdf, document, email, modification, ...
     'is_guest',             # True/False
     'num_events',           # total events identified in session
-    'has_personalization',  # whether Agent 3 ran
+    'has_personalization',  # whether PERSONALIZE stage ran
     'event_index',          # which event in the batch (0-indexed)
     'chunk_index',          # which chunk for chunked identification
     'calendar_name',        # calendar being analyzed (pattern discovery)
@@ -117,8 +117,8 @@ def set_tracking_context(
         pipeline: Pipeline label (e.g., "Session: text", "Edit event")
         input_type: Input modality ('text', 'image', 'audio', 'pdf', etc.)
         is_guest: Whether this is a guest session
-        num_events: Total events identified (set after Agent 1)
-        has_personalization: Whether Agent 3 will run
+        num_events: Total events identified (set after IDENTIFY stage)
+        has_personalization: Whether PERSONALIZE stage will run
         event_index: Which event in the batch (set per worker thread)
         chunk_index: Which chunk for chunked identification
         calendar_name: Calendar being analyzed (pattern discovery)
@@ -156,25 +156,29 @@ def get_tracking_property(name, default=None):
     return getattr(_local, name, default)
 
 
-# Human-readable labels for each agent.
+# Human-readable labels for each pipeline stage / component.
 _AGENT_LABELS = {
-    'identification': 'Identification',
-    'extraction': 'Extraction',
-    'personalization': 'Personalization',
-    'formatting': 'Formatting',
-    'modification': 'Modification',
+    'identification': 'Identify',
+    'extraction': 'Structure',
+    'extraction_batch': 'Structure (Batch)',
+    'consolidation': 'Consolidate',
+    'personalization': 'Personalize',
+    'formatting': 'Personalize',
+    'modification': 'Modify',
     'pattern_discovery': 'Pattern Discovery',
     'pattern_analysis': 'Pattern Analysis',
 }
 
-# Maps agent_name → config component, so get_invoke_config() can resolve
+# Maps stage_name → config component, so get_invoke_config() can resolve
 # the actual provider (grok/claude/openai) instead of the LangChain class name.
 _AGENT_TO_COMPONENT = {
-    'identification': 'agent_1_identification',
-    'extraction': 'agent_2_extraction',
-    'personalization': 'agent_3_preferences',
-    'formatting': 'agent_3_preferences',
-    'modification': 'agent_4_modification',
+    'identification': 'identify',
+    'extraction': 'structure',
+    'extraction_batch': 'structure',
+    'consolidation': 'default',
+    'personalization': 'personalize',
+    'formatting': 'personalize',
+    'modification': 'modify',
     'pattern_discovery': 'pattern_discovery',
     'pattern_analysis': 'pattern_discovery',
 }
@@ -321,7 +325,7 @@ def capture_pipeline_trace(
         is_guest: Whether this is a guest session
         outcome: 'success', 'error', or 'no_events'
         num_events: Number of events created
-        has_personalization: Whether Agent 3 ran
+        has_personalization: Whether PERSONALIZE stage ran
         duration_ms: Total pipeline duration in milliseconds
         error_message: Error message if outcome is 'error'
     """
@@ -382,7 +386,7 @@ def capture_event_span(
         event_index: 0-based index of this event in the batch
         num_events: Total events in the batch
         duration_ms: Total processing time for this event
-        event_description: Short description of the event (from Agent 1)
+        event_description: Short description of the event (from IDENTIFY stage)
         outcome: 'success' or 'error'
     """
     client = _ensure_client()

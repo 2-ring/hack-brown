@@ -15,7 +15,7 @@ class CorrectionQueryService:
     """
     Queries corrections based on agent needs.
 
-    Key decision: Searches by extracted_facts similarity (what Agent 3 sees),
+    Key decision: Searches by extracted_facts similarity (what PERSONALIZE sees),
     not by original input or system suggestion.
     """
 
@@ -89,14 +89,14 @@ class CorrectionQueryService:
         k: int = 10
     ) -> List[Dict]:
         """
-        Query all relevant corrections for Agent 3 (Preference Application).
+        Query all relevant corrections for PERSONALIZE stage.
 
-        This is the main use case - Agent 3 searching for corrections
+        This is the main use case - PERSONALIZE searching for corrections
         based on similar facts it has encountered before.
 
         Args:
             user_id: User UUID
-            facts: ExtractedFacts dict (what Agent 3 is currently looking at)
+            facts: ExtractedFacts dict (what PERSONALIZE is currently looking at)
             k: Number of results to return
 
         Returns:
@@ -182,7 +182,7 @@ class CorrectionQueryService:
         """
         Query by semantic similarity only (no field filter).
 
-        Main query method for Agent 3.
+        Main query method for PERSONALIZE.
         """
         # Fetch all user corrections
         try:

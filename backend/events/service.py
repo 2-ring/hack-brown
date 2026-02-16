@@ -54,8 +54,8 @@ class EventService:
             calendar_name: Provider calendar ID (stored in DB column 'calendar_name')
             color_id: Color ID
             original_input: Original raw text input
-            extracted_facts: Agent 2 output
-            system_suggestion: Agent 3 output
+            extracted_facts: STRUCTURE output
+            system_suggestion: PERSONALIZE output
 
         Returns:
             Created event dict
@@ -257,7 +257,7 @@ class EventService:
         """
         Get K events closest in time to target_time (before and after).
 
-        Used by Agent 3 to understand scheduling constraints when inferring
+        Used by PERSONALIZE to understand scheduling constraints when inferring
         end times for events that have no explicit duration.
 
         Args:
@@ -584,7 +584,7 @@ class EventService:
     @staticmethod
     def get_user_corrections(user_id: str) -> List[Dict[str, Any]]:
         """
-        Get events where user modified Agent 3 suggestions (for feedback loop).
+        Get events where user modified PERSONALIZE suggestions (for feedback loop).
 
         Args:
             user_id: User's UUID

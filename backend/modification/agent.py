@@ -1,7 +1,7 @@
 """
-Event Modification Agent
-Applies user edit instructions across a set of calendar events.
+MODIFY — applies user edit instructions across a set of calendar events.
 Returns only the events that need to change (edit or delete).
+Separate from the main pipeline (IDENTIFY → CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE).
 """
 
 from typing import Dict, Any, List, Optional
@@ -22,13 +22,13 @@ class EventModificationAgent(BaseAgent):
     """
 
     def __init__(self, llm):
-        super().__init__("Agent4_EventModification")
+        super().__init__("Modify")
         self.llm = llm.with_structured_output(ModificationResult, include_raw=True)
         self._prompt_path = "modification/prompts/modification.txt"
 
         # Resolve provider/model for manual PostHog capture
         from config.text import get_text_provider, get_model_specs
-        self._provider = get_text_provider('agent_4_modification')
+        self._provider = get_text_provider('modify')
         self._model_name = get_model_specs(self._provider)['model_name']
 
     def execute(

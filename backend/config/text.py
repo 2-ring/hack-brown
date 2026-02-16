@@ -1,6 +1,6 @@
 """
 Text/LLM Model Configuration
-Centralized config for all text-based AI agents and processors
+Centralized config for all text-based pipeline stages and services.
 """
 
 import os
@@ -22,26 +22,27 @@ class TextModelConfig:
     """
     Configuration for all text-based AI models.
 
-    Core pipeline agents (1-3) can be set individually for fine-grained control.
-    Supporting services (Agent 4, pattern discovery, session processor) all
-    follow `default` — change one value to switch them all.
+    Core pipeline stages (IDENTIFY, STRUCTURE, PERSONALIZE) can be set
+    individually for fine-grained control. Supporting services (MODIFY,
+    pattern discovery, session processor) all follow `default` — change
+    one value to switch them all.
 
-    NOTE: agent_1_identification controls LangExtract (text-based
-    identification). LangExtract only supports OpenAI-compatible providers
-    (grok, openai). Setting this to 'claude' will crash the text pipeline —
-    there is no fallback. Vision (images) always uses LangChain Agent 1.
+    NOTE: `identify` controls LangExtract (text-based identification).
+    LangExtract only supports OpenAI-compatible providers (grok, openai).
+    Setting this to 'claude' will crash the text pipeline — there is no
+    fallback. Vision (images) always uses LangChain IDENTIFY stage.
     """
 
-    # ── Core Pipeline Agents (set individually) ──────────────────────────
-    agent_1_identification: TextProvider = 'grok'   # LangExtract (text) + LangChain (vision)
-    agent_2_extraction: TextProvider = 'grok'       # Instructor structured output
-    agent_3_preferences: TextProvider = 'grok'      # LangChain personalization
+    # ── Core Pipeline Stages (set individually) ──────────────────────────
+    identify: TextProvider = 'grok'       # IDENTIFY: LangExtract (text) + LangChain (vision)
+    structure: TextProvider = 'grok'      # STRUCTURE: Instructor structured output
+    personalize: TextProvider = 'grok'    # PERSONALIZE: LangChain personalization
 
-    # ── Default (Agent 4, pattern discovery, session processor) ──────────
+    # ── Default (MODIFY, pattern discovery, session processor) ────────────
     default: TextProvider = 'grok'
 
     @property
-    def agent_4_modification(self) -> TextProvider:
+    def modify(self) -> TextProvider:
         return self.default
 
     @property
@@ -58,23 +59,23 @@ class TextModelConfig:
 
     @classmethod
     def all_grok(cls):
-        """Use Grok for everything - testing with $2.5k credits"""
+        """Use Grok for everything — testing with $2.5k credits"""
         return cls(
-            agent_1_identification='grok',
-            agent_2_extraction='grok',
-            agent_3_preferences='grok',
+            identify='grok',
+            structure='grok',
+            personalize='grok',
             default='grok',
         )
 
     @classmethod
     def all_claude(cls):
-        """Use Claude for Agents 2-4 — production quality.
-        WARNING: agent_1 stays 'grok' because LangExtract requires an
+        """Use Claude for STRUCTURE + PERSONALIZE — production quality.
+        WARNING: `identify` stays 'grok' because LangExtract requires an
         OpenAI-compatible provider. Setting it to 'claude' will crash."""
         return cls(
-            agent_1_identification='grok',
-            agent_2_extraction='claude',
-            agent_3_preferences='claude',
+            identify='grok',
+            structure='claude',
+            personalize='claude',
             default='claude',
         )
 
@@ -82,9 +83,9 @@ class TextModelConfig:
     def all_openai(cls):
         """Use OpenAI for everything"""
         return cls(
-            agent_1_identification='openai',
-            agent_2_extraction='openai',
-            agent_3_preferences='openai',
+            identify='openai',
+            structure='openai',
+            personalize='openai',
             default='openai',
         )
 
@@ -92,10 +93,10 @@ class TextModelConfig:
     def hybrid_optimized(cls):
         """Hybrid: Claude for complex tasks, Grok for simple"""
         return cls(
-            agent_1_identification='grok',      # LangExtract + vision — Grok works
-            agent_2_extraction='claude',        # Complex parsing — Claude better
-            agent_3_preferences='claude',       # Personalization — Claude better
-            default='grok',                     # Agent 4, patterns, etc. — Grok fine
+            identify='grok',         # LangExtract + vision — Grok works
+            structure='claude',      # Complex parsing — Claude better
+            personalize='claude',    # Personalization — Claude better
+            default='grok',          # MODIFY, patterns, etc. — Grok fine
         )
 
 
@@ -210,7 +211,7 @@ def create_text_model(component: str):
     Create a standard LLM instance for a component.
 
     Args:
-        component: Component name (e.g., 'agent_1_identification')
+        component: Component name (e.g., 'identify', 'structure')
 
     Returns:
         Configured LLM instance
@@ -226,7 +227,7 @@ def create_text_model_light(component: str):
     Uses cheaper/faster models for simple inputs.
 
     Args:
-        component: Component name (e.g., 'agent_1_identification')
+        component: Component name (e.g., 'identify', 'structure')
 
     Returns:
         Configured lightweight LLM instance
@@ -245,7 +246,7 @@ def create_instructor_client(component: str, light: bool = False):
     automatic Pydantic validation retries on structured output calls.
 
     Args:
-        component: Component name (e.g., 'agent_2_extraction')
+        component: Component name (e.g., 'structure')
         light: If True, use the lightweight model variant
     """
     import instructor
@@ -282,12 +283,12 @@ def print_text_config():
         light = TEXT_MODEL_SPECS_LIGHT[provider]['model_name']
         return f"{provider.upper()} ({standard} / {light})"
 
-    print("\nCORE PIPELINE AGENTS:               (standard / light)")
-    print(f"  Agent 1 (Identification):     {_model_line('agent_1_identification')}")
-    print(f"  Agent 2 (Extraction):          {_model_line('agent_2_extraction')}")
-    print(f"  Agent 3 (Preferences):         {_model_line('agent_3_preferences')}")
+    print("\nPIPELINE STAGES:                    (standard / light)")
+    print(f"  IDENTIFY:                     {_model_line('identify')}")
+    print(f"  STRUCTURE:                    {_model_line('structure')}")
+    print(f"  PERSONALIZE:                  {_model_line('personalize')}")
     default_provider = CONFIG.default.upper()
     default_model = get_model_specs(CONFIG.default)['model_name']
     print(f"\nDEFAULT ({default_provider} / {default_model}):")
-    print(f"  Agent 4 (Modification), Pattern Discovery, Session Processor")
+    print(f"  MODIFY, Pattern Discovery, Session Processor")
     print("="*70 + "\n")

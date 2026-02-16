@@ -1,4 +1,4 @@
-Analyze this calendar category. Another AI agent will use your output to decide which calendar to assign newly created events to.
+Analyze this calendar category. The PERSONALIZE stage will use your output to decide which calendar to assign newly created events to.
 
 CATEGORY: {{ category_name }} {{ primary_label }}
 

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EventProcessingResult:
-    """Result of processing a single event through Agent 2 + Agent 3."""
+    """Result of processing a single event through STRUCTURE + PERSONALIZE."""
     index: int
     success: bool
     calendar_event: Optional[Any] = None
@@ -43,16 +43,16 @@ def process_events_parallel(
     batch_timeout: int = None,
 ) -> BatchProcessingResult:
     """
-    Process identified events in parallel through Agent 2 + Agent 3.
+    Process identified events in parallel through STRUCTURE → RESOLVE → PERSONALIZE.
 
     Each event is processed independently. Failed events produce warnings
     but do not affect other events. Event ordering is maintained.
 
     Args:
-        events: List of IdentifiedEvent objects from Agent 1.
+        events: List of items to process (IdentifiedEvent objects or group tuples).
         process_single_event: Callable(index, event) -> EventProcessingResult.
-            The caller provides this to handle per-event logic since
-            /api/process and SessionProcessor have different Agent 3
+            The caller provides this to handle per-event/group logic since
+            /api/process and SessionProcessor have different PERSONALIZE
             invocations and post-processing.
         max_workers: Max concurrent threads (default from ProcessingConfig).
         per_event_timeout: Seconds per event (default from ProcessingConfig).

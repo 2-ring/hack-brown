@@ -1,6 +1,6 @@
 """
-Chunked identification orchestrator.
-Splits large text inputs into chunks, runs Agent 1 on each chunk
+Chunked identification orchestrator (IDENTIFY stage).
+Splits large text inputs into chunks, runs IDENTIFY on each chunk
 in parallel, then merges and deduplicates the results.
 """
 
@@ -30,7 +30,7 @@ def identify_events_chunked(
 
     For inputs below CHUNK_THRESHOLD or requiring vision, delegates directly
     to agent.execute(). For large text inputs, splits into chunks, runs
-    Agent 1 in parallel on each chunk, then merges and deduplicates.
+    IDENTIFY in parallel on each chunk, then merges and deduplicates.
 
     Args:
         agent: The EventIdentificationAgent instance.
@@ -63,7 +63,7 @@ def identify_events_chunked(
         f"Chunked identification: {len(raw_input)} chars -> {len(chunks)} chunks"
     )
 
-    # Run Agent 1 on each chunk in parallel
+    # Run IDENTIFY on each chunk in parallel
     all_events: List[IdentifiedEvent] = []
     max_workers = min(ProcessingConfig.CHUNK_MAX_WORKERS, len(chunks))
 
@@ -119,7 +119,7 @@ def _process_chunk(
     chunk_index: int,
     tracking_context: Optional[dict],
 ) -> Optional[IdentificationResult]:
-    """Run Agent 1 on a single chunk in a worker thread."""
+    """Run IDENTIFY on a single chunk in a worker thread."""
     if tracking_context:
         set_tracking_context(
             distinct_id=tracking_context.get('distinct_id'),

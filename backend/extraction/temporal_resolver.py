@@ -1,17 +1,19 @@
 """
-Deterministic temporal resolver.
+RESOLVE stage — deterministic temporal resolution.
 
-Converts ExtractedEvent (Agent 2 output with natural language temporal expressions)
+Converts ExtractedEvent (STRUCTURE output with natural language temporal expressions)
 into CalendarEvent (with ISO 8601 CalendarDateTime) using Duckling for parsing.
 
-The resolver ONLY converts what was explicitly extracted. If Agent 2 left a field
+The resolver ONLY converts what was explicitly extracted. If STRUCTURE left a field
 as None (e.g., no end time stated), the resolver does NOT infer a default.
-Missing end times are left as None for Agent 3 to handle later.
+Missing end times are left as None for PERSONALIZE to handle later.
+
+See backend/PIPELINE.md for architecture overview.
 
 Usage:
     from extraction.temporal_resolver import resolve_temporal
 
-    extracted = agent_2.execute(...)  # Returns ExtractedEvent
+    extracted = structurer.execute(...)  # Returns ExtractedEvent
     calendar_event = resolve_temporal(extracted, user_timezone="America/New_York")
 """
 
@@ -73,11 +75,11 @@ def resolve_temporal(
     Convert an ExtractedEvent to a CalendarEvent by resolving temporal expressions
     via Duckling.
 
-    Only resolves fields that Agent 2 explicitly extracted. Does NOT infer
-    missing end times or default durations — those are Agent 3's job.
+    Only resolves fields that STRUCTURE explicitly extracted. Does NOT infer
+    missing end times or default durations — those are PERSONALIZE's job.
 
     Args:
-        extracted: Agent 2 output with NL temporal expressions.
+        extracted: STRUCTURE output with NL temporal expressions.
         user_timezone: User's IANA timezone from their profile.
         reference_time: Override "now" for testing. Defaults to datetime.now().
 
@@ -307,7 +309,7 @@ def _resolve_all_day(
             end_date = end.date() + timedelta(days=1)
             end_dt = CalendarDateTime(date=end_date.strftime("%Y-%m-%d"))
     elif temporal.is_multiday:
-        # Multiday flag set but no end_date_text — leave None for Agent 3
+        # Multiday flag set but no end_date_text — leave None for PERSONALIZE
         end_dt = None
     else:
         # Single all-day event: end = start + 1 day (Google Calendar convention)
@@ -420,7 +422,7 @@ def _resolve_end_time(
                 timeZone=tz_name,
             )
 
-    # Case 3: Nothing stated — leave None for Agent 3
+    # Case 3: Nothing stated — leave None for PERSONALIZE
     return None
 
 

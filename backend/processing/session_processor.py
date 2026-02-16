@@ -1,6 +1,6 @@
 """
 Session processor for running AI pipeline on sessions.
-Connects the existing LangChain agents to the session workflow.
+Connects the existing LangChain pipeline stages to the session workflow.
 """
 
 from typing import Optional
@@ -36,22 +36,22 @@ class SessionProcessor:
 
     def __init__(self, llm, input_processor_factory: InputProcessorFactory, llm_personalization=None, pattern_refresh_service=None, llm_light=None, llm_personalization_light=None):
         """
-        Initialize the session processor with agents.
+        Initialize the session processor with pipeline stages.
 
         Args:
-            llm: LangChain LLM instance for agents
+            llm: LangChain LLM instance for pipeline stages
             input_processor_factory: Factory for processing files
-            llm_personalization: Optional separate LLM for personalization agent
+            llm_personalization: Optional separate LLM for PERSONALIZE stage
             pattern_refresh_service: Optional PatternRefreshService for incremental refresh
             llm_light: Optional lightweight LLM for simple inputs
-            llm_personalization_light: Optional lightweight LLM for personalization on simple inputs
+            llm_personalization_light: Optional lightweight LLM for PERSONALIZE stage on simple inputs
         """
         self.llm = llm
         self.input_processor_factory = input_processor_factory
 
-        # Agent 2 uses Instructor for self-correcting structured output
+        # STRUCTURE stage uses Instructor for self-correcting structured output
         from config.text import create_instructor_client
-        client, model, provider = create_instructor_client('agent_2_extraction')
+        client, model, provider = create_instructor_client('structure')
 
         # CONSOLIDATE stage uses a lightweight Instructor client
         cons_client, cons_model, cons_provider = create_instructor_client('default', light=True)
@@ -59,20 +59,20 @@ class SessionProcessor:
         self._consolidation_model = cons_model
         self._consolidation_provider = cons_provider
 
-        # Standard agents
-        self.agent_1_identification = EventIdentificationAgent(llm)
-        self.agent_2_extraction = EventExtractionAgent(client, model, provider)
-        self.agent_3_personalization = PersonalizationAgent(llm_personalization or llm)
+        # Standard pipeline stages
+        self.identify_agent = EventIdentificationAgent(llm)
+        self.structure_agent = EventExtractionAgent(client, model, provider)
+        self.personalize_agent = PersonalizationAgent(llm_personalization or llm)
 
-        # Light agents (for simple inputs)
+        # Light pipeline stages (for simple inputs)
         if llm_light:
-            client_l, model_l, provider_l = create_instructor_client('agent_2_extraction', light=True)
-            self.agent_1_identification_light = EventIdentificationAgent(llm_light)
-            self.agent_2_extraction_light = EventExtractionAgent(client_l, model_l, provider_l)
-            self.agent_3_personalization_light = PersonalizationAgent(llm_personalization_light or llm_light)
-            self.has_light_agents = True
+            client_l, model_l, provider_l = create_instructor_client('structure', light=True)
+            self.identify_agent_light = EventIdentificationAgent(llm_light)
+            self.structure_agent_light = EventExtractionAgent(client_l, model_l, provider_l)
+            self.personalize_agent_light = PersonalizationAgent(llm_personalization_light or llm_light)
+            self.has_light_stages = True
         else:
-            self.has_light_agents = False
+            self.has_light_stages = False
 
         # Services
         self.personalization_service = PersonalizationService()
@@ -244,26 +244,26 @@ class SessionProcessor:
             logger.warning(f"Could not load personalization context: {e}")
             return None, None
 
-    def _select_agents(self, text: str, input_type: str = 'text', metadata: dict = None):
+    def _select_pipeline_stages(self, text: str, input_type: str = 'text', metadata: dict = None):
         """
-        Select agent tier (light vs standard) based on input complexity.
+        Select pipeline stage tier (light vs standard) based on input complexity.
 
         Returns:
-            tuple: (agent_1, agent_2, agent_3, complexity_result)
+            tuple: (identifier, structurer, personalizer, complexity_result)
         """
         from config.complexity import InputComplexityAnalyzer, ComplexityLevel
 
-        if not self.has_light_agents:
-            return (self.agent_1_identification, self.agent_2_extraction, self.agent_3_personalization, None)
+        if not self.has_light_stages:
+            return (self.identify_agent, self.structure_agent, self.personalize_agent, None)
 
         result = InputComplexityAnalyzer.analyze(text, input_type, metadata)
 
         if result.level == ComplexityLevel.SIMPLE:
             logger.info(f"Complexity: SIMPLE ({result.reason}) -> using light models")
-            return (self.agent_1_identification_light, self.agent_2_extraction_light, self.agent_3_personalization_light, result)
+            return (self.identify_agent_light, self.structure_agent_light, self.personalize_agent_light, result)
         else:
             logger.info(f"Complexity: COMPLEX ({result.reason}) -> using standard models")
-            return (self.agent_1_identification, self.agent_2_extraction, self.agent_3_personalization, result)
+            return (self.identify_agent, self.structure_agent, self.personalize_agent, result)
 
     def _process_events_for_session(
         self,
@@ -272,8 +272,8 @@ class SessionProcessor:
         events: list,
         timezone: str,
         is_guest: bool = False,
-        agent_2: EventExtractionAgent = None,
-        agent_3: PersonalizationAgent = None,
+        structurer: EventExtractionAgent = None,
+        personalizer: PersonalizationAgent = None,
     ) -> None:
         """
         Process identified events through CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE.
@@ -283,19 +283,19 @@ class SessionProcessor:
 
         Shared by process_text_session and process_file_session.
         """
-        # Fall back to standard agents if not specified
-        agent_2 = agent_2 or self.agent_2_extraction
-        agent_3 = agent_3 or self.agent_3_personalization
+        # Fall back to standard pipeline stages if not specified
+        structurer = structurer or self.structure_agent
+        personalizer = personalizer or self.personalize_agent
 
         # Load personalization context once for the session
         patterns, historical_events = self._load_personalization_context(user_id, is_guest)
         use_personalization = patterns is not None
 
-        # Update thread-local so pipeline trace and downstream agents know
+        # Update thread-local so pipeline trace and downstream stages know
         set_tracking_context(has_personalization=use_personalization)
 
         if use_personalization:
-            logger.info(f"Session {session_id}: Using personalization (Agent 3)")
+            logger.info(f"Session {session_id}: Using personalization (PERSONALIZE stage)")
         else:
             logger.info(f"Session {session_id}: Skipping personalization")
 
@@ -313,8 +313,8 @@ class SessionProcessor:
             logger.info(f"Session {session_id}: {total_events} events — skipping CONSOLIDATE")
             self._process_events_per_event(
                 session_id=session_id, user_id=user_id, events=events,
-                timezone=timezone, is_guest=is_guest, agent_2=agent_2,
-                agent_3=agent_3, patterns=patterns,
+                timezone=timezone, is_guest=is_guest, structurer=structurer,
+                personalizer=personalizer, patterns=patterns,
                 historical_events=historical_events,
                 use_personalization=use_personalization,
                 db_lock=db_lock, _parent_input_type=_parent_input_type,
@@ -346,8 +346,8 @@ class SessionProcessor:
             capture_agent_error("consolidation", e, {'session_id': session_id})
             self._process_events_per_event(
                 session_id=session_id, user_id=user_id, events=events,
-                timezone=timezone, is_guest=is_guest, agent_2=agent_2,
-                agent_3=agent_3, patterns=patterns,
+                timezone=timezone, is_guest=is_guest, structurer=structurer,
+                personalizer=personalizer, patterns=patterns,
                 historical_events=historical_events,
                 use_personalization=use_personalization,
                 db_lock=db_lock, _parent_input_type=_parent_input_type,
@@ -357,7 +357,7 @@ class SessionProcessor:
 
         # ── STRUCTURE + RESOLVE + PERSONALIZE: per-group in parallel ───────
         def process_single_group(group_idx, group_data):
-            """Process one group: batch Agent 2 → per-event temporal + Agent 3 + DB."""
+            """Process one group: batch STRUCTURE → per-event RESOLVE + PERSONALIZE + DB."""
             import uuid as _uuid
             category, indexed_events = group_data
             group_events = [ie for _, ie in indexed_events]
@@ -377,7 +377,7 @@ class SessionProcessor:
 
             try:
                 # STRUCTURE: batch extraction for the group
-                extracted_events = agent_2.execute_batch(
+                extracted_events = structurer.execute_batch(
                     events=group_events,
                     cross_event_context=cross_event_context,
                     document_context=group_events[0].document_context,
@@ -409,7 +409,7 @@ class SessionProcessor:
 
                         # PERSONALIZE
                         if use_personalization:
-                            calendar_event = agent_3.execute(
+                            calendar_event = personalizer.execute(
                                 event=calendar_event,
                                 discovered_patterns=patterns,
                                 historical_events=historical_events,
@@ -482,7 +482,7 @@ class SessionProcessor:
                     event_span_id = str(_uuid.uuid4())
                     event_start = _time.time()
                     try:
-                        extracted_event = agent_2.execute(
+                        extracted_event = structurer.execute(
                             identified_event.raw_text,
                             identified_event.description,
                             document_context=identified_event.document_context,
@@ -493,7 +493,7 @@ class SessionProcessor:
                             extracted_event, user_timezone=timezone
                         )
                         if use_personalization:
-                            calendar_event = agent_3.execute(
+                            calendar_event = personalizer.execute(
                                 event=calendar_event,
                                 discovered_patterns=patterns,
                                 historical_events=historical_events,
@@ -558,8 +558,8 @@ class SessionProcessor:
         events: list,
         timezone: str,
         is_guest: bool,
-        agent_2,
-        agent_3,
+        structurer,
+        personalizer,
         patterns,
         historical_events,
         use_personalization: bool,
@@ -586,7 +586,7 @@ class SessionProcessor:
                 parent_id=event_span_id,
             )
             try:
-                extracted_event = agent_2.execute(
+                extracted_event = structurer.execute(
                     event.raw_text,
                     event.description,
                     document_context=event.document_context,
@@ -599,7 +599,7 @@ class SessionProcessor:
                 )
 
                 if use_personalization:
-                    calendar_event = agent_3.execute(
+                    calendar_event = personalizer.execute(
                         event=calendar_event,
                         discovered_patterns=patterns,
                         historical_events=historical_events,
@@ -698,8 +698,8 @@ class SessionProcessor:
                 is_guest=is_guest,
             )
 
-            # Select agents based on input complexity
-            agent_1, agent_2, agent_3, complexity = self._select_agents(text, input_type='text')
+            # Select pipeline stages based on input complexity
+            identifier, structurer, personalizer, complexity = self._select_pipeline_stages(text, input_type='text')
 
             # Launch title generation in background (runs in parallel with pipeline)
             title_thread = threading.Thread(
@@ -748,10 +748,10 @@ class SessionProcessor:
             ]
             DBSession.update_extracted_events(session_id, extracted_events)
 
-            # Update context with event count for downstream Agent 2/3 calls
+            # Update context with event count for downstream pipeline stages
             set_tracking_context(num_events=identification_result.num_events)
 
-            # Phase 2: Process events (extraction → optional personalization → DB)
+            # Phase 2: Process events (STRUCTURE → optional PERSONALIZE → DB)
             session = DBSession.get_by_id(session_id)
             user_id = session['user_id']
             is_guest = session.get('guest_mode', False)
@@ -763,8 +763,8 @@ class SessionProcessor:
                 events=identification_result.events,
                 timezone=timezone,
                 is_guest=is_guest,
-                agent_2=agent_2,
-                agent_3=agent_3,
+                structurer=structurer,
+                personalizer=personalizer,
             )
 
             # Mark session as complete
@@ -856,8 +856,8 @@ class SessionProcessor:
             else:
                 raise ValueError(f"Unsupported file type: {file_type}")
 
-            # Select agents based on input complexity
-            agent_1, agent_2, agent_3, complexity = self._select_agents(text, input_type=file_type, metadata=metadata)
+            # Select pipeline stages based on input complexity
+            identifier, structurer, personalizer, complexity = self._select_pipeline_stages(text, input_type=file_type, metadata=metadata)
 
             # Launch title generation in background (runs in parallel with pipeline)
             title_thread = threading.Thread(
@@ -869,9 +869,9 @@ class SessionProcessor:
 
             # Phase 1: Event Identification
             if requires_vision:
-                # Image inputs: use Agent 1 with vision (LangExtract is text-only)
+                # Image inputs: use IDENTIFY with vision (LangExtract is text-only)
                 identification_result = identify_events_chunked(
-                    agent=agent_1,
+                    agent=identifier,
                     raw_input=text,
                     metadata=metadata,
                     requires_vision=True,
@@ -923,10 +923,10 @@ class SessionProcessor:
             ]
             DBSession.update_extracted_events(session_id, extracted_events)
 
-            # Update context with event count for downstream Agent 2/3 calls
+            # Update context with event count for downstream pipeline stages
             set_tracking_context(num_events=identification_result.num_events)
 
-            # Phase 2: Process events (extraction → optional personalization → DB)
+            # Phase 2: Process events (STRUCTURE → optional PERSONALIZE → DB)
             session = DBSession.get_by_id(session_id)
             user_id = session['user_id']
             is_guest = session.get('guest_mode', False)
@@ -938,8 +938,8 @@ class SessionProcessor:
                 events=identification_result.events,
                 timezone=timezone,
                 is_guest=is_guest,
-                agent_2=agent_2,
-                agent_3=agent_3,
+                structurer=structurer,
+                personalizer=personalizer,
             )
 
             # Mark session as complete
