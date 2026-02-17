@@ -78,7 +78,15 @@ function AppContent() {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
 
   // Calendars from sync response (passed to EventsWorkspace)
-  const [syncedCalendars, setSyncedCalendars] = useState<SyncCalendar[]>([])
+  // Seed from localStorage so events render with correct colors/names immediately on refresh
+  const [syncedCalendars, setSyncedCalendars] = useState<SyncCalendar[]>(() => {
+    try {
+      const cached = localStorage.getItem('dropcal_calendars')
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
 
   // Tracks the session the user is currently viewing (prevents stale processing from hijacking UI)
   const activeViewSessionRef = useRef<string | null>(null)
@@ -269,6 +277,7 @@ function AppContent() {
         .then(calendars => {
           if (calendars.length > 0) {
             setSyncedCalendars(calendars)
+            try { localStorage.setItem('dropcal_calendars', JSON.stringify(calendars)) } catch {}
           }
         })
         .catch(() => {})
@@ -287,6 +296,7 @@ function AppContent() {
           }
           if (result.calendars && result.calendars.length > 0) {
             setSyncedCalendars(result.calendars)
+            try { localStorage.setItem('dropcal_calendars', JSON.stringify(result.calendars)) } catch {}
           }
         })
         .catch(error => {
@@ -295,6 +305,8 @@ function AppContent() {
         })
     } else if (!user) {
       lastSyncedUserId.current = null
+      setSyncedCalendars([])
+      try { localStorage.removeItem('dropcal_calendars') } catch {}
     }
   }, [user, calendarReady])
 

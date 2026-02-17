@@ -1,5 +1,5 @@
 
-import { WordMark } from '../../components/WordMark'
+import { WordMark } from '../../../components/WordMark'
 import { TwitterLogo, InstagramLogo, LinkedinLogo } from '@phosphor-icons/react'
 import './Footer.css'
 

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { List, X, Mailbox, FingerprintSimple, Flask } from '@phosphor-icons/react'
-import { Logo } from '../../components/Logo'
+import { Logo } from '../../../components/Logo'
 import { CTAButton } from './CTAButton'
-import { useTheme } from '../../theme/ThemeProvider'
-import wordImageLight from '../../assets/brand/light/word.png'
-import wordImageDark from '../../assets/brand/dark/word.png'
+import { useTheme } from '../../../theme/ThemeProvider'
+import wordImageLight from '../../../assets/brand/light/word.png'
+import wordImageDark from '../../../assets/brand/dark/word.png'
 import './NavBar.css'
 
 export function NavBar() {

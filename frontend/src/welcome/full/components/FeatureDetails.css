@@ -9,7 +9,7 @@
 /* Single-column flow — blocks zigzag left/right */
 .feature-details-flow {
     width: 100%;
-    max-width: 1200px;
+    max-width: 960px;
     display: flex;
     flex-direction: column;
 }
@@ -20,7 +20,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    width: 45%;
+    width: 44%;
 }
 
 /* Zigzag: odd blocks left, even blocks right with vertical overlap */
@@ -30,7 +30,12 @@
 
 .feature-right {
     align-self: flex-end;
-    margin-top: -200px;
+    margin-top: -340px;
+}
+
+/* All blocks after the first also overlap */
+.feature-left ~ .feature-left {
+    margin-top: -340px;
 }
 
 .feature-headline {
