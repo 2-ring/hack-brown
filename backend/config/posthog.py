@@ -14,7 +14,9 @@ import os
 import atexit
 import logging
 import threading
+import time as _time
 import uuid
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +107,7 @@ def _set(field, value):
 def set_tracking_context(
     distinct_id=None,
     trace_id=None,
+    session_id=None,
     pipeline=None,
     input_type=None,
     is_guest=None,
@@ -124,12 +127,21 @@ def set_tracking_context(
     Call this before running agents so LLM calls are attributed correctly.
 
     Pass None to skip a field (partial updates). Pass CLEAR to reset a field.
+
+    PostHog hierarchy:
+        session_id → $ai_session_id  (groups multiple traces, e.g., pipeline + modifications)
+        trace_id   → $ai_trace_id    (root of one operation: a pipeline run or a modification)
+        parent_id  → $ai_parent_id   (nests under a stage span within a trace)
+
+    For pipeline runs: session_id = trace_id = DropCal session UUID.
+    For modifications: session_id = DropCal session UUID, trace_id = unique edit UUID.
     """
     # Core fields
     if distinct_id is not None:
         _local.distinct_id = distinct_id
     if trace_id is not None:
         _local.trace_id = trace_id
+    _set('session_id', session_id)
     if pipeline is not None:
         _local.pipeline = pipeline
 
@@ -153,14 +165,18 @@ def get_tracking_property(name, default=None):
     return getattr(_local, name, default)
 
 
+def _get_session_id():
+    """
+    Get the AI session ID for PostHog grouping.
+    Returns session_id if set, otherwise falls back to trace_id.
+    """
+    return getattr(_local, 'session_id', None) or getattr(_local, 'trace_id', None)
+
+
 # Human-readable labels for each pipeline stage / component.
 _AGENT_LABELS = {
-    'identification': 'Identify',
-    'extraction': 'Structure',
-    'extraction_batch': 'Structure (Batch)',
-    'consolidation': 'Consolidate',
+    'extraction': 'Extract',
     'personalization': 'Personalize',
-    'formatting': 'Personalize',
     'modification': 'Modify',
     'pattern_discovery': 'Pattern Discovery',
     'pattern_analysis': 'Pattern Analysis',
@@ -169,12 +185,8 @@ _AGENT_LABELS = {
 # Maps stage_name → config component, so get_invoke_config() can resolve
 # the actual provider (grok/claude/openai) instead of the LangChain class name.
 _AGENT_TO_COMPONENT = {
-    'identification': 'identify',
-    'extraction': 'structure',
-    'extraction_batch': 'structure',
-    'consolidation': 'default',
+    'extraction': 'extract',
     'personalization': 'personalize',
-    'formatting': 'personalize',
     'modification': 'modify',
     'pattern_discovery': 'pattern_discovery',
     'pattern_analysis': 'pattern_discovery',
@@ -266,15 +278,16 @@ def get_invoke_config(agent_name=None, properties=None):
 
         distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
         trace_id = getattr(_local, 'trace_id', None)
+        session_id = _get_session_id()
         parent_id = getattr(_local, 'parent_id', None)
         pipeline = getattr(_local, 'pipeline', None)
 
         # Build properties from thread-local context
         merged_properties = {'environment': _ENVIRONMENT}
 
-        # $ai_session_id groups all traces in a pipeline run into one AI session
-        if trace_id:
-            merged_properties['$ai_session_id'] = str(trace_id)
+        # $ai_session_id groups all traces (pipeline + modifications) into one AI session
+        if session_id:
+            merged_properties['$ai_session_id'] = str(session_id)
 
         if agent_name:
             merged_properties["agent_name"] = agent_name
@@ -404,40 +417,75 @@ def capture_pipeline_trace(
         logger.debug(f"PostHog: Failed to capture pipeline trace: {e}")
 
 
-def capture_stage_span(session_id, span_id, stage_name):
+@contextmanager
+def stage_span(stage_name):
     """
-    Capture a stage span (e.g., "Structure", "Personalize") under the pipeline trace.
-    Individual LLM calls nest under this via parent_id.
+    Context manager that wraps a pipeline stage in a PostHog $ai_span.
+
+    Creates a tree structure in PostHog's trace view:
+        Pipeline: Text (trace)
+        ├── Extract (span)
+        │   └── Extract (generation)    ← LLM call nests here via parent_id
+        ├── Personalize: Event 1/3 (span)
+        │   └── Personalize (generation)
+        └── ...
+
+    Sets parent_id in tracking context so LLM calls within the span
+    automatically nest under it. Restores previous parent_id on exit.
+
+    Usage:
+        with stage_span("extraction"):
+            result = extractor.execute(...)
     """
-    client = _ensure_client()
-    if not client:
-        return
+    span_id = str(uuid.uuid4())
+    # Build name at entry time (context may change during execution)
+    span_name = _build_span_name(stage_name)
+    previous_parent_id = getattr(_local, 'parent_id', None)
+    start = _time.time()
+
+    # Set parent_id so child LLM calls nest under this span
+    _local.parent_id = span_id
 
     try:
-        distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
+        yield span_id
+    finally:
+        duration_ms = (_time.time() - start) * 1000
 
-        event_properties = {
-            '$ai_trace_id': session_id,
-            '$ai_session_id': str(session_id),
-            '$ai_parent_id': str(session_id),
-            '$ai_span_id': span_id,
-            '$ai_span_name': stage_name,
-            '$ai_framework': 'dropcal',
-            'environment': _ENVIRONMENT,
-        }
+        # Restore previous parent_id
+        _local.parent_id = previous_parent_id
 
-        for attr in ('input_type', 'is_guest', 'has_personalization'):
-            val = getattr(_local, attr, None)
-            if val is not None:
-                event_properties[attr] = val
+        # Capture the span event
+        client = _ensure_client()
+        if client:
+            try:
+                distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
+                trace_id = getattr(_local, 'trace_id', None)
+                session_id = _get_session_id()
 
-        client.capture(
-            distinct_id=distinct_id,
-            event='$ai_span',
-            properties=event_properties,
-        )
-    except Exception as e:
-        logger.debug(f"PostHog: Failed to capture stage span: {e}")
+                event_properties = {
+                    '$ai_trace_id': str(trace_id) if trace_id else None,
+                    '$ai_session_id': str(session_id) if session_id else None,
+                    '$ai_parent_id': str(previous_parent_id or trace_id) if (previous_parent_id or trace_id) else None,
+                    '$ai_span_id': span_id,
+                    '$ai_span_name': span_name,
+                    '$ai_latency': duration_ms / 1000,
+                    '$ai_framework': 'dropcal',
+                    'environment': _ENVIRONMENT,
+                    'agent_name': stage_name,
+                }
+
+                for attr in _AUTO_INCLUDE_ATTRS:
+                    val = getattr(_local, attr, None)
+                    if val is not None:
+                        event_properties[attr] = val
+
+                client.capture(
+                    distinct_id=distinct_id,
+                    event='$ai_span',
+                    properties=event_properties,
+                )
+            except Exception as e:
+                logger.debug(f"PostHog: Failed to capture stage span: {e}")
 
 
 # ============================================================================
@@ -471,11 +519,12 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
     try:
         distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
         trace_id = getattr(_local, 'trace_id', None)
+        session_id = _get_session_id()
         parent_id = getattr(_local, 'parent_id', None)
 
         event_properties = {
-            '$ai_trace_id': trace_id,
-            '$ai_session_id': str(trace_id) if trace_id else None,
+            '$ai_trace_id': str(trace_id) if trace_id else None,
+            '$ai_session_id': str(session_id) if session_id else None,
             '$ai_span_id': str(uuid.uuid4()),
             '$ai_parent_id': str(parent_id or trace_id) if (parent_id or trace_id) else None,
             '$ai_span_name': _build_span_name(agent_name),
@@ -549,15 +598,16 @@ def capture_llm_generation(
     try:
         distinct_id = getattr(_local, 'distinct_id', None) or 'anonymous'
         trace_id = getattr(_local, 'trace_id', None)
+        session_id = _get_session_id()
         parent_id = getattr(_local, 'parent_id', None)
         pipeline = getattr(_local, 'pipeline', None)
 
-        # Parent: event span if set, otherwise pipeline trace
+        # Parent: stage span if set, otherwise pipeline trace
         effective_parent = parent_id or trace_id
 
         event_properties = {
-            '$ai_trace_id': trace_id,
-            '$ai_session_id': str(trace_id) if trace_id else None,
+            '$ai_trace_id': str(trace_id) if trace_id else None,
+            '$ai_session_id': str(session_id) if session_id else None,
             '$ai_span_id': str(uuid.uuid4()),
             '$ai_parent_id': str(effective_parent) if effective_parent else None,
             '$ai_span_name': _build_span_name(agent_name),

@@ -1,6 +1,5 @@
 """
 Pydantic models for agent inputs and outputs.
-Extracted from app.py for better organization.
 """
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -11,148 +10,63 @@ import pytz
 
 
 # ============================================================================
-# STRUCTURE Stage: Natural Language Temporal Extraction
+# EXTRACT Stage: Lean event extraction model
 # ============================================================================
-
-class TemporalExtraction(BaseModel):
-    """
-    Natural language temporal expression extracted by the STRUCTURE stage.
-    Resolved deterministically to CalendarDateTime by the temporal resolver (Duckling).
-
-    STRUCTURE stage extracts ONLY what is stated (explicitly or implicitly) in the text.
-    If temporal information is omitted from the input, the field stays None.
-    """
-    date_text: Optional[str] = Field(
-        default=None,
-        description="Date expression as stated in text: 'next Tuesday', 'February 15', 'tomorrow', 'March 3'. "
-                    "None only if no date is mentioned at all."
-    )
-    end_date_text: Optional[str] = Field(
-        default=None,
-        description="End date for multi-day events: 'February 16' (from 'Feb 15-16'), 'March 5'. "
-                    "None for same-day or when not stated."
-    )
-    start_time_text: Optional[str] = Field(
-        default=None,
-        description="Start time as stated: '3pm', 'noon', '14:00', '6:30pm'. "
-                    "None for all-day events or when no time is mentioned."
-    )
-    end_time_text: Optional[str] = Field(
-        default=None,
-        description="End time if explicitly stated: '5pm' (from '3-5pm'), '8:00'. "
-                    "None if not mentioned — do NOT infer."
-    )
-    duration_text: Optional[str] = Field(
-        default=None,
-        description="Duration if stated in text: '90 minutes', '2 hours', '30 min'. "
-                    "None if not mentioned — do NOT infer default durations."
-    )
-    is_all_day: bool = Field(
-        default=False,
-        description="True when no time is mentioned AND the event is naturally all-day "
-                    "(birthdays, holidays, deadlines, trips). False otherwise."
-    )
-    is_multiday: bool = Field(
-        default=False,
-        description="True if the event spans multiple days (e.g., 'Feb 15-16', 'this weekend')."
-    )
-    is_approximate: bool = Field(
-        default=False,
-        description="True if temporal info is vague: 'sometime next week', 'around noon', 'in the evening'."
-    )
-    is_recurring: bool = Field(
-        default=False,
-        description="True if the event repeats: 'every Tuesday', 'weekly', 'daily standup'."
-    )
-    recurrence_pattern: Optional[str] = Field(
-        default=None,
-        description="Natural language recurrence pattern: 'every Tuesday and Thursday', 'weekly', 'daily'. "
-                    "None if not recurring."
-    )
-    explicit_timezone: Optional[str] = Field(
-        default=None,
-        description="Timezone ONLY if explicitly stated in text: 'EST', 'Pacific', 'UTC', 'ET'. "
-                    "None if not mentioned (resolver uses user's default timezone)."
-    )
-    temporal_confidence: float = Field(
-        default=1.0,
-        description="Confidence in temporal extraction: 1.0 = certain, 0.5 = ambiguous, 0.0 = guessing. "
-                    "Lower confidence when text is vague or contradictory."
-    )
-    uncertainty_flags: List[str] = Field(
-        default_factory=list,
-        description="List of uncertainty reasons: ['ambiguous_date', 'no_year', 'relative_reference', "
-                    "'missing_time', 'vague_duration']. Empty if confident."
-    )
-    original_temporal_text: Optional[str] = Field(
-        default=None,
-        description="The raw substring from input containing the temporal reference. "
-                    "E.g., 'next Tuesday at 3pm for about 2 hours'."
-    )
-    extraction_reasoning: Optional[str] = Field(
-        default=None,
-        description="Brief explanation of non-obvious temporal decisions. "
-                    "E.g., 'Interpreted \"this weekend\" as Saturday since context is a daytime activity'."
-    )
-
 
 class ExtractedEvent(BaseModel):
     """
-    STRUCTURE stage output model. Contains all semantic fields of a calendar event,
-    but with natural language temporal expressions (TemporalExtraction) instead
-    of resolved ISO 8601 CalendarDateTime.
+    Single calendar event extracted from input.
 
-    The temporal resolver (Duckling) converts this to a CalendarEvent.
+    Uses natural language date/time strings (resolved by Duckling downstream).
+    Intentionally lean — only the fields needed to create a calendar event.
     """
-    summary: str = Field(description="Event title — clean, descriptive, and scannable")
-    temporal: TemporalExtraction = Field(description="Natural language date/time extraction")
-    location: Optional[str] = Field(default=None, description="Physical location (standardized)")
-    description: Optional[str] = Field(default=None, description="Event description/notes")
-    recurrence: Optional[List[str]] = Field(default=None, description="RRULE strings for recurring events")
-    attendees: Optional[List[str]] = Field(default=None, description="Attendee email addresses")
-
-    # Metadata from extraction
-    meeting_url: Optional[str] = Field(default=None, description="Virtual meeting link (Zoom, Teams, etc.)")
-    people: Optional[List[str]] = Field(default=None, description="People mentioned by name")
-    instructions: Optional[str] = Field(default=None, description="User's explicit requests: 'remind me 1 hour before', 'high priority'")
-
-    # Set by STRUCTURE (if explicit) or PERSONALIZE stage
-    calendar: Optional[str] = Field(default=None, description="Target calendar name from user instructions. None = primary calendar.")
-    colorId: Optional[str] = Field(default=None, description="Always None from STRUCTURE. Set by PERSONALIZE stage.")
+    summary: str = Field(
+        description="Event title — clean, descriptive, Title Case. 2-5 words."
+    )
+    date: Optional[str] = Field(
+        default=None,
+        description="Date as natural language for Duckling: 'tomorrow', 'next Tuesday', "
+                    "'October 20, 2025', 'this Saturday'. None if no date mentioned."
+    )
+    start_time: Optional[str] = Field(
+        default=None,
+        description="Start time as stated: '3pm', '3:00 pm', 'noon', '14:00'. "
+                    "None for all-day events or when no time mentioned."
+    )
+    end_time: Optional[str] = Field(
+        default=None,
+        description="End time ONLY if explicitly stated: '5pm' (from '3-5pm'). "
+                    "None if not mentioned — do NOT infer."
+    )
+    location: Optional[str] = Field(
+        default=None,
+        description="Physical location: 'Friedman Hall 108', 'Starbucks'. "
+                    "Not 'virtual', 'online', 'Zoom' (those go in description)."
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="Additional details beyond the title: preparation, agenda, "
+                    "people involved, meeting URLs, notes. None if nothing to add."
+    )
+    is_all_day: bool = Field(
+        default=False,
+        description="True for birthdays, holidays, deadlines, trips (no time). "
+                    "False for events that likely have a time."
+    )
+    recurrence: Optional[List[str]] = Field(
+        default=None,
+        description="RRULE strings if repeating: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE']. "
+                    "None for one-time events."
+    )
 
     @field_validator('summary')
     @classmethod
     def validate_summary(cls, v: str) -> str:
-        """Validate and truncate summary."""
-        from config.limits import TextLimits
-        max_len = TextLimits.EVENT_TITLE_MAX_LENGTH
         if not v or not v.strip():
             raise ValueError("Summary cannot be empty")
         v = v.strip()
-        if len(v) > max_len:
-            v = v[:max_len - 3] + "..."
-        return v
-
-    @field_validator('recurrence')
-    @classmethod
-    def validate_recurrence(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        """Validate RRULE format."""
-        if v is None:
-            return v
-        if not isinstance(v, list):
-            raise ValueError("Recurrence must be a list of RRULE strings")
-        for rule in v:
-            if not isinstance(rule, str):
-                raise ValueError(f"Each RRULE must be a string, got {type(rule).__name__}")
-            if not rule.startswith('RRULE:'):
-                raise ValueError(f"RRULE must start with 'RRULE:', got '{rule}'")
-            rrule_content = rule[6:]
-            if 'FREQ=' not in rrule_content:
-                raise ValueError(f"RRULE must contain FREQ parameter, got '{rule}'")
-            valid_freq = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
-            freq_match = re.search(r'FREQ=(\w+)', rrule_content)
-            if freq_match and freq_match.group(1) not in valid_freq:
-                raise ValueError(f"Invalid FREQ value '{freq_match.group(1)}', must be one of {valid_freq}")
+        if len(v) > 200:
+            v = v[:197] + "..."
         return v
 
 
@@ -217,9 +131,9 @@ class ConsolidationResult(BaseModel):
 
 
 class ExtractedEventBatch(BaseModel):
-    """STRUCTURE stage batch output — one ExtractedEvent per input event."""
-    events: List['ExtractedEvent'] = Field(
-        description="One ExtractedEvent per input event, in the same order as the input list."
+    """Batch output — one ExtractedEvent per real-world event found in input."""
+    events: List[ExtractedEvent] = Field(
+        description="One ExtractedEvent per real-world event. Deduplicated."
     )
 
 

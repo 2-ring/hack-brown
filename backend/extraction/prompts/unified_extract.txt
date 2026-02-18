@@ -1,0 +1,37 @@
+Extract all calendar events from the input below.
+
+A calendar event is anything someone would put on a calendar: meetings, classes, exams, appointments, deadlines, parties, flights, office hours, etc. Ignore past events, opinions, and vague intentions ("I should work out more").
+
+For each event, output:
+
+- **summary**: Title in Title Case, 2-5 words. Preserve course codes ("CSCI 0500 Lecture"). Add context when helpful ("Dinner with Sarah"). Fix typos.
+- **date**: Natural language date string ("tomorrow", "next Tuesday", "October 20, 2025"). Must specify a specific day without ANY ambguity, for example "9th of October this year" or "9th of October, 2026" not just "9th of October." If no year mentioned add "this year". Use relevant document context (e.g. "Fall 2025" syllabus → "October 20, 2025"). Null if no date mentioned.
+- **start_time**: Time as stated ("3pm", "noon", "14:00"). From ranges: "3-5pm" → "3pm". Null for all-day events or if no time mentioned.
+- **end_time**: Only if explicitly stated ("3-5pm" → "5pm"). Never infer an end time. Null if not mentioned.
+- **location**: Physical places only ("CIT 368", "Starbucks"). Virtual locations go in description instead. Null if none.
+- **description**: Context beyond the title — people involved, prep notes, URLs, exam rules. Don't repeat the title. Null if nothing to add.
+- **is_all_day**: True for birthdays, holidays, deadlines, trips with no time. False otherwise.
+- **recurrence**: RRULE strings for repeating events (["RRULE:FREQ=WEEKLY;BYDAY=MO,WE"]). Include UNTIL if an end date is known. Null for one-time events.
+
+Key behaviors:
+
+- **Conversations**: Follow the negotiation to its conclusion. "Lunch tomorrow?" → "Actually dinner" → "Yes, 6:15, Ararat" = extract dinner only (the agreed plan).
+- **Dedup**: Same event described in multiple places = extract once, using the most specific version.
+- **Context**: Use surrounding info to fill in gaps. Office hours "after lecture" when lecture ends 4:20pm → start_time "4:20 pm". Course code in syllabus header applies to all events below it.
+- **Splitting**: "Meeting Mon and Wed 3-4pm" = 1 recurring event. "Midterm Oct 20, Final Dec 20" = 2 separate events.
+- **Dates/times as strings**: Output natural language, not ISO timestamps. "Tomorrow at 2pm" → date: "tomorrow", start_time: "2pm".
+- **Don't hallucinate**: If it's not in the input, leave it null.
+
+Examples:
+
+"Team meeting tomorrow at 2pm in Conference Room B. Bring the report."
+→ summary: "Team Meeting", date: "tomorrow", start_time: "2pm", location: "Conference Room B", description: "Bring the report"
+
+Text conversation with Jack Wolfen: "Lunch tomorrow?" ... "Maybe dinner instead" ... "Yes 6:15? @the Ratty?" ... "Sounds good"
+→ summary: "Dinner with Jack", date: "tomorrow", start_time: "6:15pm", location: "The Ratty"
+
+Syllabus (CSCI 0500 — Fall 2025): "Lecture Mon/Wed 3:00-4:20 pm, Friedman 108"
+→ summary: "CSCI 0500 Lecture", start_time: "3:00 pm", end_time: "4:20 pm", location: "Friedman Hall 108", recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE"]
+
+"Mom's birthday March 15"
+→ summary: "Mom's Birthday", date: "March 15 this year", is_all_day: true

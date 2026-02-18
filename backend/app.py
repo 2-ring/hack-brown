@@ -2,17 +2,14 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 import os
 import sys
 import threading
 import uuid
 from werkzeug.utils import secure_filename
-from typing import Optional
 import logging
 import traceback
-from pydantic import ValidationError
 from pathlib import Path
 
 # Add backend directory to Python path if running from project root
@@ -36,15 +33,11 @@ from database.models import User, Session as DBSession, Event
 from storage.file_handler import FileStorage
 from events.service import EventService
 
-# Import agent modules
-from extraction.agents.identification import EventIdentificationAgent
-from extraction.agents.facts import EventExtractionAgent
+# Import pipeline modules
+from extraction.extract import UnifiedExtractor
 from extraction.temporal_resolver import resolve_temporal
 from modification.agent import EventModificationAgent
 from preferences.agent import PersonalizationAgent
-
-# Import models
-from extraction.models import ExtractedFacts
 
 # Import route blueprints
 from calendars.routes import calendar_bp
@@ -59,12 +52,7 @@ from auth.middleware import require_auth
 # Import session processor
 from processing.session_processor import SessionProcessor
 
-# Import processing config and parallel helper
 from config.processing import ProcessingConfig
-from processing.parallel import process_events_parallel, EventProcessingResult
-from processing.chunked_identification import identify_events_chunked
-from extraction.langextract_identifier import identify_events_langextract
-from config.langextract import PASSES_SIMPLE, PASSES_COMPLEX
 from config.posthog import init_posthog, set_tracking_context, flush_posthog, capture_agent_error
 
 # Import rate limit configuration
@@ -148,22 +136,15 @@ app.config['MAX_CONTENT_LENGTH'] = FileLimits.MAX_UPLOAD_BYTES
 # CENTRALIZED MODEL CONFIGURATION
 # ============================================================================
 
-from config.text import create_text_model, create_text_model_light, print_text_config
+from config.text import create_text_model, print_text_config
 from config.audio import print_audio_config
 
-# Create standard LLM instances for each pipeline stage
-llm_identify = create_text_model('identify')
-llm_structure = create_text_model('structure')
+# Create LLM instances for each pipeline stage
+llm_extract = create_text_model('extract')
 llm_modify = create_text_model('modify')
 llm_personalize = create_text_model('personalize')
 llm_pattern_discovery = create_text_model('pattern_discovery')
-llm_session_processor = create_text_model('session_processor')
 llm_vision = create_text_model('vision')
-
-# Create light LLM instances for simple inputs (dynamic complexity routing)
-llm_identify_light = create_text_model_light('identify')
-llm_structure_light = create_text_model_light('structure')
-llm_personalize_light = create_text_model_light('personalize')
 
 # Print configuration on startup
 print_text_config()
@@ -183,18 +164,10 @@ pattern_discovery_service = PatternDiscoveryService(llm_pattern_discovery)
 # Initialize Data Collection service
 data_collection_service = DataCollectionService(calendar_service)
 
-# Initialize agents with their configured models (standard)
-identify_agent = EventIdentificationAgent(llm_identify)
-from config.text import create_instructor_client
-_ic, _mn, _pv = create_instructor_client('structure')
-structure_agent = EventExtractionAgent(_ic, _mn, _pv)
+# Initialize agents
+extractor = UnifiedExtractor(llm_extract, llm_vision=llm_vision)
 modify_agent = EventModificationAgent(llm_modify)
 personalize_agent = PersonalizationAgent(llm_personalize)
-
-# Initialize light agents for simple inputs (used by /process endpoint)
-identify_agent_light = EventIdentificationAgent(llm_identify_light)
-_ic_l, _mn_l, _pv_l = create_instructor_client('structure', light=True)
-structure_agent_light = EventExtractionAgent(_ic_l, _mn_l, _pv_l)
 
 # Initialize input processor factory and register all processors
 input_processor_factory = InputProcessorFactory()
@@ -226,73 +199,14 @@ pattern_refresh_service = PatternRefreshService(
     pattern_discovery_service=pattern_discovery_service,
 )
 
-# Initialize session processor (with light models for dynamic complexity routing)
+# Initialize session processor
 session_processor = SessionProcessor(
-    llm_session_processor, input_processor_factory,
+    llm_extract, input_processor_factory,
+    llm_personalization=llm_personalize,
     pattern_refresh_service=pattern_refresh_service,
-    llm_light=llm_identify_light,
-    llm_personalization_light=llm_personalize_light,
     llm_vision=llm_vision,
 )
 app.session_processor = session_processor
-
-
-# ============================================================================
-# Validation Error Handling Utilities
-# ============================================================================
-
-def format_validation_error(error: ValidationError, stage: str) -> dict:
-    """
-    Format ValidationError into user-friendly error details.
-
-    Args:
-        error: Pydantic ValidationError
-        stage: Pipeline stage ('identification', 'extraction', 'formatting')
-
-    Returns:
-        Dictionary with formatted error details
-    """
-    errors = []
-    for err in error.errors():
-        field = '.'.join(str(loc) for loc in err['loc'])
-        message = err['msg']
-        error_type = err['type']
-
-        errors.append({
-            'field': field,
-            'message': message,
-            'type': error_type,
-            'input': err.get('input', 'N/A')
-        })
-
-    return {
-        'stage': stage,
-        'errors': errors,
-        'suggestion': get_suggestion_for_stage(stage)
-    }
-
-
-def get_validation_summary(error: ValidationError) -> str:
-    """Get one-line summary of validation errors."""
-    error_count = len(error.errors())
-    first_error = error.errors()[0]
-    field = '.'.join(str(loc) for loc in first_error['loc'])
-    message = first_error['msg']
-
-    if error_count == 1:
-        return f"{field}: {message}"
-    else:
-        return f"{field}: {message} (+{error_count-1} more errors)"
-
-
-def get_suggestion_for_stage(stage: str) -> str:
-    """Get user-facing suggestion based on pipeline stage."""
-    suggestions = {
-        'identification': 'Please ensure your input contains clear event information (date, time, title).',
-        'extraction': 'The event information could not be properly formatted. Check that dates are in YYYY-MM-DD format and times are in HH:MM:SS format.',
-        'formatting': 'The event could not be formatted for your calendar. Check that timezones and recurrence rules are valid.'
-    }
-    return suggestions.get(stage, 'Please check your input and try again.')
 
 
 # ============================================================================
@@ -309,7 +223,7 @@ def process_input():
     Unified endpoint for processing all input types and extracting calendar events.
     Handles: text, audio, images, PDFs, and other text files.
 
-    Runs full pipeline: IDENTIFY → CONSOLIDATE → STRUCTURE → RESOLVE → PERSONALIZE
+    Runs pipeline: EXTRACT → RESOLVE
 
     For text input: Send JSON with {"text": "your text here"}
     For file input: Send multipart/form-data with file upload
@@ -319,9 +233,7 @@ def process_input():
     # Step 1: Preprocess input
     raw_input = ''
     metadata = {}
-    requires_vision = False
 
-    # Check if this is a text-only request
     if request.is_json:
         data = request.get_json()
         raw_input = data.get('text', '')
@@ -336,39 +248,28 @@ def process_input():
             }), 413
 
         metadata = {'source': 'direct_text'}
-        requires_vision = False
 
-    # File upload processing
     elif 'file' in request.files:
         file = request.files['file']
 
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
 
-        # Save file temporarily
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
         try:
-            # Auto-detect file type and process
             result = input_processor_factory.auto_process_file(filepath)
-
-            # Clean up the uploaded file
             os.remove(filepath)
 
             if not result.success:
-                return jsonify({
-                    'success': False,
-                    'error': result.error
-                }), 400
+                return jsonify({'success': False, 'error': result.error}), 400
 
             raw_input = result.text
             metadata = result.metadata
-            requires_vision = metadata.get('requires_vision', False)
 
         except Exception as e:
-            # Clean up on error
             if os.path.exists(filepath):
                 os.remove(filepath)
             return jsonify({'error': f'File processing failed: {str(e)}'}), 500
@@ -390,155 +291,55 @@ def process_input():
                 if user_tz:
                     timezone = user_tz
     except Exception as e:
-        print(f"Note: Could not load user timezone: {e}")
+        logger.warning(f"Could not load user timezone: {e}")
 
-    # Set PostHog tracking context for this request
-    input_type_label = 'text' if request.is_json else 'file'
+    # Set PostHog tracking context
+    requires_vision = metadata.get('requires_vision', False)
+    input_type = 'image' if requires_vision else 'text'
     set_tracking_context(
         distinct_id=locals().get('user_id', 'guest'),
         trace_id=f"process-{uuid.uuid4().hex[:8]}",
         pipeline="Guest processing",
-        input_type=input_type_label,
+        input_type=input_type,
         is_guest=True,
     )
 
-    # Select agents based on input complexity
-    from config.complexity import InputComplexityAnalyzer, ComplexityLevel
-    input_type = 'image' if requires_vision else 'text'
-    complexity = InputComplexityAnalyzer.analyze(raw_input, input_type=input_type, metadata=metadata)
-    if complexity.level == ComplexityLevel.SIMPLE:
-        logger.info(f"Process endpoint: SIMPLE ({complexity.reason}) -> light models")
-        active_identifier = identify_agent_light
-        active_structurer = structure_agent_light
-    else:
-        logger.info(f"Process endpoint: COMPLEX ({complexity.reason}) -> standard models")
-        active_identifier = identify_agent
-        active_structurer = structure_agent
-
-    # Step 3: Run full pipeline with validation error handling
+    # Step 3: EXTRACT → RESOLVE
     try:
-        # IDENTIFY: find events
-        try:
-            if requires_vision:
-                # Image inputs: use IDENTIFY with vision (LangExtract is text-only)
-                identification_result = identify_events_chunked(
-                    agent=active_identifier,
-                    raw_input=raw_input,
-                    metadata=metadata,
-                    requires_vision=True,
-                    tracking_context={
-                        'distinct_id': locals().get('user_id', 'guest'),
-                        'trace_id': f"process-{uuid.uuid4().hex[:8]}",
-                    },
-                )
-            else:
-                # Text inputs: LangExtract identification
-                passes = PASSES_COMPLEX if complexity.level == ComplexityLevel.COMPLEX else PASSES_SIMPLE
-                identification_result = identify_events_langextract(
-                    text=raw_input,
-                    extraction_passes=passes,
-                    tracking_context={
-                        'distinct_id': locals().get('user_id', 'guest'),
-                        'trace_id': f"process-{uuid.uuid4().hex[:8]}",
-                    },
-                )
-        except ValidationError as e:
-            logger.error(f"Validation error in IDENTIFY stage: {e}")
-            capture_agent_error("identification", e, {'error_stage': 'validation'})
-            return jsonify({
-                'success': False,
-                'error': 'Event identification failed',
-                'details': format_validation_error(e, 'identification'),
-                'error_type': 'validation_error'
-            }), 400
+        extracted_events = extractor.execute(
+            raw_input, input_type=input_type, metadata=metadata
+        )
 
-        # Check if any events were found
-        if not identification_result.has_events:
+        if not extracted_events:
             return jsonify({
                 'success': True,
                 'events': [],
                 'message': 'No calendar events found in input'
             })
 
-        # Step 4: Extract events in per-group parallel with per-event error handling
-        def process_single_event_api(idx, event):
-            """Process one event through STRUCTURE stage for /api/process."""
+        # Resolve temporal expressions per event
+        calendar_events = []
+        warnings = []
+        for i, extracted in enumerate(extracted_events):
             try:
-                try:
-                    extracted_event = active_structurer.execute(
-                        event.raw_text,
-                        event.description,
-                    )
-
-                    # Deterministic temporal resolution: NL → ISO 8601 via Duckling
-                    calendar_event = resolve_temporal(
-                        extracted_event, user_timezone=timezone
-                    )
-
-                    # Log soft warning for long titles (>8 words)
-                    warning = None
-                    if len(calendar_event.summary.split()) > 8:
-                        warning = f"Event {idx+1}: Title is long ({len(calendar_event.summary.split())} words). Consider shortening."
-                        logger.warning(warning)
-
-                    return EventProcessingResult(
-                        index=idx, success=True,
-                        calendar_event=calendar_event.model_dump(),
-                        warning=warning,
-                    )
-
-                except ValidationError as e:
-                    logger.error(f"Validation error in STRUCTURE stage for event {idx+1}: {e}")
-                    capture_agent_error("extraction", e, {'error_stage': 'validation', 'event_index': idx})
-                    return EventProcessingResult(
-                        index=idx, success=False,
-                        warning=f"Event {idx+1} ('{event.description[:50]}...'): Failed validation - {get_validation_summary(e)}"
-                    )
-
+                calendar_event = resolve_temporal(extracted, user_timezone=timezone)
+                calendar_events.append(calendar_event.model_dump())
             except Exception as e:
-                logger.error(f"Unexpected error processing event {idx+1}: {e}\n{traceback.format_exc()}")
-                capture_agent_error("extraction", e, {'event_index': idx})
-                return EventProcessingResult(
-                    index=idx, success=False,
-                    warning=f"Event {idx+1}: Unexpected error - {str(e)}",
-                    error=e,
-                )
+                logger.warning(f"Temporal resolution failed for event {i+1}: {e}")
+                warnings.append(f"Event {i+1} ('{extracted.summary}'): {str(e)}")
 
-        batch_result = process_events_parallel(
-            events=identification_result.events,
-            process_single_event=process_single_event_api,
-        )
-
-        formatted_events = [r.calendar_event for r in batch_result.successful_results]
-        validation_warnings = batch_result.warnings
-
-        # Return results with warnings if any events failed or were truncated
         response = {
             'success': True,
-            'num_events': len(formatted_events),
-            'events': formatted_events
+            'num_events': len(calendar_events),
+            'events': calendar_events,
         }
-
-        if validation_warnings:
-            response['warnings'] = validation_warnings
-            response['message'] = f"Successfully processed {len(formatted_events)} of {batch_result.original_count} events"
+        if warnings:
+            response['warnings'] = warnings
 
         return jsonify(response)
 
-    except ValidationError as e:
-        # Top-level validation error (shouldn't happen if we caught all above)
-        logger.error(f"Top-level validation error: {e}")
-        capture_agent_error("pipeline", e, {'error_stage': 'validation'})
-        return jsonify({
-            'success': False,
-            'error': 'Event extraction failed due to validation errors',
-            'details': format_validation_error(e, 'extraction'),
-            'error_type': 'validation_error'
-        }), 400
-
     except Exception as e:
-        # Catch-all for unexpected errors
-        logger.error(f"Unexpected error in extraction pipeline: {e}\n{traceback.format_exc()}")
+        logger.error(f"Error in extraction pipeline: {e}\n{traceback.format_exc()}")
         capture_agent_error("pipeline", e)
         return jsonify({
             'success': False,
@@ -562,6 +363,7 @@ def edit_event():
     events = data.get('events')
     edit_instruction = data.get('instruction')
     calendars = data.get('calendars', [])
+    edit_session_id = data.get('session_id')
 
     if not events or not isinstance(events, list):
         return jsonify({'error': 'No events list provided'}), 400
@@ -582,9 +384,12 @@ def edit_event():
         except Exception:
             pass
 
+        # Modification gets its own trace_id but groups under the original
+        # session via session_id so PostHog shows pipeline + edits together.
         set_tracking_context(
             distinct_id=edit_user_id,
             trace_id=f"edit-{uuid.uuid4().hex[:8]}",
+            session_id=edit_session_id,
             pipeline="Edit event",
             input_type='modification',
             is_guest=edit_user_id == 'anonymous',
