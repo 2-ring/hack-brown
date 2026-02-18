@@ -7,9 +7,12 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import numpy as np
 
+import logging
 from database.models import Event, Session
-from preferences.similarity import compute_embedding
+from preferences.similarity import compute_embedding, compute_embeddings_batch
 from config.database import QueryLimits
+
+logger = logging.getLogger(__name__)
 
 
 class EventService:
@@ -96,6 +99,62 @@ class EventService:
         Session.add_event(session_id, event['id'])
 
         return event
+
+    @staticmethod
+    def create_dropcal_events_batch(
+        user_id: str,
+        session_id: str,
+        events_data: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """
+        Create multiple DropCal events without embeddings, then batch-compute
+        embeddings and update all events in one pass.
+
+        Saves events to DB immediately (so the frontend can display them),
+        then computes embeddings efficiently via a single model.encode() call.
+
+        Args:
+            user_id: User's UUID
+            session_id: Session UUID
+            events_data: List of dicts with keys matching create_dropcal_event params
+
+        Returns:
+            List of created event dicts
+        """
+        if not events_data:
+            return []
+
+        # 1. Save all events without embeddings
+        created_events = []
+        for data in events_data:
+            event = Event.create(
+                user_id=user_id,
+                provider="dropcal",
+                is_draft=True,
+                event_embedding=None,
+                **data,
+            )
+            Session.add_event(session_id, event['id'])
+            created_events.append(event)
+
+        # 2. Batch-compute embeddings in a single model.encode() call
+        texts = []
+        for data in events_data:
+            text = data.get('summary', '')
+            if data.get('description'):
+                text += f" {data['description']}"
+            texts.append(text)
+
+        try:
+            embeddings = compute_embeddings_batch(texts)
+            for event, embedding in zip(created_events, embeddings):
+                Event.update(event['id'], {
+                    "event_embedding": embedding.tolist()
+                })
+        except Exception as e:
+            logger.warning(f"Batch embedding failed, events saved without embeddings: {e}")
+
+        return created_events
 
     @staticmethod
     def create_provider_event(

@@ -9,6 +9,7 @@ import os
 import logging
 import threading
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from database.models import Session as DBSession, Event
 from processors.factory import InputProcessorFactory, InputType
 from extraction.extract import UnifiedExtractor
@@ -224,10 +225,14 @@ class SessionProcessor:
             title_thread.start()
 
             # ── EXTRACT: single LLM call ────────────────────────────────
-            with stage_span("extraction"):
+            with stage_span("extraction") as span:
+                span.input = {"text": text, "input_type": input_type}
                 extracted_events = self.extractor.execute(
                     text, input_type=input_type, metadata=metadata
                 )
+                span.output = [
+                    e.model_dump() for e in extracted_events
+                ] if extracted_events else []
 
             if not extracted_events:
                 logger.warning(f"No events found in session {session_id}")
@@ -279,48 +284,78 @@ class SessionProcessor:
 
             if use_personalization:
                 logger.info(f"Session {session_id}: Personalizing {len(calendar_events)} events")
-                for i, cal_event in enumerate(calendar_events):
-                    try:
-                        set_tracking_context(
-                            event_index=i,
-                            event_description=cal_event.summary,
-                        )
-                        with stage_span("personalization"):
-                            calendar_events[i] = self.personalize_agent.execute(
-                                event=cal_event,
-                                discovered_patterns=patterns,
-                                historical_events=historical_events,
-                                user_id=user_id,
-                            )
-                    except Exception as e:
-                        logger.warning(
-                            f"Personalization failed for '{cal_event.summary}': {e}"
-                        )
-                        capture_agent_error("personalization", e, {
-                            'session_id': session_id, 'event_index': i,
-                        })
+                # Pre-build similarity index once (thread-safe reuse)
+                self.personalize_agent.build_similarity_index(historical_events)
 
-            # ── SAVE: write all events to DB ────────────────────────────
+                def _personalize_event(i, cal_event):
+                    # Copy parent thread's tracking context into this worker thread
+                    set_tracking_context(
+                        distinct_id=user_id,
+                        trace_id=session_id,
+                        session_id=session_id,
+                        pipeline=pipeline_label,
+                        input_type=input_type,
+                        is_guest=is_guest,
+                        num_events=len(calendar_events),
+                        has_personalization=True,
+                        event_index=i,
+                        event_description=cal_event.summary,
+                    )
+                    with stage_span("personalization") as span:
+                        span.input = cal_event.model_dump()
+                        result = self.personalize_agent.execute(
+                            event=cal_event,
+                            discovered_patterns=patterns,
+                            historical_events=historical_events,
+                            user_id=user_id,
+                        )
+                        span.output = result.model_dump()
+                    return i, result
+
+                with ThreadPoolExecutor(max_workers=len(calendar_events)) as pool:
+                    futures = {
+                        pool.submit(_personalize_event, i, evt): i
+                        for i, evt in enumerate(calendar_events)
+                    }
+                    for future in as_completed(futures):
+                        i = futures[future]
+                        try:
+                            idx, result = future.result()
+                            calendar_events[idx] = result
+                        except Exception as e:
+                            logger.warning(
+                                f"Personalization failed for '{calendar_events[i].summary}': {e}"
+                            )
+                            capture_agent_error("personalization", e, {
+                                'session_id': session_id, 'event_index': i,
+                            })
+
+            # ── SAVE: write events to DB, then embeddings in background ─
+            events_data = []
             for calendar_event in calendar_events:
-                EventService.create_dropcal_event(
-                    user_id=user_id,
-                    session_id=session_id,
-                    summary=calendar_event.summary,
-                    start_time=calendar_event.start.dateTime,
-                    end_time=calendar_event.end.dateTime if calendar_event.end else None,
-                    start_date=calendar_event.start.date,
-                    end_date=calendar_event.end.date if calendar_event.end else None,
-                    is_all_day=calendar_event.start.date is not None,
-                    description=calendar_event.description,
-                    location=calendar_event.location,
-                    calendar_name=calendar_event.calendar,
-                    color_id=calendar_event.colorId,
-                    original_input='',
-                    extracted_facts=calendar_event.model_dump(),
-                    system_suggestion=calendar_event.model_dump(),
-                    recurrence=calendar_event.recurrence,
-                    attendees=calendar_event.attendees,
-                )
+                events_data.append({
+                    'summary': calendar_event.summary,
+                    'start_time': calendar_event.start.dateTime,
+                    'end_time': calendar_event.end.dateTime if calendar_event.end else None,
+                    'start_date': calendar_event.start.date,
+                    'end_date': calendar_event.end.date if calendar_event.end else None,
+                    'is_all_day': calendar_event.start.date is not None,
+                    'description': calendar_event.description,
+                    'location': calendar_event.location,
+                    'calendar_name': calendar_event.calendar,
+                    'color_id': calendar_event.colorId,
+                    'original_input': '',
+                    'extracted_facts': calendar_event.model_dump(),
+                    'system_suggestion': calendar_event.model_dump(),
+                    'recurrence': calendar_event.recurrence,
+                    'attendees': calendar_event.attendees,
+                })
+
+            EventService.create_dropcal_events_batch(
+                user_id=user_id,
+                session_id=session_id,
+                events_data=events_data,
+            )
 
             DBSession.update_status(session_id, 'processed')
 
@@ -329,6 +364,10 @@ class SessionProcessor:
                 num_events=len(calendar_events),
                 has_personalization=use_personalization,
                 duration_ms=(_time.time() - pipeline_start) * 1000,
+                input_state={"text": text, "input_type": input_type},
+                output_state=[
+                    e.model_dump() for e in calendar_events
+                ],
             )
             flush_posthog()
 

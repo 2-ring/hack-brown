@@ -58,6 +58,12 @@ class PersonalizationAgent(BaseAgent):
         self.llm = llm
         self.similarity_search = None
 
+    def build_similarity_index(self, historical_events: Optional[List[Dict]] = None):
+        """Pre-build the similarity search index (call before parallel execute)."""
+        if historical_events and len(historical_events) >= 3 and self.similarity_search is None:
+            self.similarity_search = ProductionSimilaritySearch()
+            self.similarity_search.build_index(historical_events)
+
     def execute(
         self,
         event: CalendarEvent,

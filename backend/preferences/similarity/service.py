@@ -956,3 +956,22 @@ def compute_embedding(text: str) -> np.ndarray:
     """
     model = get_embedding_model()
     return model.encode(text, convert_to_numpy=True)
+
+
+def compute_embeddings_batch(texts: List[str]) -> List[np.ndarray]:
+    """
+    Compute embeddings for multiple texts in a single model.encode() call.
+
+    Much faster than N individual calls because the model batches internally.
+
+    Args:
+        texts: List of texts to embed
+
+    Returns:
+        List of 384-dim embedding vectors as numpy arrays
+    """
+    if not texts:
+        return []
+    model = get_embedding_model()
+    embeddings = model.encode(texts, convert_to_numpy=True, batch_size=len(texts))
+    return list(embeddings)

@@ -364,6 +364,8 @@ def capture_pipeline_trace(
     has_personalization=False,
     duration_ms=0,
     error_message=None,
+    input_state=None,
+    output_state=None,
 ):
     """
     Capture a manual $ai_trace event representing a full pipeline execution.
@@ -404,6 +406,11 @@ def capture_pipeline_trace(
             'has_personalization': has_personalization,
         }
 
+        if input_state is not None:
+            event_properties['$ai_input_state'] = input_state
+        if output_state is not None:
+            event_properties['$ai_output_state'] = output_state
+
         if outcome == 'error':
             event_properties['$ai_is_error'] = True
             event_properties['$ai_error'] = error_message or 'Unknown error'
@@ -415,6 +422,16 @@ def capture_pipeline_trace(
         )
     except Exception as e:
         logger.debug(f"PostHog: Failed to capture pipeline trace: {e}")
+
+
+class SpanContext:
+    """Mutable context yielded by stage_span for setting input/output state."""
+    __slots__ = ('span_id', 'input', 'output')
+
+    def __init__(self, span_id: str):
+        self.span_id = span_id
+        self.input = None
+        self.output = None
 
 
 @contextmanager
@@ -433,11 +450,17 @@ def stage_span(stage_name):
     Sets parent_id in tracking context so LLM calls within the span
     automatically nest under it. Restores previous parent_id on exit.
 
+    Yields a SpanContext — set .input and .output to populate
+    $ai_input_state and $ai_output_state in PostHog's trace view.
+
     Usage:
-        with stage_span("extraction"):
+        with stage_span("extraction") as span:
+            span.input = {"text": text[:500], "input_type": input_type}
             result = extractor.execute(...)
+            span.output = {"events": [e.summary for e in result]}
     """
     span_id = str(uuid.uuid4())
+    ctx = SpanContext(span_id)
     # Build name at entry time (context may change during execution)
     span_name = _build_span_name(stage_name)
     previous_parent_id = getattr(_local, 'parent_id', None)
@@ -447,7 +470,7 @@ def stage_span(stage_name):
     _local.parent_id = span_id
 
     try:
-        yield span_id
+        yield ctx
     finally:
         duration_ms = (_time.time() - start) * 1000
 
@@ -473,6 +496,11 @@ def stage_span(stage_name):
                     'environment': _ENVIRONMENT,
                     'agent_name': stage_name,
                 }
+
+                if ctx.input is not None:
+                    event_properties['$ai_input_state'] = ctx.input
+                if ctx.output is not None:
+                    event_properties['$ai_output_state'] = ctx.output
 
                 for attr in _AUTO_INCLUDE_ATTRS:
                     val = getattr(_local, attr, None)
