@@ -191,7 +191,10 @@ class EventExtractionAgent(BaseAgent):
             "extraction", self.model_name, self.provider, duration_ms,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            input_content=user_message,
+            input_content=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
             output_content=result.model_dump_json(),
         )
 
@@ -326,7 +329,10 @@ class EventExtractionAgent(BaseAgent):
             "extraction_batch", self.model_name, self.provider, duration_ms,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            input_content=user_message,
+            input_content=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
             output_content=result.model_dump_json(),
         )
 

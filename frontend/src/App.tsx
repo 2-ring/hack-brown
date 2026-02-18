@@ -725,6 +725,7 @@ function AppContent() {
           onEventsChanged={handleEventsChanged}
           onMenuToggle={handleSidebarToggle}
           onNewSession={handleNewSession}
+          onAuthRequired={() => setAuthModalHeading('Sign in to add events to your calendar.')}
           sessionId={currentSession?.id}
         />
       </div>

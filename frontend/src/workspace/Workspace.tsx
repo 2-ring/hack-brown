@@ -40,6 +40,7 @@ interface WorkspaceProps {
   onEventsChanged?: (events: CalendarEvent[]) => void
   onMenuToggle?: () => void
   onNewSession?: () => void
+  onAuthRequired?: () => void
   sessionId?: string
 }
 
@@ -64,6 +65,7 @@ export function Workspace({
   onEventsChanged,
   onMenuToggle,
   onNewSession,
+  onAuthRequired,
   sessionId,
 }: WorkspaceProps) {
   const { user } = useAuth()
@@ -140,6 +142,7 @@ export function Workspace({
           onEventDeleted={onEventDeleted}
           onEventsChanged={onEventsChanged}
           onBack={onMenuToggle}
+          onAuthRequired={onAuthRequired}
           sessionId={sessionId}
           calendars={calendars}
         />

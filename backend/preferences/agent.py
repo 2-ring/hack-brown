@@ -13,7 +13,6 @@ See backend/PIPELINE.md for architecture overview.
 
 import statistics
 import logging
-import time as _time
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 from typing import List, Dict, Optional
@@ -25,7 +24,7 @@ from core.base_agent import BaseAgent
 from core.prompt_loader import load_prompt
 from extraction.models import CalendarEvent, CalendarDateTime
 from preferences.similarity import ProductionSimilaritySearch
-from config.posthog import capture_llm_generation
+from config.posthog import get_invoke_config
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +57,6 @@ class PersonalizationAgent(BaseAgent):
         super().__init__("Personalize")
         self.llm = llm
         self.similarity_search = None
-
-        # Resolve provider/model for manual PostHog capture
-        from config.text import get_text_provider, get_model_specs
-        self._provider = get_text_provider('personalize')
-        self._model_name = get_model_specs(self._provider)['model_name']
 
     def execute(
         self,
@@ -122,7 +116,6 @@ class PersonalizationAgent(BaseAgent):
 
         system_prompt = load_prompt(
             "preferences/prompts/preferences.txt",
-            event_json=event.model_dump_json(indent=2),
             correction_context=correction_context,
             has_location=has_location,
             raw_location=event.location or '',
@@ -148,28 +141,12 @@ class PersonalizationAgent(BaseAgent):
 
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content="Apply personalization to this event."),
+            HumanMessage(content=f"Apply personalization to this event.\n\n{event.model_dump_json(indent=2)}"),
         ]
-        start = _time.time()
-        raw_result = structured_llm.invoke(messages)
-        duration_ms = (_time.time() - start) * 1000
-        result = raw_result['parsed']
-
-        # Manual PostHog capture (flat — no chain wrapper)
-        input_tokens = None
-        output_tokens = None
-        try:
-            usage = raw_result['raw'].usage_metadata
-            input_tokens = usage.get('input_tokens')
-            output_tokens = usage.get('output_tokens')
-        except (AttributeError, TypeError):
-            pass
-        capture_llm_generation(
-            "personalization", self._model_name, self._provider, duration_ms,
-            input_tokens=input_tokens, output_tokens=output_tokens,
-            input_content=event.model_dump_json(),
-            output_content=result.model_dump_json() if hasattr(result, 'model_dump_json') else str(result),
+        raw_result = structured_llm.invoke(
+            messages, config=get_invoke_config("personalization")
         )
+        result = raw_result['parsed']
 
         # Merge LLM output into original event (preserves all untouched fields)
         event.summary = result.summary

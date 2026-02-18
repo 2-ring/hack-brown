@@ -37,6 +37,7 @@ class TextModelConfig:
     identify: TextProvider = 'grok'       # IDENTIFY: LangExtract (text) + LangChain (vision)
     structure: TextProvider = 'grok'      # STRUCTURE: Instructor structured output
     personalize: TextProvider = 'grok'    # PERSONALIZE: LangChain personalization
+    vision: TextProvider = 'openai'       # IDENTIFY (vision): image inputs (grok-3 lacks vision)
 
     # ── Default (MODIFY, pattern discovery, session processor) ────────────
     default: TextProvider = 'grok'
@@ -59,11 +60,13 @@ class TextModelConfig:
 
     @classmethod
     def all_grok(cls):
-        """Use Grok for everything — testing with $2.5k credits"""
+        """Use Grok for everything — testing with $2.5k credits.
+        Vision falls back to OpenAI because grok-3 lacks image support."""
         return cls(
             identify='grok',
             structure='grok',
             personalize='grok',
+            vision='openai',
             default='grok',
         )
 
@@ -76,6 +79,7 @@ class TextModelConfig:
             identify='grok',
             structure='claude',
             personalize='claude',
+            vision='claude',
             default='claude',
         )
 
@@ -86,6 +90,7 @@ class TextModelConfig:
             identify='openai',
             structure='openai',
             personalize='openai',
+            vision='openai',
             default='openai',
         )
 
@@ -93,9 +98,10 @@ class TextModelConfig:
     def hybrid_optimized(cls):
         """Hybrid: Claude for complex tasks, Grok for simple"""
         return cls(
-            identify='grok',         # LangExtract + vision — Grok works
+            identify='grok',         # LangExtract (text-only)
             structure='claude',      # Complex parsing — Claude better
             personalize='claude',    # Personalization — Claude better
+            vision='openai',         # Image inputs — grok-3 lacks vision
             default='grok',          # MODIFY, patterns, etc. — Grok fine
         )
 
@@ -285,6 +291,7 @@ def print_text_config():
 
     print("\nPIPELINE STAGES:                    (standard / light)")
     print(f"  IDENTIFY:                     {_model_line('identify')}")
+    print(f"  IDENTIFY (vision):            {_model_line('vision')}")
     print(f"  STRUCTURE:                    {_model_line('structure')}")
     print(f"  PERSONALIZE:                  {_model_line('personalize')}")
     default_provider = CONFIG.default.upper()

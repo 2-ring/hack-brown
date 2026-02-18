@@ -115,7 +115,9 @@ def identify_events_langextract(
         capture_llm_generation(
             "identification", model_name, provider_name,
             duration_ms,
-            input_content=text[:2000],
+            input_content=[
+                {"role": "user", "content": text[:2000]},
+            ],
             output_content=str(output_summary),
             properties={
                 'extraction_passes': passes,

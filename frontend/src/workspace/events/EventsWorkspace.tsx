@@ -47,11 +47,12 @@ interface EventsWorkspaceProps {
   inputType?: 'text' | 'image' | 'audio' | 'document' | 'pdf' | 'email'
   inputContent?: string
   onBack?: () => void
+  onAuthRequired?: () => void
   sessionId?: string
   calendars?: SyncCalendar[]
 }
 
-export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsChanged, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, sessionId, calendars: propCalendars }: EventsWorkspaceProps) {
+export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsChanged, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, onAuthRequired, sessionId, calendars: propCalendars }: EventsWorkspaceProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
@@ -62,7 +63,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const pendingEditRef = useRef<CalendarEvent | null>(null)
   const { currentNotification, addNotification, dismissNotification } = useNotificationQueue()
   const [eventConflicts, setEventConflicts] = useState<Record<string, ConflictInfo[]>>({})
-  const { primaryCalendarProvider } = useAuth()
+  const { user, primaryCalendarProvider } = useAuth()
 
   const calendars = propCalendars && propCalendars.length > 0 ? propCalendars : DEFAULT_CALENDARS
 
@@ -329,6 +330,10 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   // Wrap onConfirm to pass edited events and show loading in the bottom bar
   const handleConfirm = async () => {
     if (onConfirm) {
+      if (!user) {
+        onAuthRequired?.()
+        return
+      }
       const validEditedEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
       setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
       try {
@@ -364,6 +369,10 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   // Swipe right: push single event to calendar (create or update)
   const handleSwipeAdd = async (event: CalendarEvent) => {
     if (!event.id) return
+    if (!user) {
+      onAuthRequired?.()
+      return
+    }
     setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
     try {
       const result = await pushEvents([event.id])

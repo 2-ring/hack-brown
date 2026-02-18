@@ -23,7 +23,7 @@ from extraction.langextract_identifier import identify_events_langextract
 from config.langextract import PASSES_SIMPLE, PASSES_COMPLEX
 from config.posthog import (
     set_tracking_context, flush_posthog, capture_agent_error,
-    capture_pipeline_trace, capture_stage_span,
+    capture_pipeline_trace,
     get_tracking_property, CLEAR,
 )
 import time as _time
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class SessionProcessor:
     """Processes sessions through the full AI pipeline."""
 
-    def __init__(self, llm, input_processor_factory: InputProcessorFactory, llm_personalization=None, pattern_refresh_service=None, llm_light=None, llm_personalization_light=None):
+    def __init__(self, llm, input_processor_factory: InputProcessorFactory, llm_personalization=None, pattern_refresh_service=None, llm_light=None, llm_personalization_light=None, llm_vision=None):
         """
         Initialize the session processor with pipeline stages.
 
@@ -45,6 +45,7 @@ class SessionProcessor:
             pattern_refresh_service: Optional PatternRefreshService for incremental refresh
             llm_light: Optional lightweight LLM for simple inputs
             llm_personalization_light: Optional lightweight LLM for PERSONALIZE stage on simple inputs
+            llm_vision: Optional separate LLM for vision/image identification
         """
         self.llm = llm
         self.input_processor_factory = input_processor_factory
@@ -61,6 +62,7 @@ class SessionProcessor:
 
         # Standard pipeline stages
         self.identify_agent = EventIdentificationAgent(llm)
+        self.identify_agent_vision = EventIdentificationAgent(llm_vision or llm)
         self.structure_agent = EventExtractionAgent(client, model, provider)
         self.personalize_agent = PersonalizationAgent(llm_personalization or llm)
 
@@ -308,12 +310,6 @@ class SessionProcessor:
 
         total_events = len(events)
 
-        # Stage span IDs: Structure and Personalize each get a parent span
-        # so individual LLM calls nest under them in PostHog.
-        import uuid as _uuid
-        structure_span_id = str(_uuid.uuid4())
-        personalize_span_id = str(_uuid.uuid4())
-
         # ── Small batches: skip consolidation, use per-event flow ──────────
         if total_events <= 3:
             logger.info(f"Session {session_id}: {total_events} events — skipping CONSOLIDATE")
@@ -325,12 +321,7 @@ class SessionProcessor:
                 use_personalization=use_personalization,
                 db_lock=db_lock, _parent_input_type=_parent_input_type,
                 _parent_pipeline=_parent_pipeline,
-                structure_span_id=structure_span_id,
-                personalize_span_id=personalize_span_id,
             )
-            capture_stage_span(session_id, structure_span_id, 'Structure')
-            if use_personalization:
-                capture_stage_span(session_id, personalize_span_id, 'Personalize')
             return
 
         # ── CONSOLIDATE: group + dedup + cross-event context ───────────────
@@ -363,12 +354,7 @@ class SessionProcessor:
                 use_personalization=use_personalization,
                 db_lock=db_lock, _parent_input_type=_parent_input_type,
                 _parent_pipeline=_parent_pipeline,
-                structure_span_id=structure_span_id,
-                personalize_span_id=personalize_span_id,
             )
-            capture_stage_span(session_id, structure_span_id, 'Structure')
-            if use_personalization:
-                capture_stage_span(session_id, personalize_span_id, 'Personalize')
             return
 
         # ── STRUCTURE + RESOLVE + PERSONALIZE: per-group in parallel ───────
@@ -381,7 +367,6 @@ class SessionProcessor:
             num_groups = len(groups)
 
             # Propagate tracking context with group info.
-            # parent_id=structure_span_id so batch STRUCTURE nests under the Structure stage span.
             set_tracking_context(
                 distinct_id=user_id,
                 trace_id=session_id,
@@ -390,7 +375,7 @@ class SessionProcessor:
                 is_guest=is_guest,
                 num_events=total_events,
                 has_personalization=use_personalization,
-                parent_id=structure_span_id,
+                parent_id=CLEAR,
                 group_index=group_idx,
                 num_groups=num_groups,
                 group_category=category,
@@ -422,11 +407,10 @@ class SessionProcessor:
                         break
                     extracted_event = extracted_events[i]
 
-                    # Switch to event context + Personalize stage span
+                    # Switch to event context for Personalize
                     set_tracking_context(
                         event_index=orig_idx,
                         event_description=identified_event.description,
-                        parent_id=personalize_span_id,
                         group_index=CLEAR,
                         num_groups=CLEAR,
                         group_category=CLEAR,
@@ -503,7 +487,6 @@ class SessionProcessor:
                     set_tracking_context(
                         event_index=orig_idx,
                         event_description=identified_event.description,
-                        parent_id=structure_span_id,
                         group_index=CLEAR,
                         num_groups=CLEAR,
                         group_category=CLEAR,
@@ -520,7 +503,6 @@ class SessionProcessor:
                             extracted_event, user_timezone=timezone
                         )
                         if use_personalization:
-                            set_tracking_context(parent_id=personalize_span_id)
                             calendar_event = personalizer.execute(
                                 event=calendar_event,
                                 discovered_patterns=patterns,
@@ -567,11 +549,6 @@ class SessionProcessor:
             process_single_event=lambda idx, item: process_single_group(idx, item),
         )
 
-        # Capture stage spans (after all groups complete)
-        capture_stage_span(session_id, structure_span_id, 'Structure')
-        if use_personalization:
-            capture_stage_span(session_id, personalize_span_id, 'Personalize')
-
         if batch_result.warnings:
             logger.warning(
                 f"Session {session_id}: {len(batch_result.warnings)} group(s) "
@@ -593,13 +570,10 @@ class SessionProcessor:
         db_lock,
         _parent_input_type,
         _parent_pipeline,
-        structure_span_id: str = None,
-        personalize_span_id: str = None,
     ) -> None:
-        """Legacy per-event processing (used for small batches and fallback)."""
+        """Per-event processing (used for small batches and fallback)."""
 
         def process_single_event(idx, event):
-            # Structure: nest under Structure stage span
             set_tracking_context(
                 distinct_id=user_id,
                 trace_id=session_id,
@@ -610,7 +584,7 @@ class SessionProcessor:
                 has_personalization=use_personalization,
                 event_index=idx,
                 event_description=event.description,
-                parent_id=structure_span_id,
+                parent_id=CLEAR,
             )
             try:
                 extracted_event = structurer.execute(
@@ -625,9 +599,7 @@ class SessionProcessor:
                     extracted_event, user_timezone=timezone
                 )
 
-                # Personalize: nest under Personalize stage span
                 if use_personalization:
-                    set_tracking_context(parent_id=personalize_span_id)
                     calendar_event = personalizer.execute(
                         event=calendar_event,
                         discovered_patterns=patterns,
@@ -907,9 +879,9 @@ class SessionProcessor:
 
             # Phase 1: Event Identification
             if requires_vision:
-                # Image inputs: use IDENTIFY with vision (LangExtract is text-only)
+                # Image inputs: use vision-specific identifier (grok-3 lacks image support)
                 identification_result = identify_events_chunked(
-                    agent=identifier,
+                    agent=self.identify_agent_vision,
                     raw_input=text,
                     metadata=metadata,
                     requires_vision=True,

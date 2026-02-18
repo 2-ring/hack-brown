@@ -96,7 +96,10 @@ class EventModificationAgent(BaseAgent):
         capture_llm_generation(
             "modification", self._model_name, self._provider, duration_ms,
             input_tokens=input_tokens, output_tokens=output_tokens,
-            input_content=instruction,
+            input_content=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"EVENTS:\n{events_block}{calendars_block}\n\nINSTRUCTION:\n{instruction}"},
+            ],
             output_content=result.model_dump_json(),
         )
 

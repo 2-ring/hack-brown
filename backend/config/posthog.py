@@ -195,14 +195,23 @@ def _truncate(s, max_len=50):
     return s[:max_len] + '…' if len(s) > max_len else s
 
 
+# PostHog calculates costs from $ai_provider + $ai_model.  Grok uses the
+# OpenAI-compatible API, and PostHog only has pricing tables for "openai"
+# provider — not "grok".  Map so costs show up correctly.
+_PROVIDER_TO_POSTHOG = {
+    'grok': 'openai',
+    'claude': 'anthropic',
+    'openai': 'openai',
+}
+
+
 def _build_span_name(agent_name):
     """
     Build a descriptive span name from thread-local context.
 
-    Nested under a stage span (parent_id set):
-        Group context  → "Errands" (Group 1/3)
-        Event context  → "1:1 with Manager" (Event 6/9)
-    Top-level (no parent_id):
+    Always includes the stage label so traces are scannable:
+        Group context  → Structure: "Errands" (Group 1/3)
+        Event context  → Personalize: "1:1 with Manager" (Event 6/9)
         No context     → Identify
     """
     label = _AGENT_LABELS.get(agent_name, agent_name)
@@ -214,7 +223,7 @@ def _build_span_name(agent_name):
 
     if group_index is not None and num_groups:
         desc = f'"{_truncate(group_category)}" ' if group_category else ''
-        return f'{desc}(Group {group_index + 1}/{num_groups})'
+        return f'{label}: {desc}(Group {group_index + 1}/{num_groups})'
 
     # Event context (per-event Structure, Personalize)
     event_index = getattr(_local, 'event_index', None)
@@ -223,7 +232,7 @@ def _build_span_name(agent_name):
 
     if event_index is not None and num_events:
         desc = f'"{_truncate(event_description)}" ' if event_description else ''
-        return f'{desc}(Event {event_index + 1}/{num_events})'
+        return f'{label}: {desc}(Event {event_index + 1}/{num_events})'
 
     return label
 
@@ -310,6 +319,10 @@ def get_invoke_config(agent_name=None, properties=None):
             properties=merged_properties or None,
             privacy_mode=False,
         )
+        # Suppress internal LangChain chain spans (RunnableLambda,
+        # RunnableSequence, etc.) — they clutter the PostHog trace
+        # without adding useful info.  LLM generations still captured.
+        callback.ignore_chain = True
 
         config = {"callbacks": [callback]}
 
@@ -491,7 +504,7 @@ def capture_agent_error(agent_name: str, error: Exception, extra: dict = None):
             properties={
                 **event_properties,
                 '$ai_is_error': True,
-                '$ai_provider': 'pipeline',
+                '$ai_provider': 'dropcal',
                 '$ai_model': f'agent:{agent_name}',
                 '$ai_framework': 'dropcal',
             },
@@ -548,7 +561,7 @@ def capture_llm_generation(
             '$ai_span_id': str(uuid.uuid4()),
             '$ai_parent_id': str(effective_parent) if effective_parent else None,
             '$ai_span_name': _build_span_name(agent_name),
-            '$ai_provider': provider,
+            '$ai_provider': _PROVIDER_TO_POSTHOG.get(provider, provider),
             '$ai_model': model,
             '$ai_latency': duration_ms / 1000 if duration_ms else None,
             '$ai_framework': 'dropcal',
@@ -562,11 +575,24 @@ def capture_llm_generation(
         if output_tokens is not None:
             event_properties['$ai_output_tokens'] = output_tokens
 
-        # Input/output content for trace inspection
+        # Input/output content for trace inspection.
+        # PostHog expects $ai_input as a list of message dicts and
+        # $ai_output_choices as a list of completion dicts.
         if input_content is not None:
-            event_properties['$ai_input'] = input_content
+            if isinstance(input_content, list):
+                # Already formatted as message dicts
+                event_properties['$ai_input'] = input_content
+            else:
+                event_properties['$ai_input'] = [
+                    {"role": "user", "content": str(input_content)}
+                ]
         if output_content is not None:
-            event_properties['$ai_output'] = output_content
+            if isinstance(output_content, list):
+                event_properties['$ai_output_choices'] = output_content
+            else:
+                event_properties['$ai_output_choices'] = [
+                    {"role": "assistant", "content": str(output_content)}
+                ]
 
         if pipeline:
             event_properties['pipeline'] = pipeline

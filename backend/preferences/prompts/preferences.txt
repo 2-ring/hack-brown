@@ -11,12 +11,6 @@ You have decision-making authority over:
 
 All other fields are preserved automatically.
 
-============================================================
-EVENT TO PERSONALIZE
-============================================================
-
-{{ event_json }}
-
 {% if similar_events_display %}
 ============================================================
 SIMILAR EVENTS FROM USER'S HISTORY

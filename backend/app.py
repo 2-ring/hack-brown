@@ -158,6 +158,7 @@ llm_modify = create_text_model('modify')
 llm_personalize = create_text_model('personalize')
 llm_pattern_discovery = create_text_model('pattern_discovery')
 llm_session_processor = create_text_model('session_processor')
+llm_vision = create_text_model('vision')
 
 # Create light LLM instances for simple inputs (dynamic complexity routing)
 llm_identify_light = create_text_model_light('identify')
@@ -231,6 +232,7 @@ session_processor = SessionProcessor(
     pattern_refresh_service=pattern_refresh_service,
     llm_light=llm_identify_light,
     llm_personalization_light=llm_personalize_light,
+    llm_vision=llm_vision,
 )
 app.session_processor = session_processor
 

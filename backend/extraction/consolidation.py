@@ -92,7 +92,10 @@ def consolidate_events(
         "consolidation", model_name, provider, duration_ms,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
-        input_content=user_message,
+        input_content=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
         output_content=result.model_dump_json(),
     )
 
