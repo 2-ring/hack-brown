@@ -75,9 +75,115 @@ body {
   display: none !important;
 }
 
-/* ===== Sign In State ===== */
+/* ===== Shared: Header ===== */
 
-.state {
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.header-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ===== Shared: Spinners ===== */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-tiny {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ===== Shared: Buttons ===== */
+
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 100px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.2s ease;
+}
+
+.btn-cta:hover {
+  background: var(--primary-hover);
+  transform: scale(1.02) translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.btn-cta:active {
+  transform: scale(0.98);
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.btn-secondary:hover {
+  background: var(--surface-hover);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* ============================================================
+   View: Auth
+   ============================================================ */
+
+.view-centered {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -102,27 +208,11 @@ body {
   line-height: 1.5;
 }
 
-/* ===== Header ===== */
+/* ============================================================
+   View: Input
+   ============================================================ */
 
-.popup-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.header-logo {
-  width: 28px;
-  height: 28px;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-/* ===== Drop Zone ===== */
+/* ----- Drop Zone ----- */
 
 .drop-zone {
   position: relative;
@@ -149,17 +239,10 @@ body {
 
 .drop-zone.processing {
   pointer-events: none;
-}
-
-@keyframes dash-rotate {
-  to { stroke-dashoffset: -72; }
-}
-
-.drop-zone.processing {
   background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%231170C5' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'%3e%3canimate attributeName='stroke-dashoffset' values='0;-72' dur='2s' repeatCount='indefinite'/%3e%3c/rect%3e%3c/svg%3e");
 }
 
-/* Dark mode: swap SVG border stroke to match dark primary (#4A9EFF) */
+/* Dark mode drop zone borders */
 [data-theme="dark"] .drop-zone {
   background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%234A9EFF80' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
 }
@@ -190,37 +273,7 @@ body {
   font-weight: 500;
 }
 
-.drop-zone-subtext {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* ===== Spinners ===== */
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.spinner-small {
-  width: 24px;
-  height: 24px;
-  border: 3px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-.spinner-tiny {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  flex-shrink: 0;
-}
-
-/* ===== Icon Grid (semi-circular button menu) ===== */
+/* ----- Icon Grid (semi-circular button menu) ----- */
 
 .icon-row {
   display: grid;
@@ -297,7 +350,7 @@ body {
 .btn-right-2 { grid-column: 3; grid-row: 2; justify-self: start; transform: translateX(12px); }
 .btn-right-3 { grid-column: 3; grid-row: 3; justify-self: start; }
 
-/* ===== Results Section ===== */
+/* ----- Results Section ----- */
 
 .results-section {
   margin-top: 20px;
@@ -321,7 +374,6 @@ body {
   overflow: hidden;
 }
 
-/* Session row */
 .session-row {
   display: flex;
   align-items: center;
@@ -347,17 +399,9 @@ body {
   flex-shrink: 0;
 }
 
-.session-dot.status-polling {
-  background: var(--primary);
-}
-
-.session-dot.status-processed {
-  background: var(--success);
-}
-
-.session-dot.status-error {
-  background: var(--error);
-}
+.session-dot.status-polling { background: var(--primary); }
+.session-dot.status-processed { background: var(--success); }
+.session-dot.status-error { background: var(--error); }
 
 .session-info {
   flex: 1;
@@ -401,7 +445,7 @@ body {
   color: var(--text-tertiary);
 }
 
-/* ===== Active Processing Indicator ===== */
+/* ----- Active Processing Indicator ----- */
 
 .active-processing {
   display: flex;
@@ -416,77 +460,48 @@ body {
   color: var(--text-secondary);
 }
 
-/* ===== CTA Button ===== */
+/* ============================================================
+   View: Processing
+   ============================================================ */
 
-.btn-cta {
-  display: inline-flex;
+/* Uses .drop-zone.processing — no extra styles needed */
+
+/* ============================================================
+   View: Feedback
+   ============================================================ */
+
+.feedback-card {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  padding: 12px 24px;
-  background: var(--primary);
-  color: #ffffff;
-  border: none;
-  border-radius: 100px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.2s ease;
-  margin-top: 4px;
+  gap: 12px;
+  text-align: center;
 }
 
-.btn-cta:hover {
-  background: var(--primary-hover);
-  transform: scale(1.02) translateY(-1px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-}
-
-.btn-cta:active {
-  transform: scale(0.98);
-}
-
-.btn-icon {
+.feedback-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
-/* ===== Secondary Button ===== */
-
-.btn-secondary {
-  width: 100%;
-  padding: 8px 16px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
+.feedback-icon-success {
+  color: var(--success);
 }
 
-.btn-secondary:hover {
-  background: var(--surface-hover);
-}
-
-.btn-secondary:active {
-  transform: scale(0.98);
-}
-
-/* ===== Error ===== */
-
-.error-icon {
-  width: 44px;
-  height: 44px;
+.feedback-icon-error {
   color: var(--error);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.feedback-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.feedback-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .error-text {

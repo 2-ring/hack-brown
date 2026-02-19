@@ -47,6 +47,13 @@ async function clearAuth(): Promise<void> {
 async function ensureAuth(): Promise<boolean> {
   const auth = await getAuth();
   if (!auth) return false;
+
+  // Proactively clear expired tokens (with 60s buffer)
+  if (auth.expiresAt && Date.now() / 1000 > auth.expiresAt - 60) {
+    await clearAuth();
+    return false;
+  }
+
   setAuthToken(auth.accessToken);
   return true;
 }
@@ -158,8 +165,11 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   } catch (error) {
     console.error('DropCal: Failed to create session', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
+    const msgLower = msg.toLowerCase();
     const isAuthError =
-      msg.includes('401') || msg.includes('403') || msg.includes('authentication');
+      msgLower.includes('401') || msgLower.includes('403') ||
+      msgLower.includes('authentication') || msgLower.includes('jwt') ||
+      msgLower.includes('token') || msgLower.includes('expired');
 
     setBadgeError();
 
