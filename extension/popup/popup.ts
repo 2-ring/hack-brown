@@ -168,14 +168,34 @@ document.addEventListener('paste', (e) => {
 
 // ----- History rendering -----
 
-function renderHistory(sessions: SessionRecord[]): void {
-  const displaySessions = sessions.filter((s) => s.status !== 'polling');
-  const hasPolling = sessions.some((s) => s.status === 'polling');
+const INPUT_ICONS: Record<SessionRecord['inputType'], string> = {
+  text: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M221.66,90.34,192,120,136,64l29.66-29.66a8,8,0,0,1,11.31,0L221.66,79A8,8,0,0,1,221.66,90.34Z" opacity="0.2"/><path d="M227.32,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31l83.67-83.66,3.48,13.9-36.8,36.79a8,8,0,0,0,11.31,11.32l40-40a8,8,0,0,0,2.11-7.6l-6.9-27.61L227.32,96A16,16,0,0,0,227.32,73.37ZM48,208V179.31L76.69,208Zm48-3.31L51.31,160,136,75.31,180.69,120Zm96-96L147.32,64l24-24L216,84.69Z"/></svg>',
+  image: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M224,56v82.06l-23.72-23.72a8,8,0,0,0-11.31,0L163.31,140,113.66,90.34a8,8,0,0,0-11.32,0L64,128.69V56a8,8,0,0,1,8-8H216A8,8,0,0,1,224,56Z" opacity="0.2"/><path d="M216,40H72A16,16,0,0,0,56,56V72H40A16,16,0,0,0,24,88V200a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V184h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM72,56H216v62.75l-10.07-10.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L72,109.37ZM184,200H40V88H56v80a16,16,0,0,0,16,16H184Zm32-32H72V132l36-36,49.66,49.66a8,8,0,0,0,11.31,0L194.63,120,216,141.38V168ZM160,84a12,12,0,1,1,12,12A12,12,0,0,1,160,84Z"/></svg>',
+  page: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104a87.62,87.62,0,0,1-6.4,32.94l-44.7-27.49a15.92,15.92,0,0,0-6.24-2.23l-22.82-3.08a16.11,16.11,0,0,0-16,7.86h-8.72l-3.8-7.86a16,16,0,0,0-11.09-8.48L74.34,116l12.74-26.29a16,16,0,0,0-1.27-16.06l-3.75-5.51A87.46,87.46,0,0,1,128,56a88.44,88.44,0,0,1,13.8,1.08l-4.26,14.61a16,16,0,0,0,4.06,15.63l10.52,10.52a16,16,0,0,0,9.79,4.68l19.54,1.62L196,118.54A16.07,16.07,0,0,0,216,128ZM40,128A87.44,87.44,0,0,1,67,56.79L71,62.4,58.31,88.68a16,16,0,0,0,1.08,15.78l9.58,14.18a16,16,0,0,0,11.09,6.9l21.91,3.61,3.8,7.86a16.07,16.07,0,0,0,14.37,9h1.83l-4.35,42.08a87.48,87.48,0,0,1-5.81,1.28A88.14,88.14,0,0,1,40,128Zm87.83,87.91,4.67-45.12a16,16,0,0,0-10.44-16.89L109,149.53l14.25-3.56a16,16,0,0,0,8.23-5.49l7.13-8.56,22.81,3.08,44.71,27.5A87.51,87.51,0,0,1,127.83,215.91Z"/></svg>',
+  file: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M208,88H152V32Z" opacity="0.2"/><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/></svg>',
+};
 
-  // Active processing indicator
+function getTimeGroup(createdAt: number): string {
+  const now = new Date();
+  const date = new Date(createdAt);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const sessionDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (sessionDay >= today) return 'Today';
+  if (sessionDay >= yesterday) return 'Yesterday';
+  const diffDays = Math.floor((today.getTime() - sessionDay.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 7) return '7 Days';
+  if (diffDays <= 30) return '30 Days';
+  return 'Older';
+}
+
+function renderHistory(sessions: SessionRecord[]): void {
+  const hasPolling = sessions.some((s) => s.status === 'polling');
   activeProcessingEl.classList.toggle('hidden', !hasPolling);
 
-  if (displaySessions.length === 0) {
+  if (sessions.length === 0) {
     resultsSection.classList.add('hidden');
     return;
   }
@@ -183,52 +203,63 @@ function renderHistory(sessions: SessionRecord[]): void {
   resultsSection.classList.remove('hidden');
   resultsList.innerHTML = '';
 
-  for (const session of displaySessions) {
-    const row = document.createElement('div');
-    row.className = 'session-row';
-    row.addEventListener('click', () => openSidebar(session.sessionId));
+  // Group sessions by time period
+  const groups = new Map<string, SessionRecord[]>();
+  const groupOrder = ['Today', 'Yesterday', '7 Days', '30 Days', 'Older'];
 
-    const dot = document.createElement('div');
-    dot.className = `session-dot status-${session.status}`;
+  for (const session of sessions) {
+    const group = getTimeGroup(session.createdAt);
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group)!.push(session);
+  }
 
-    const info = document.createElement('div');
-    info.className = 'session-info';
+  for (const groupName of groupOrder) {
+    const groupSessions = groups.get(groupName);
+    if (!groupSessions || groupSessions.length === 0) continue;
 
-    const title = document.createElement('div');
-    title.className = 'session-row-title';
-    title.textContent = session.title || 'Untitled';
+    const groupEl = document.createElement('div');
+    groupEl.className = 'session-group';
 
-    const subtitle = document.createElement('div');
-    subtitle.className = 'session-row-subtitle';
-    subtitle.textContent =
-      session.eventSummaries.length > 0
-        ? session.eventSummaries.slice(0, 3).join(' \u00B7 ')
-        : session.status === 'error'
-          ? session.errorMessage || 'Error'
-          : '';
+    const label = document.createElement('div');
+    label.className = 'session-group-label';
+    label.textContent = groupName;
+    groupEl.appendChild(label);
 
-    info.appendChild(title);
-    if (subtitle.textContent) info.appendChild(subtitle);
+    for (const session of groupSessions) {
+      const row = document.createElement('div');
+      row.className = 'session-row';
+      row.addEventListener('click', () => openSidebar(session.sessionId));
 
-    const right = document.createElement('div');
-    right.className = 'session-row-right';
+      // Input type icon
+      const icon = document.createElement('div');
+      icon.className = 'session-icon';
+      icon.innerHTML = INPUT_ICONS[session.inputType] || INPUT_ICONS.text;
 
-    if (session.eventCount > 0) {
-      const count = document.createElement('span');
-      count.className = 'session-event-count';
-      count.textContent = String(session.eventCount);
-      right.appendChild(count);
+      // Title
+      const title = document.createElement('div');
+      title.className = 'session-row-title';
+      if (session.status === 'polling') title.classList.add('processing');
+      title.textContent = session.title || 'Untitled';
+
+      row.appendChild(icon);
+      row.appendChild(title);
+
+      // Right indicator
+      if (session.status === 'polling') {
+        const pulse = document.createElement('div');
+        pulse.className = 'processing-indicator';
+        row.appendChild(pulse);
+      } else if (session.eventCount > 0) {
+        const badge = document.createElement('div');
+        badge.className = 'event-count-badge';
+        badge.textContent = String(session.eventCount);
+        row.appendChild(badge);
+      }
+
+      groupEl.appendChild(row);
     }
 
-    const chevron = document.createElement('span');
-    chevron.className = 'session-chevron';
-    chevron.textContent = '\u203A';
-    right.appendChild(chevron);
-
-    row.appendChild(dot);
-    row.appendChild(info);
-    row.appendChild(right);
-    resultsList.appendChild(row);
+    resultsList.appendChild(groupEl);
   }
 }
 
