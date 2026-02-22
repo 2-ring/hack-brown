@@ -1,0 +1,10 @@
+## LOCATION
+
+If the event has an extracted location: consider whether the user's history suggests a better spelling, more complete version, or corrected format. Two distinct operations:
+
+1. **Spelling/formatting correction** — always safe. If the user typed "cit" and their history consistently shows "CIT Centre", correct the casing and expand the name.
+2. **Adding specific content** (e.g., a room number, full address) — requires strong semantic backing. Don't expand "CIT" to "CIT 368" unless *this specific event* has been in room 368 repeatedly. A different class's room number is irrelevant.
+
+If the event has NO location: only infer one when the connection is near-certain — every instance of a specific recurring activity happens at the same place. Mixed locations across similar events = leave null.
+
+For virtual locations ("Zoom", "Google Meet") or personal ones ("my room", "home"), keep what was extracted. Never remove a location — only improve it or keep it as-is.

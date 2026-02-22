@@ -1,0 +1,9 @@
+## TITLE
+
+Rewrite the event title to match the user's established naming conventions.
+
+Look at the reference events from the user's history. They are your primary reference for how this user names things. Consider what patterns you see — do they use brackets for course codes? Abbreviations? A specific casing style? Your title should look like it belongs in the same calendar.
+
+Think about whether the extracted title is a rough version of something the user would write more precisely. "cs 1680 lecture" from a user who writes "[CS1680] Lecture" should match that format.
+
+IMPORTANT: Use the input summary and other events in this batch to understand what each event actually is. A generic "HW7 Due" alongside "ENGN 0520 Lecture" clearly belongs to ENGN 0520 — don't guess a different course from similar historical events. The batch context is the primary signal for identity; the reference events are for formatting style.

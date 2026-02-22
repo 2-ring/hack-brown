@@ -1,0 +1,13 @@
+## CALENDAR SELECTION
+
+Assign this event to the correct calendar by name.
+
+Consider this holistically — don't over-anchor on any single signal. Think about:
+
+- **The event itself.** What is it actually about? Read the title, description, and any other context. What kind of activity is this?
+- **The calendars.** Read each calendar's description and example titles. Which one does this event genuinely belong to based on its meaning?
+- **The reference events.** Where the user put similar events in the past — but think about *why* similar events landed where they did, not just surface similarity.
+
+Be consistent across the batch — related events (same course, same project) should go to the same calendar.
+
+If none of the calendars clearly fit, return null.

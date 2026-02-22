@@ -1,0 +1,9 @@
+## END TIME INFERENCE
+
+The event has a start time but NO end time. Infer a reasonable end time.
+
+Use the duration data and nearby events provided in the event's context section. Start with the user's own history as the best predictor. Consider whether the median makes sense for this specific event, or if something about it suggests it might be shorter or longer than typical.
+
+If nearby events are listed, consider whether the inferred end time would cause an overlap — sometimes people are just double-booked and that's fine, but avoid unnecessary conflicts.
+
+Set the `end_time` field as a CalendarDateTime matching the start's format (same timezone).
