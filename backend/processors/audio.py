@@ -113,20 +113,17 @@ class AudioProcessor(BaseInputProcessor):
             with open(file_path, 'rb') as audio_file:
                 buffer_data = audio_file.read()
 
-            # Configure transcription options
-            options = {
-                "model": self.model,
-                "language": language,
-                "smart_format": smart_format,
-                "punctuate": True
-            }
-
-            # Transcribe
-            payload = {"buffer": buffer_data}
-            response = self.client.listen.v1.media.transcribe_file(payload, options)
+            # Transcribe (SDK v5 uses keyword-only args)
+            response = self.client.listen.v1.media.transcribe_file(
+                request=buffer_data,
+                model=self.model,
+                language=language,
+                smart_format=smart_format,
+                punctuate=True,
+            )
 
             # Extract transcript
-            if hasattr(response, 'results') and response.results.channels:
+            if response.results and response.results.channels:
                 channel = response.results.channels[0]
                 if channel.alternatives:
                     text = channel.alternatives[0].transcript
@@ -262,19 +259,17 @@ class AudioProcessor(BaseInputProcessor):
             with open(file_path, 'rb') as audio_file:
                 buffer_data = audio_file.read()
 
-            options = {
-                "model": self.model,
-                "language": language,
-                "smart_format": smart_format,
-                "punctuate": True,
-                "utterances": True,
-                "words": True  # Word-level timestamps
-            }
+            # SDK v5 uses keyword-only args
+            response = self.client.listen.v1.media.transcribe_file(
+                request=buffer_data,
+                model=self.model,
+                language=language,
+                smart_format=smart_format,
+                punctuate=True,
+                utterances=True,
+            )
 
-            payload = {"buffer": buffer_data}
-            response = self.client.listen.v1.media.transcribe_file(payload, options)
-
-            if hasattr(response, 'results') and response.results.channels:
+            if response.results and response.results.channels:
                 channel = response.results.channels[0]
                 if channel.alternatives:
                     text = channel.alternatives[0].transcript

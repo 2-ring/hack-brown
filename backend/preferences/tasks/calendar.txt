@@ -1,5 +1,4 @@
-## CALENDAR SELECTION
-
+<task name="calendar">
 Assign this event to the correct calendar by name.
 
 Consider this holistically — don't over-anchor on any single signal. Think about:
@@ -11,3 +10,4 @@ Consider this holistically — don't over-anchor on any single signal. Think abo
 Be consistent across the batch — related events (same course, same project) should go to the same calendar.
 
 If none of the calendars clearly fit, return null.
+</task>

@@ -625,6 +625,10 @@ class SessionProcessor:
         except Exception as e:
             error_message = str(e)
             logger.error(f"Error preprocessing file session {session_id}: {error_message}")
+            # Signal SSE stream so the frontend stops loading
+            stream = get_stream(session_id)
+            if stream:
+                stream.mark_error(error_message)
             capture_agent_error("pipeline", e, {
                 'session_id': session_id, 'session_type': 'file'
             })

@@ -1,7 +1,7 @@
-## DESCRIPTION
-
+<task name="description">
 Add or refine the event description to match the user's description style.
 
 Look at the reference events — do they have descriptions? If not, don't add one. Match their level of detail.
 
 If the user does write descriptions, consider their voice: are they formal, casual, using bullet points? Only add context that genuinely helps beyond what the title already says. If there's nothing meaningful to add, leave description as-is or null.
+</task>

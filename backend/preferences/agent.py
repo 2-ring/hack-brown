@@ -51,27 +51,27 @@ DEFAULT_DURATIONS = [
 TASK_DEFINITIONS = {
     'title': {
         'file': 'preferences/tasks/title.txt',
-        'field_type': (str, PydanticField(description="Event title reformatted to match user's naming style")),
+        'field_type': (str, PydanticField(description="Output of the title task")),
         'merge_field': 'summary',
     },
     'description': {
         'file': 'preferences/tasks/description.txt',
-        'field_type': (Optional[str], PydanticField(default=None, description="Event description, enhanced or unchanged")),
+        'field_type': (Optional[str], PydanticField(default=None, description="Output of the description task")),
         'merge_field': 'description',
     },
     'calendar': {
         'file': 'preferences/tasks/calendar.txt',
-        'field_type': (Optional[str], PydanticField(default=None, description="Calendar name from the available calendars list, or null")),
+        'field_type': (Optional[str], PydanticField(default=None, description="Output of the calendar task")),
         'merge_field': 'calendar',
     },
     'end_time': {
         'file': 'preferences/tasks/end_time.txt',
-        'field_type': (Optional[CalendarDateTime], PydanticField(default=None, description="Inferred end time matching the start's format and timezone")),
+        'field_type': (Optional[CalendarDateTime], PydanticField(default=None, description="Output of the end_time task")),
         'merge_field': 'end',
     },
     'location': {
         'file': 'preferences/tasks/location.txt',
-        'field_type': (Optional[str], PydanticField(default=None, description="Resolved location or null")),
+        'field_type': (Optional[str], PydanticField(default=None, description="Output of the location task")),
         'merge_field': 'location',
     },
 }
@@ -380,13 +380,11 @@ class PersonalizationAgent(BaseAgent):
         """
         Build a dynamic Pydantic model for the batch output.
 
-        The model contains an 'events' list where each item has an 'index' field
-        plus one field per task in the union. Tasks not assigned to a given event
-        should be null in the output.
+        The model contains an 'events' array where each item has one field per
+        task in the union. Position in the array matches input event order.
+        Only assigned task fields need values; the rest stay null.
         """
-        event_fields = {
-            'index': (int, PydanticField(description="0-based index matching input event order")),
-        }
+        event_fields = {}
         for task_name in all_tasks:
             task_def = TASK_DEFINITIONS[task_name]
             event_fields[task_name] = task_def['field_type']
@@ -396,7 +394,7 @@ class PersonalizationAgent(BaseAgent):
         return create_model(
             'BatchPersonalizationOutput',
             events=(List[EventOutput], PydanticField(
-                description=f"Exactly {num_events} outputs, one per event, in order."
+                description=f"Exactly {num_events} outputs, one per event, in input order."
             )),
         )
 

@@ -6,14 +6,13 @@ These events were extracted together from the same source. When an event has a v
 {{ input_summary }}
 </input_summary>
 
-<tasks>
+<task_definitions>
 For each event below, you will be given a list of tasks to complete. Here is what each task requires:
 
 {% for task_content in task_descriptions %}
 {{ task_content }}
-
 {% endfor %}
-</tasks>
+</task_definitions>
 {% if reference_events_display %}
 <reference_events>
 These are real events from the user's calendar. Use them to understand the user's style — how they title events, which calendar they use, typical durations, and location patterns.
@@ -38,34 +37,34 @@ These are real events from the user's calendar. Use them to understand the user'
 <event index="{{ ctx.index }}" summary="{{ ctx.summary }}">
 {{ ctx.event_json }}
 
-Tasks: {{ ctx.task_list }}
+<assigned_tasks>{{ ctx.task_list }}</assigned_tasks>
 {% if ctx.duration_lines %}
-
-Duration context:
+<duration_context>
 {% for line in ctx.duration_lines %}
 {{ line }}
 {% endfor %}
+</duration_context>
 {% endif %}
 {% if ctx.surrounding_event_lines %}
-
-Nearby events on user's calendar:
+<nearby_events>
 {% for line in ctx.surrounding_event_lines %}
 - {{ line }}
 {% endfor %}
+</nearby_events>
 {% endif %}
 {% if ctx.has_location and ctx.location_match_lines %}
-
-Location history:
+<location_history>
 {% for line in ctx.location_match_lines %}
 - {{ line }}
 {% endfor %}
+</location_history>
 {% endif %}
 {% if ctx.location_correction_lines %}
-
-Location corrections:
+<location_corrections>
 {% for line in ctx.location_correction_lines %}
 - {{ line }}
 {% endfor %}
+</location_corrections>
 {% endif %}
 </event>
 {% endfor %}
@@ -78,7 +77,7 @@ Location corrections:
 4. Use the input summary to resolve ambiguity — don't let fuzzy matches to history override what you know from the batch.
 </rules>
 
-<output>
-Output exactly {{ num_events }} objects, one per event, in order (index 0, 1, 2, ...).
-For each event, output ONLY the tasks listed for that event. Leave other fields null.
-</output>
+<output_format>
+Output an array of exactly {{ num_events }} objects in the same order as the events above.
+Each object contains only the assigned task fields for that event.
+</output_format>
