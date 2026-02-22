@@ -333,22 +333,41 @@ async function capturePageText(): Promise<string | null> {
 
 // ===== Badge Helpers =====
 
+let badgeSpinnerInterval: ReturnType<typeof setInterval> | null = null;
+
 function setBadgeProcessing(): void {
-  chrome.action.setBadgeText({ text: '...' });
+  clearBadgeSpinner();
+  const frames = ['◐', '◓', '◑', '◒'];
+  let i = 0;
   chrome.action.setBadgeBackgroundColor({ color: '#1170C5' });
+  chrome.action.setBadgeText({ text: frames[0] });
+  badgeSpinnerInterval = setInterval(() => {
+    i = (i + 1) % frames.length;
+    chrome.action.setBadgeText({ text: frames[i] });
+  }, 350);
+}
+
+function clearBadgeSpinner(): void {
+  if (badgeSpinnerInterval !== null) {
+    clearInterval(badgeSpinnerInterval);
+    badgeSpinnerInterval = null;
+  }
 }
 
 function setBadgeCount(count: number): void {
+  clearBadgeSpinner();
   chrome.action.setBadgeText({ text: String(count) });
   chrome.action.setBadgeBackgroundColor({ color: '#2e7d32' });
 }
 
 function setBadgeError(): void {
+  clearBadgeSpinner();
   chrome.action.setBadgeText({ text: '!' });
   chrome.action.setBadgeBackgroundColor({ color: '#c41e3a' });
 }
 
 function clearBadge(): void {
+  clearBadgeSpinner();
   chrome.action.setBadgeText({ text: '' });
 }
 

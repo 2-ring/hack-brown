@@ -727,7 +727,7 @@ function AppContent() {
     })
     .map(session => ({
       id: session.id,
-      title: session.title || (session.input_content ? session.input_content.substring(0, 50) + (session.input_content.length > 50 ? '...' : '') : 'Untitled'),
+      title: session.title || (session.status === 'processed' ? 'Untitled' : ''),
       icon: session.icon,
       timestamp: new Date(session.created_at),
       inputType: session.input_type,

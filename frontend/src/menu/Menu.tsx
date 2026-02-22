@@ -5,6 +5,7 @@ import type { InputType } from '../sessions'
 import { ICON_MAP } from './iconMap'
 import { Account } from './Account'
 import { MenuButton } from './MenuButton'
+import Skeleton from 'react-loading-skeleton'
 import { SkeletonSessionGroup } from '../components/skeletons'
 import { TypingText } from '../components/TypingText'
 import { useAuth } from '../auth/AuthContext'
@@ -251,7 +252,9 @@ export function Menu({
                               speed={25}
                               onComplete={() => handleTitleAnimationComplete(session.id)}
                             />
-                          ) : session.title}
+                          ) : session.title ? session.title : (
+                            <Skeleton width="70%" height={14} borderRadius={4} />
+                          )}
                         </span>
                         {session.status === 'processing' ? (
                           <span className="processing-indicator" />
