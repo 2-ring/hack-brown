@@ -273,7 +273,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease;
   background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='24' ry='24' stroke='%231170C580' stroke-width='6' stroke-dasharray='20 16' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
 }
 
@@ -540,37 +540,18 @@ body {
 }
 
 /* Processing pulse indicator */
-@keyframes processingRing {
-  0% { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(2.8); opacity: 0; }
+@keyframes processingPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 .processing-indicator {
-  position: relative;
   min-width: 20px;
   height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 10px;
+  background: var(--border);
   flex-shrink: 0;
-}
-
-.processing-indicator::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-}
-
-.processing-indicator::after {
-  content: '';
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid var(--primary);
-  animation: processingRing 1.5s ease-out infinite;
+  animation: processingPulse 1.5s ease-in-out infinite;
 }
 
 /* ----- Skeleton Loading ----- */

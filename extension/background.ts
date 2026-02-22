@@ -502,22 +502,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
     });
 
-    // Re-fetch events in background so cached sessions get fresh calendar info
-    ensureAuth().then(async (hasAuth) => {
-      if (!hasAuth) return;
-      try {
-        const { events } = await getSessionEvents(sessionId);
-        if (events.length > 0) {
-          await updateSessionRecord(sessionId, {
-            events,
-            eventSummaries: events.slice(0, 3).map((e) => e.summary),
-          });
-        }
-      } catch {
-        // Non-critical — sidebar still renders from cached data
-      }
-    });
-
     sendResponse({ ok: true });
     return false;
   }

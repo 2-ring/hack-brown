@@ -163,7 +163,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease;
   background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='64' ry='64' stroke='%231170C5FF' stroke-width='9' stroke-dasharray='28 22' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
 }
 

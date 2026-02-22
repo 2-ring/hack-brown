@@ -1,0 +1,1303 @@
+{
+  "trace_id": "c23078b7-789e-4f58-87a9-cd3450a1992c",
+  "timestamp": "2026-02-22T02:21:47.747000+00:00",
+  "total_tokens": {
+    "input": 0,
+    "output": 0
+  },
+  "events": [
+    {
+      "type": "span",
+      "name": "Extract",
+      "input": {
+        "input_type": "pdf",
+        "text": "## ENGN 0520: ELECTRICAL CIRCUITS AND SYSTEMS\n\n## Spring 2026, Prof. Jacob Rosenstein and Prof. Ted Tracy MWF 10 am - 10:50 am (Version I)\n\nAll exams are set in time, however all other information is subject to change.\n\nLEGEND: Yellow= Lectures, Purple=Exams, Grey=No Class,   Textbook = Ulaby Circuit Analysis and Design, 3rd edition\n\n|   Week | Monday                                                                       | Wednesday                                                                                       | Friday                                                                                     | Tues/Thurs Sections                           | Assignments                    |\n|--------|------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------|--------------------------------|\n|      1 |                                                                              | Jan 21, L1, (Ch 1) Course Intro, basic electrical quantities, analog vs digital                 | Jan 23, L2, (Ch 1.6, 2.1, 2.2) Sources, R, L, C, Nodes, Branches, Loops, Kirchhoff's Laws  | (No sections.)                                |                                |\n|      2 | Jan 26, L3, (Ch 2.3) Series/parallel, equivalent resistor simplification     | Jan 28, L4, (Ch. 2.3) Voltage division, current division, resistive sources and loads.          | Jan 30, L5, (Ch 3.2) Nodal analysis                                                        | LTspice intro + HW1 practice.                 | (Fri) HW1 due                  |\n|      3 | Feb 2, L6, (Ch 3.5) Linearity, Superposition, and Source Transformation      | Feb 4, L7, (Ch. 3.6) Thevenin and Norton Equivalent circuits                                    | Feb 6, L8, (Ch. 5.4, 5.5) First-order RC and RL circuits: settling from initial conditions | Lab 1 intro + HW2practice.                    | (Fri) HW2 due                  |\n|      4 | Feb 9, L9 (Ch. 5) First-order step response                                  | Feb 11, L10 (Supplement) Digital: logic levels, basic gates, boolean logic, truth tables        | Feb 13, L11 (Supplement) Digital: logical equivalence, theorems                            | Lab 2 intro + HW3 practice.                   | (Fri) HW3 due                  |\n|      5 | Feb 16+17 Long weekend                                                       | Feb 18, L12 (Supplement) Digital: binary integer representation                                 | Feb 20, L13 (Supplement) Digital: clocks, D flip flops, shift registers                    | (No Tues sections, only Thurs.) HW4 practice. | (Fri) HW4 due                  |\n|      6 | Feb 23, L14 (Supplement) Digital: Serial ports and parallel busses           | Feb 25, L15 (Supplement) Digital: Propagation delay, timing requirements, setup/hold            | Feb 27 Mid-Term I, In-Class (DC circuits, 1st order transients, some digital)              | Exam review.                                  | (Tues) Lab 1 due               |\n|      7 | Mar 2, L16, (Supplement) Quantization, DACs and ADCs.                        | Mar 4, L17, (Ch. 1.6, 3.8) Amplifiers and dependent sources, maximum power transfer             | Mar 6, L18, Operational amplifiers, negative feedback                                      | Lab 3 intro + HW5 practice.                   | (Fri) HW5 due                  |\n|      8 | Mar 9, L19, (Ch. 4) More opamps                                              | Mar 11, L20, (Ch. 4) Opamp examples                                                             | Mar 13, L21, (Ch. 7.1, 7.2, 7.3) Euler's formula, Sinusoids and Phasors                    | Lab 4 intro + HW6 practice.                   | (Tues) Lab 2 due (Fri) HW6 due |\n|      9 | Mar 16, L22, (Ch. 7.4, 7.5) Impedance and Admittance, Impedance Combinations | Mar 18, L23, (Ch. 7.9) Sinusoidal Steady-State Analysis                                         | Mar 20, L24 Circuits Applications                                                          | LTspice advanced features + complex math quiz | (Tues) Lab 3 due (Fri) HW7 due |\n|     10 | Mar 23 Spring Recess                                                         | Mar 25 Spring Recess                                                                            | Mar 27 Spring Recess                                                                       | Costa Rica!                                   |                                |\n|     11 | Mar 30, L25, (Ch. 9.1, 9.3, 12.2) Transfer Functions; Poles and Zeros        | Apr 1, L26, (Ch. 9.3) Decibel Scale, Magnitude Frequency Response                               | Apr 3, L27, (Ch. 9.3) Bode plots                                                           | Lab 5 intro + HW8 practice.                   | (Tues) Lab 4 due (Fri) HW8 due |\n|     12 | Apr 6, L28, (Ch. 9) Bode plot examples                                       | Apr 8, L29, Op amp specs, GBWproduct                                                            | Apr 10 Mid-Term II, In-Class (through bode plots)                                          | Exam review . Declare your concentration!     |                                |\n|     13 | Apr 13, L30, LC networks, parallel/series resonance                          | Apr 15, L31, RLC networks                                                                       | Apr 17, L32, (Ch. 6) RLC filters                                                           | Lab 6 intro + HW9 practice.                   | (Tues) Lab 5 due (Fri) HW9 due |\n|     14 | Apr 20, L33, (Ch. 6) Second-order RLC filters and opamps                     | Apr 22, L34, (Ch. 9.6, 9.7) AC Power Analysis: Inst. and Avg. Power, revisit max power transfer | Apr 24, L35, (Ch. 8.5) Impedance matching networks                                         | Lab 7 intro + HW10 practice.                  | (Fri) HW10 due                 |\n|     15 | Apr 27, L36, Harmonics and Fourier Series                                    | Apr 29, L37, (Ch. 13.2) Fourier Series Circuit Applications                                     | May 1, L38, (Ch. 13.3) Feedback control, PID                                               | Exam Review                                   | (Tues) Lab 6 due               |\n|     16 | May 4, L39 Review                                                            | Wed May 6, Final Exam 9:00am-12:00pm                                                            |                                                                                            |                                               | (Mon) Lab 7 due                |"
+      },
+      "output": [
+        {
+          "date": "",
+          "description": "Regular lectures for Electrical Circuits and Systems course.",
+          "end_time": "10:50 am",
+          "is_all_day": false,
+          "location": "",
+          "recurrence": [
+            "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260504"
+          ],
+          "start_time": "10:00 am",
+          "summary": "ENGN 0520 Lecture"
+        },
+        {
+          "date": "February 27, 2026",
+          "description": "In-class exam covering DC circuits, 1st order transients, and some digital topics.",
+          "end_time": "",
+          "is_all_day": false,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "ENGN 0520 Mid-Term I"
+        },
+        {
+          "date": "April 10, 2026",
+          "description": "In-class exam covering material through Bode plots.",
+          "end_time": "",
+          "is_all_day": false,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "ENGN 0520 Mid-Term II"
+        },
+        {
+          "date": "May 6, 2026",
+          "description": "Final examination for the course.",
+          "end_time": "12:00 pm",
+          "is_all_day": false,
+          "location": "",
+          "recurrence": null,
+          "start_time": "9:00 am",
+          "summary": "ENGN 0520 Final Exam"
+        },
+        {
+          "date": "January 30, 2026",
+          "description": "Homework 1 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW1 Due"
+        },
+        {
+          "date": "February 6, 2026",
+          "description": "Homework 2 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW2 Due"
+        },
+        {
+          "date": "February 13, 2026",
+          "description": "Homework 3 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW3 Due"
+        },
+        {
+          "date": "February 20, 2026",
+          "description": "Homework 4 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW4 Due"
+        },
+        {
+          "date": "March 6, 2026",
+          "description": "Homework 5 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW5 Due"
+        },
+        {
+          "date": "March 13, 2026",
+          "description": "Homework 6 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW6 Due"
+        },
+        {
+          "date": "March 20, 2026",
+          "description": "Homework 7 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW7 Due"
+        },
+        {
+          "date": "April 3, 2026",
+          "description": "Homework 8 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW8 Due"
+        },
+        {
+          "date": "April 17, 2026",
+          "description": "Homework 9 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW9 Due"
+        },
+        {
+          "date": "April 24, 2026",
+          "description": "Homework 10 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "HW10 Due"
+        },
+        {
+          "date": "February 24, 2026",
+          "description": "Lab 1 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 1 Due"
+        },
+        {
+          "date": "March 10, 2026",
+          "description": "Lab 2 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 2 Due"
+        },
+        {
+          "date": "March 17, 2026",
+          "description": "Lab 3 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 3 Due"
+        },
+        {
+          "date": "March 31, 2026",
+          "description": "Lab 4 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 4 Due"
+        },
+        {
+          "date": "April 14, 2026",
+          "description": "Lab 5 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 5 Due"
+        },
+        {
+          "date": "May 5, 2026",
+          "description": "Lab 6 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 6 Due"
+        },
+        {
+          "date": "May 4, 2026",
+          "description": "Lab 7 submission deadline.",
+          "end_time": "",
+          "is_all_day": true,
+          "location": "",
+          "recurrence": null,
+          "start_time": "",
+          "summary": "Lab 7 Due"
+        }
+      ],
+      "metrics": {
+        "latency": 13.194108247756958
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW7 Due\" (Event 11/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 7 submission deadline.",
+        "end": {
+          "date": "2026-03-21",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-20",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW7 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 7 submission deadline.",
+        "end": {
+          "date": "2026-03-21",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-20",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 3.8744137287139897
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW6 Due\" (Event 10/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 6 submission deadline.",
+        "end": {
+          "date": "2026-03-14",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-13",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW6 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 6 submission deadline.",
+        "end": {
+          "date": "2026-03-14",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-13",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 5.384321689605713
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW10 Due\" (Event 14/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 10 submission deadline.",
+        "end": {
+          "date": "2026-04-25",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-24",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW10 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 10 submission deadline.",
+        "end": {
+          "date": "2026-04-25",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-24",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[MATH 0540] Homework 10"
+      },
+      "metrics": {
+        "latency": 5.378811359405518
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"ENGN 0520 Mid-Term II\" (Event 3/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "In-class exam covering material through Bode plots.",
+        "end": null,
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": null,
+          "dateTime": "2026-04-10T00:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "ENGN 0520 Mid-Term II"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "30301b3e45d39e055dc07e5a27e93d48dd6399fa7287e200a82ef7e55e7c5dbc@group.calendar.google.com",
+        "colorId": null,
+        "description": "In-class exam covering material through Bode plots.",
+        "end": {
+          "date": null,
+          "dateTime": "2026-04-10T01:30:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": null,
+          "dateTime": "2026-04-10T00:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "[ENGN 0520] Mid-Term II"
+      },
+      "metrics": {
+        "latency": 5.744334697723389
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW1 Due\" (Event 5/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 1 submission deadline.",
+        "end": {
+          "date": "2026-01-31",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-01-30",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW1 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 1 submission deadline.",
+        "end": {
+          "date": "2026-01-31",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-01-30",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "MATH 0540 Homework 1"
+      },
+      "metrics": {
+        "latency": 5.804626703262329
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"ENGN 0520 Final Exam\" (Event 4/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Final examination for the course.",
+        "end": {
+          "date": null,
+          "dateTime": "2026-05-06T12:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": null,
+          "dateTime": "2026-05-06T09:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "ENGN 0520 Final Exam"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "30301b3e45d39e055dc07e5a27e93d48dd6399fa7287e200a82ef7e55e7c5dbc@group.calendar.google.com",
+        "colorId": null,
+        "description": "Final examination for the course.",
+        "end": {
+          "date": null,
+          "dateTime": "2026-05-06T12:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": null,
+          "dateTime": "2026-05-06T09:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "[ENGN 0520] Final Exam"
+      },
+      "metrics": {
+        "latency": 5.837188005447388
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 6 Due\" (Event 20/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 6 submission deadline.",
+        "end": {
+          "date": "2026-05-06",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-05-05",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 6 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 6 submission deadline.",
+        "end": {
+          "date": "2026-05-06",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-05-05",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 6 Deadline"
+      },
+      "metrics": {
+        "latency": 5.865534067153931
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW2 Due\" (Event 6/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 2 submission deadline.",
+        "end": {
+          "date": "2026-02-07",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-06",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW2 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 2 submission deadline.",
+        "end": {
+          "date": "2026-02-07",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-06",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 6.0882790088653564
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW5 Due\" (Event 9/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 5 submission deadline.",
+        "end": {
+          "date": "2026-03-07",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-06",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW5 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 5 submission deadline.",
+        "end": {
+          "date": "2026-03-07",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-06",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 6.0897910594940186
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW9 Due\" (Event 13/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 9 submission deadline.",
+        "end": {
+          "date": "2026-04-18",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-17",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW9 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 9 submission deadline.",
+        "end": {
+          "date": "2026-04-18",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-17",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 6.100431203842163
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW4 Due\" (Event 8/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 4 submission deadline.",
+        "end": {
+          "date": "2026-02-21",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-20",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW4 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 4 submission deadline.",
+        "end": {
+          "date": "2026-02-21",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-20",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 6.132429122924805
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 1 Due\" (Event 15/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 1 submission deadline.",
+        "end": {
+          "date": "2026-02-25",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-24",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 1 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 1 submission deadline for CSCI 0500.",
+        "end": {
+          "date": "2026-02-25",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-24",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 1 Deadline"
+      },
+      "metrics": {
+        "latency": 6.138463735580444
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 3 Due\" (Event 17/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 3 submission deadline.",
+        "end": {
+          "date": "2026-03-18",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-17",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 3 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 3 submission deadline for CSCI 0500.",
+        "end": {
+          "date": "2026-03-18",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-17",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 3 Deadline"
+      },
+      "metrics": {
+        "latency": 6.073565244674683
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"ENGN 0520 Lecture\" (Event 1/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Regular lectures for Electrical Circuits and Systems course.",
+        "end": {
+          "date": null,
+          "dateTime": "2026-02-22T10:50:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": [
+          "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260504"
+        ],
+        "start": {
+          "date": null,
+          "dateTime": "2026-02-22T10:00:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "ENGN 0520 Lecture"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "2a8c7c4098fec32ad105663969958e3a4c0e900af78bcd50c74a34483d7e50d7@group.calendar.google.com",
+        "colorId": null,
+        "description": "Regular lectures for Electrical Circuits and Systems course.",
+        "end": {
+          "date": null,
+          "dateTime": "2026-02-22T10:50:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": [
+          "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260504"
+        ],
+        "start": {
+          "date": null,
+          "dateTime": "2026-02-22T10:00:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "[ENGN 0520] Class"
+      },
+      "metrics": {
+        "latency": 6.310072898864746
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 2 Due\" (Event 16/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 2 submission deadline.",
+        "end": {
+          "date": "2026-03-11",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-10",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 2 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 2 submission deadline for CSCI 0500.",
+        "end": {
+          "date": "2026-03-11",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-10",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 2 Deadline"
+      },
+      "metrics": {
+        "latency": 6.317471265792847
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 7 Due\" (Event 21/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 7 submission deadline.",
+        "end": {
+          "date": "2026-05-05",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-05-04",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 7 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 7 submission deadline for CSCI 0500.",
+        "end": {
+          "date": "2026-05-05",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-05-04",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 7 Deadline"
+      },
+      "metrics": {
+        "latency": 6.236921072006226
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW8 Due\" (Event 12/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 8 submission deadline.",
+        "end": {
+          "date": "2026-04-04",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-03",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW8 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 8 submission deadline.",
+        "end": {
+          "date": "2026-04-04",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-03",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 6.412646532058716
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"HW3 Due\" (Event 7/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Homework 3 submission deadline.",
+        "end": {
+          "date": "2026-02-14",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-13",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "HW3 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Homework 3 submission deadline.",
+        "end": {
+          "date": "2026-02-14",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-02-13",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Deadline"
+      },
+      "metrics": {
+        "latency": 6.4627368450164795
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 5 Due\" (Event 19/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 5 submission deadline.",
+        "end": {
+          "date": "2026-04-15",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-14",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 5 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 5 submission deadline for CSCI 0500.",
+        "end": {
+          "date": "2026-04-15",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-04-14",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 5 Deadline"
+      },
+      "metrics": {
+        "latency": 6.389744281768799
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"Lab 4 Due\" (Event 18/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "Lab 4 submission deadline.",
+        "end": {
+          "date": "2026-04-01",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-31",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "Lab 4 Due"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "081563c26672da57f5619bfed008c28b5795f261282966d2841ac9f40336bbe1@group.calendar.google.com",
+        "colorId": null,
+        "description": "Lab 4 submission deadline for CSCI 0500.",
+        "end": {
+          "date": "2026-04-01",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": "2026-03-31",
+          "dateTime": null,
+          "timeZone": null
+        },
+        "summary": "[CSCI 0500] Lab 4 Deadline"
+      },
+      "metrics": {
+        "latency": 6.42419171333313
+      }
+    },
+    {
+      "type": "span",
+      "name": "Personalize: \"ENGN 0520 Mid-Term I\" (Event 2/21)",
+      "input": {
+        "attendees": null,
+        "calendar": null,
+        "colorId": null,
+        "description": "In-class exam covering DC circuits, 1st order transients, and some digital topics.",
+        "end": null,
+        "instructions": null,
+        "location": "",
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": null,
+          "dateTime": "2026-02-27T00:00:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "ENGN 0520 Mid-Term I"
+      },
+      "output": {
+        "attendees": null,
+        "calendar": "30301b3e45d39e055dc07e5a27e93d48dd6399fa7287e200a82ef7e55e7c5dbc@group.calendar.google.com",
+        "colorId": null,
+        "description": "In-class exam covering DC circuits, 1st order transients, and some digital topics.",
+        "end": {
+          "date": null,
+          "dateTime": "2026-02-27T01:30:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "instructions": null,
+        "location": null,
+        "meeting_url": null,
+        "people": null,
+        "recurrence": null,
+        "start": {
+          "date": null,
+          "dateTime": "2026-02-27T00:00:00-05:00",
+          "timeZone": "America/New_York"
+        },
+        "summary": "[ENGN 0520] Midterm 1"
+      },
+      "metrics": {
+        "latency": 6.931323766708374
+      }
+    }
+  ],
+  "name": "Pipeline: File (PDF)"
+}
