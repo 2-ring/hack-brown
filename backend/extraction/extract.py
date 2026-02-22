@@ -92,7 +92,7 @@ class UnifiedExtractor(BaseAgent):
         result = raw_result['parsed']
 
         if not result or not result.events:
-            return ExtractedEventBatch(session_title="Untitled", events=[])
+            return ExtractedEventBatch(session_title="Untitled", input_summary="", events=[])
 
         logger.info(f"Extracted {len(result.events)} events from {input_type} input")
         return result
@@ -134,7 +134,7 @@ class UnifiedExtractor(BaseAgent):
         result = raw_result['parsed']
 
         if not result or not result.events:
-            return ExtractedEventBatch(session_title="Untitled", events=[])
+            return ExtractedEventBatch(session_title="Untitled", input_summary="", events=[])
 
         logger.info(f"Extracted {len(result.events)} events from image input")
         return result

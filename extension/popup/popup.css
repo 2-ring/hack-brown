@@ -67,20 +67,58 @@
 
 body {
   width: 380px;
+  height: 600px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: 14px;
   color: var(--text-primary);
   background: var(--background);
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
 #root {
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .hidden {
   display: none !important;
+}
+
+/* ===== Scrollbar ===== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 /* ===== Shared: Header ===== */
@@ -262,6 +300,13 @@ body {
 /* ============================================================
    View: Input
    ============================================================ */
+
+#view-input {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 
 /* ----- Drop Zone ----- */
 
@@ -474,6 +519,9 @@ body {
 
 .results-section {
   margin-top: 16px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .results-list {

@@ -56,6 +56,38 @@ body {
   display: none !important;
 }
 
+/* ===== Scrollbar ===== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
 /* ===== Header ===== */
 
 .sidebar-header {
@@ -135,7 +167,7 @@ body {
 
 .date-group {
   display: grid;
-  grid-template-columns: 50px 1fr;
+  grid-template-columns: 40px 1fr;
   gap: 4px;
   align-items: start;
 }
@@ -144,11 +176,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 36px;
+  width: 28px;
 }
 
 .date-day-label {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 800;
   color: var(--text-secondary);
   letter-spacing: 0.05em;
@@ -156,8 +188,8 @@ body {
 }
 
 .date-circle {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -166,7 +198,7 @@ body {
 }
 
 .date-number {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1;
@@ -188,6 +220,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 /* ===== Event Card ===== */
@@ -201,6 +234,17 @@ body {
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   border-left: 8px solid var(--primary);
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.event-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.event-card:active {
+  transform: scale(0.98);
 }
 
 .event-card-title-row {
@@ -214,6 +258,8 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .event-card-time {
@@ -228,6 +274,13 @@ body {
   gap: 6px;
   font-size: 13px;
   color: var(--text-secondary);
+  min-width: 0;
+}
+
+.event-card-meta span {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .event-card-meta i {

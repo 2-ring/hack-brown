@@ -2,6 +2,8 @@ Extract all calendar events from the input below.
 
 A calendar event is anything someone would put on a calendar: meetings, classes, exams, appointments, deadlines, parties, flights, office hours, etc. Ignore past events, opinions, and vague intentions ("I should work out more").
 
+First, write an **input_summary**: 1-2 sentences describing what the user provided and what it contains — the source type, subject matter, and kinds of events. This summary will be passed to later pipeline stages that don't see the raw input. Be specific about the subject (course codes, people, destinations) so downstream stages have the context they need.
+
 For each event, output:
 
 - **summary**: Title in Title Case, 2-5 words. Preserve course codes ("CSCI 0500 Lecture"). Add context when helpful ("Dinner with Sarah"). Fix typos.

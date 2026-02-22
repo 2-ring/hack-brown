@@ -135,6 +135,15 @@ class ExtractedEventBatch(BaseModel):
     session_title: str = Field(
         description="Short ~3 word descriptive title for this session (e.g. '[MATH180] Syllabus', 'Weekend Chores', 'Dinner with Ben')"
     )
+    input_summary: str = Field(
+        description="1-2 sentence summary of what the user provided and what it contains. "
+                    "Describe the source type, subject matter, and the kinds of events found. "
+                    "Examples: 'The user provided a PDF syllabus for ENGN 0520 Electrical Circuits and Systems. "
+                    "It contains lectures, exams, homework deadlines, and lab due dates.' or "
+                    "'The user provided a Google Flights booking confirmation for a round trip flight "
+                    "from Boston to San Juan on January 28th.' or "
+                    "'The user described a dinner plan with Jack at The Ratty tomorrow evening.'"
+    )
     events: List[ExtractedEvent] = Field(
         description="One ExtractedEvent per real-world event. Deduplicated."
     )

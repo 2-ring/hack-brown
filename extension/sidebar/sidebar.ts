@@ -68,7 +68,6 @@ function getEventDate(event: CalendarEvent): Date {
 function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
   const groups = new Map<string, CalendarEvent[]>();
 
-  // Sort events chronologically
   const sorted = [...events].sort((a, b) => getEventDate(a).getTime() - getEventDate(b).getTime());
 
   for (const event of sorted) {
@@ -183,6 +182,17 @@ function renderEvents(events: CalendarEvent[]): void {
       }
 
       card.innerHTML = html;
+
+      // Click → open session on dropcal.ai
+      card.addEventListener('click', () => {
+        if (currentSessionId) {
+          chrome.runtime.sendMessage({
+            type: 'OPEN_SESSION',
+            sessionId: currentSessionId,
+          });
+        }
+      });
+
       dateEventsDiv.appendChild(card);
     }
 

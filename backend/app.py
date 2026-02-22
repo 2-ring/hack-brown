@@ -719,15 +719,15 @@ def apply_preferences_endpoint():
         except Exception as e:
             logger.warning(f"Could not fetch historical events: {e}")
 
-        personalized_event = personalize_agent.execute(
-            event=event,
+        personalized_events = personalize_agent.execute_batch(
+            events=[event],
             discovered_patterns=patterns,
             historical_events=historical_events,
-            user_id=user_id
+            user_id=user_id,
         )
 
         return jsonify({
-            'event': personalized_event.model_dump(),
+            'event': personalized_events[0].model_dump(),
             'preferences_applied': True,
             'user_id': user_id,
             'events_analyzed': patterns.get('total_events_analyzed', 0),

@@ -9,7 +9,6 @@ import os
 import logging
 import threading
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from database.models import Session as DBSession, Event
 from processors.factory import InputProcessorFactory, InputType
 from extraction.extract import UnifiedExtractor
@@ -473,53 +472,28 @@ class SessionProcessor:
             set_tracking_context(has_personalization=use_personalization)
 
             if use_personalization:
-                logger.info(f"Session {session_id}: Personalizing {len(calendar_events)} events")
+                logger.info(f"Session {session_id}: Personalizing {len(calendar_events)} events (batch)")
                 # Similarity index was already built in the context thread
 
                 t_personalize = _time.time()
 
-                def _personalize_event(i, cal_event):
-                    # Copy parent thread's tracking context into this worker thread
-                    set_tracking_context(
-                        distinct_id=user_id,
-                        trace_id=session_id,
-                        session_id=session_id,
-                        pipeline=pipeline_label,
-                        input_type=input_type,
-                        is_guest=is_guest,
-                        num_events=len(calendar_events),
-                        has_personalization=True,
-                        event_index=i,
-                        event_description=cal_event.summary,
-                    )
-                    with stage_span("personalization") as span:
-                        span.input = cal_event.model_dump()
-                        result = self.personalize_agent.execute(
-                            event=cal_event,
-                            discovered_patterns=patterns,
-                            historical_events=historical_events,
-                            user_id=user_id,
-                        )
-                        span.output = result.model_dump()
-                    return i, result
+                set_tracking_context(
+                    event_index=CLEAR,
+                    event_description=f"batch: {len(calendar_events)} events",
+                )
 
-                with ThreadPoolExecutor(max_workers=len(calendar_events)) as pool:
-                    futures = {
-                        pool.submit(_personalize_event, i, evt): i
-                        for i, evt in enumerate(calendar_events)
-                    }
-                    for future in as_completed(futures):
-                        i = futures[future]
-                        try:
-                            idx, result = future.result()
-                            calendar_events[idx] = result
-                        except Exception as e:
-                            logger.warning(
-                                f"Personalization failed for '{calendar_events[i].summary}': {e}"
-                            )
-                            capture_agent_error("personalization", e, {
-                                'session_id': session_id, 'event_index': i,
-                            })
+                input_summary = getattr(extraction_result, 'input_summary', '') or ''
+
+                with stage_span("personalization") as span:
+                    span.input = [e.model_dump() for e in calendar_events]
+                    calendar_events = self.personalize_agent.execute_batch(
+                        events=calendar_events,
+                        discovered_patterns=patterns,
+                        historical_events=historical_events,
+                        user_id=user_id,
+                        input_summary=input_summary,
+                    )
+                    span.output = [e.model_dump() for e in calendar_events]
 
                 logger.info(f"[timing] personalize: {_time.time() - t_personalize:.2f}s")
 

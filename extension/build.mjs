@@ -1,6 +1,21 @@
 import * as esbuild from 'esbuild';
+import { copyFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 
 const isWatch = process.argv.includes('--watch');
+
+// Copy static assets (CSS, HTML) from source dirs to dist
+function copyStaticAssets() {
+  const dirs = ['popup', 'sidebar'];
+  const exts = ['.css', '.html'];
+  for (const dir of dirs) {
+    for (const file of readdirSync(dir)) {
+      if (exts.some(ext => file.endsWith(ext))) {
+        copyFileSync(join(dir, file), join('dist', dir, file));
+      }
+    }
+  }
+}
 
 const commonOptions = {
   bundle: true,
@@ -42,6 +57,7 @@ async function run() {
   } else {
     await Promise.all([bgCtx.rebuild(), popupCtx.rebuild(), contentCtx.rebuild(), sidebarCtx.rebuild()]);
     await Promise.all([bgCtx.dispose(), popupCtx.dispose(), contentCtx.dispose(), sidebarCtx.dispose()]);
+    copyStaticAssets();
     console.log('Build complete.');
   }
 }
