@@ -4,7 +4,7 @@ Handles both DropCal-created events and provider-synced events.
 """
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 
 import logging
@@ -129,8 +129,8 @@ class EventService:
             }
             for key in (
                 'summary', 'start_time', 'end_time', 'start_date', 'end_date',
-                'is_all_day', 'description', 'location', 'calendar_name',
-                'original_input', 'extracted_facts',
+                'is_all_day', 'description', 'location', 'timezone',
+                'calendar_name', 'original_input', 'extracted_facts',
                 'system_suggestion', 'recurrence',
             ):
                 if data.get(key) is not None:
@@ -521,11 +521,29 @@ class EventService:
         tz = event_row.get('timezone') or 'America/New_York'
 
         if event_row.get('is_all_day'):
-            start = {'date': event_row.get('start_date'), 'timeZone': tz}
-            end = {'date': event_row.get('end_date'), 'timeZone': tz}
+            start_date = event_row.get('start_date')
+            end_date = event_row.get('end_date')
+            # Google Calendar requires end date; default to start + 1 day
+            if start_date and not end_date:
+                try:
+                    end_date = (datetime.strptime(start_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+                except (ValueError, TypeError):
+                    end_date = start_date
+            start = {'date': start_date, 'timeZone': tz}
+            end = {'date': end_date, 'timeZone': tz}
         else:
-            start = {'dateTime': event_row.get('start_time'), 'timeZone': tz}
-            end = {'dateTime': event_row.get('end_time'), 'timeZone': tz}
+            start_time = event_row.get('start_time')
+            end_time = event_row.get('end_time')
+            # Google Calendar requires end time; default to start + 1 hour
+            if start_time and not end_time:
+                try:
+                    start_dt = datetime.fromisoformat(start_time)
+                    end_dt = start_dt + timedelta(hours=1)
+                    end_time = end_dt.isoformat()
+                except (ValueError, TypeError):
+                    end_time = start_time
+            start = {'dateTime': start_time, 'timeZone': tz}
+            end = {'dateTime': end_time, 'timeZone': tz}
 
         result = {
             'id': event_row['id'],

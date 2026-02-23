@@ -89,29 +89,56 @@ def sync_user_profile():
         is_new_user = existing_user is None
 
         if is_new_user:
-            # Create new user (upsert to handle race conditions)
-            supabase = get_supabase()
-            user_data = {
-                "id": user_id,
-                "email": auth_user.email,
-                "display_name": profile['display_name'],
-                "photo_url": profile['photo_url'],
-                "primary_auth_provider": provider,
-                "provider_connections": [{
-                    "provider": provider,
-                    "provider_id": profile['provider_id'],
+            # Check if a user with the same email exists under a different auth ID
+            # (e.g., previously signed in with Microsoft, now signing in with Google)
+            existing_by_email = User.get_by_email(auth_user.email) if auth_user.email else None
+
+            if existing_by_email:
+                # Same person, different auth provider — migrate to new auth ID
+                old_user_id = existing_by_email['id']
+                supabase = get_supabase()
+
+                # Update foreign keys first, then the user row
+                supabase.table("events").update({"user_id": user_id}).eq("user_id", old_user_id).execute()
+                supabase.table("sessions").update({"user_id": user_id}).eq("user_id", old_user_id).execute()
+                supabase.table("users").update({"id": user_id}).eq("id", old_user_id).execute()
+
+                # Add the new provider connection
+                User.add_provider_connection(
+                    user_id=user_id,
+                    provider=provider,
+                    provider_id=profile['provider_id'],
+                    email=auth_user.email,
+                    usage=usage,
+                    display_name=profile['display_name'],
+                    photo_url=profile['photo_url']
+                )
+                is_new_user = False
+                user = User.get_by_id(user_id)
+            else:
+                # Truly new user — create
+                supabase = get_supabase()
+                user_data = {
+                    "id": user_id,
                     "email": auth_user.email,
                     "display_name": profile['display_name'],
                     "photo_url": profile['photo_url'],
-                    "usage": usage,
-                    "linked_at": "now"
-                }]
-            }
-            # Set timezone from browser on first sign-up
-            if browser_timezone:
-                user_data["timezone"] = browser_timezone
-            response = supabase.table("users").upsert(user_data).execute()
-            user = response.data[0]
+                    "primary_auth_provider": provider,
+                    "provider_connections": [{
+                        "provider": provider,
+                        "provider_id": profile['provider_id'],
+                        "email": auth_user.email,
+                        "display_name": profile['display_name'],
+                        "photo_url": profile['photo_url'],
+                        "usage": usage,
+                        "linked_at": "now"
+                    }]
+                }
+                # Set timezone from browser on first sign-up
+                if browser_timezone:
+                    user_data["timezone"] = browser_timezone
+                response = supabase.table("users").upsert(user_data).execute()
+                user = response.data[0]
         else:
             # Add provider connection if not already present
             User.add_provider_connection(

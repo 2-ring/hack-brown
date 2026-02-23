@@ -150,7 +150,7 @@ def create_events_from_session(
                 cal_event = EventService.event_row_to_calendar_event(event_row)
                 # Strip metadata fields before sending to Google API
                 api_event = {k: v for k, v in cal_event.items()
-                             if k not in ('id', 'version', 'provider_syncs')}
+                             if k not in ('id', 'version', 'provider_syncs', 'calendar')}
                 event_tuples.append((api_event, eid))
     else:
         # Backward compat: fall back to processed_events blob

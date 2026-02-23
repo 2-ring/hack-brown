@@ -549,6 +549,7 @@ class SessionProcessor:
                     'is_all_day': calendar_event.start.date is not None,
                     'description': calendar_event.description,
                     'location': calendar_event.location,
+                    'timezone': calendar_event.start.timeZone,
                     'calendar_name': calendar_event.calendar,
                     'original_input': '',
                     'extracted_facts': calendar_event.model_dump(),

@@ -819,6 +819,7 @@ def push_events():
         created = []
         updated = []
         skipped = []
+        failed = []
 
         for eid in event_ids:
             try:
@@ -830,11 +831,15 @@ def push_events():
                     updated.append(eid)
                 elif action == 'skipped':
                     skipped.append(eid)
+                else:
+                    failed.append(eid)
+                    print(f"[push] FAILED event={eid}: {result.get('error', 'unknown')}")
             except Exception as e:
+                failed.append(eid)
                 print(f"[push] ERROR event={eid}: {e}")
 
         # Mark session if provided
-        if session_id and created:
+        if session_id and (created or updated):
             from database.models import Session as DBSession
             try:
                 DBSession.mark_added_to_calendar(session_id, created + updated)
@@ -849,13 +854,18 @@ def push_events():
             parts.append(f"updated {len(updated)}")
         if skipped:
             parts.append(f"{len(skipped)} already up to date")
+        if failed:
+            parts.append(f"{len(failed)} failed")
         message = ', '.join(parts) if parts else 'No events to sync'
 
+        success = len(failed) == 0 and (len(created) + len(updated) + len(skipped)) > 0
+
         return jsonify({
-            'success': True,
+            'success': success,
             'created': created,
             'updated': updated,
             'skipped': skipped,
+            'failed': failed,
             'num_created': len(created),
             'num_updated': len(updated),
             'num_skipped': len(skipped),

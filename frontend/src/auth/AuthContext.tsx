@@ -145,44 +145,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (shouldSync && !syncInitiatedRef.current) {
           syncInitiatedRef.current = true;
-          // Background: sync profile + store tokens in parallel, then load preferences
+          // Background: sync profile first, then store tokens, then load preferences
           (async () => {
-            // Run profile sync and token storage concurrently
-            const profileSyncPromise = syncUserProfile()
-              .then(result => console.log(result.is_new_user ? 'Account created successfully' : 'Welcome back'))
-              .catch(error => console.error('Failed to sync user profile:', error));
+            // Profile sync must complete before token storage (user row must exist)
+            try {
+              const result = await syncUserProfile();
+              console.log(result.is_new_user ? 'Account created successfully' : 'Welcome back');
+            } catch (error) {
+              console.error('Failed to sync user profile:', error);
+            }
 
             // Detect auth provider and store calendar tokens accordingly
             const authProvider = newSession.user?.app_metadata?.provider;
-            let tokenStoragePromise: Promise<void>;
 
             if (!hasProviderToken) {
-              tokenStoragePromise = Promise.resolve();
+              // No token to store
             } else if (authProvider === 'azure') {
               // Microsoft sign-in: send tokens to Microsoft calendar endpoint
-              tokenStoragePromise = sendMicrosoftTokens({
-                access_token: newSession.provider_token!,
-                refresh_token: newSession.provider_refresh_token || undefined,
-                email: newSession.user?.email || undefined,
-              })
-                .then(() => console.log('Microsoft Calendar tokens stored successfully'))
-                .catch(error => console.error('Failed to store Microsoft Calendar tokens:', error));
+              try {
+                await sendMicrosoftTokens({
+                  access_token: newSession.provider_token!,
+                  refresh_token: newSession.provider_refresh_token || undefined,
+                  email: newSession.user?.email || undefined,
+                });
+                console.log('Microsoft Calendar tokens stored successfully');
+              } catch (error) {
+                console.error('Failed to store Microsoft Calendar tokens:', error);
+              }
             } else if (authProvider === 'apple') {
               // Apple sign-in: no calendar tokens from OAuth (CalDAV needs app-specific password).
-              // Prompt the user to connect their Apple Calendar if not already connected.
-              tokenStoragePromise = Promise.resolve();
               setShowAppleCalendarSetup(true);
             } else {
               // Google (default): store Google Calendar tokens
-              tokenStoragePromise = storeGoogleCalendarTokens({
-                access_token: newSession.provider_token!,
-                refresh_token: newSession.provider_refresh_token || undefined,
-              })
-                .then(() => console.log('Google Calendar tokens stored successfully'))
-                .catch(error => console.error('Failed to store Google Calendar tokens:', error));
+              try {
+                await storeGoogleCalendarTokens({
+                  access_token: newSession.provider_token!,
+                  refresh_token: newSession.provider_refresh_token || undefined,
+                });
+                console.log('Google Calendar tokens stored successfully');
+              } catch (error) {
+                console.error('Failed to store Google Calendar tokens:', error);
+              }
             }
-
-            await Promise.all([profileSyncPromise, tokenStoragePromise]);
 
             // Load preferences after profile is synced
             try {
