@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=380">
+  <link rel="stylesheet" href="../fonts/phosphor.css">
+  <link rel="stylesheet" href="../fonts/phosphor-duotone.css">
+  <link rel="stylesheet" href="popup.css">
+  <title>DropCal</title>
+</head>
+<body>
+  <div id="root">
+    <!-- ===== View: Auth ===== -->
+    <div id="view-auth" class="view view-centered hidden">
+      <div class="auth-brand">
+        <i class="ph-fill ph-drop header-logo"></i>
+        <span class="header-title">dropcal</span>
+      </div>
+      <p class="signin-heading">Sign in to DropCal</p>
+      <p class="signin-text">Sign in on dropcal.ai to start creating events from any page.</p>
+      <button id="btn-signin" class="btn-cta">
+        <i class="ph-duotone ph-fingerprint btn-icon" style="font-size: 20px"></i>
+        Sign in
+        <i class="ph-duotone ph-link btn-icon" style="font-size: 18px"></i>
+      </button>
+    </div>
+
+    <!-- Shared header (input, processing, feedback) -->
+    <div id="popup-header" class="popup-header hidden">
+      <a id="header-brand" class="header-brand" href="#" title="Open DropCal">
+        <i class="ph-fill ph-drop header-logo"></i>
+        <span class="header-title">dropcal</span>
+      </a>
+      <button id="btn-settings" class="header-settings" title="Settings">
+        <i class="ph ph-gear-six" style="font-size: 20px"></i>
+      </button>
+    </div>
+
+    <!-- ===== View: Input ===== -->
+    <div id="view-input" class="view hidden">
+      <!-- Drop zone with button grid -->
+      <div id="drop-zone" class="drop-zone">
+        <div id="drop-zone-content" class="drop-zone-content">
+          <div class="icon-row">
+            <!-- Left column -->
+            <button id="btn-link" class="icon-circle btn-left-1" title="Link Input">
+              <i class="ph-duotone ph-link" style="font-size: 24px"></i>
+            </button>
+
+            <button id="btn-images" class="icon-circle btn-left-2" title="Upload Image">
+              <i class="ph-duotone ph-images" style="font-size: 24px"></i>
+            </button>
+
+            <button id="btn-files" class="icon-circle btn-left-3" title="Upload Document">
+              <i class="ph-duotone ph-file" style="font-size: 24px"></i>
+            </button>
+
+            <!-- Center button -->
+            <button id="btn-center" class="icon-circle center" title="Upload">
+              <i class="ph-bold ph-arrow-fat-up" style="font-size: 28px"></i>
+            </button>
+
+            <!-- Right column -->
+            <button id="btn-audio" class="icon-circle btn-right-1" title="Record Audio">
+              <i class="ph-duotone ph-microphone" style="font-size: 24px"></i>
+            </button>
+
+            <button id="btn-text" class="icon-circle btn-right-2" title="Text Input">
+              <i class="ph-duotone ph-pen" style="font-size: 24px"></i>
+            </button>
+
+            <button id="btn-email" class="icon-circle btn-right-3" title="Email Input">
+              <i class="ph-duotone ph-envelope" style="font-size: 24px"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Success feedback (replaces drop zone content) -->
+        <div id="drop-zone-success" class="drop-zone-feedback hidden">
+          <i id="feedback-icon" class="ph-duotone ph-check-fat feedback-icon feedback-icon-success" style="font-size: 48px"></i>
+          <p id="feedback-title" class="feedback-title"></p>
+          <p id="feedback-subtitle" class="feedback-subtitle"></p>
+        </div>
+
+        <!-- Error feedback (replaces drop zone content) -->
+        <div id="drop-zone-error" class="drop-zone-feedback hidden">
+          <i id="feedback-error-icon" class="ph-duotone ph-warning-circle feedback-icon feedback-icon-error" style="font-size: 48px"></i>
+          <p id="feedback-error-title" class="feedback-title"></p>
+          <p id="feedback-error-subtitle" class="feedback-subtitle"></p>
+        </div>
+      </div>
+
+      <!-- Feedback actions (below drop zone) -->
+      <div id="feedback-actions" class="feedback-actions hidden">
+        <button id="btn-dismiss-success" class="btn-secondary">Done</button>
+        <button id="btn-dismiss-error" class="btn-secondary hidden">Dismiss</button>
+      </div>
+
+      <!-- Session history -->
+      <div id="results-section" class="results-section hidden">
+        <div id="results-list" class="results-list"></div>
+      </div>
+
+    </div>
+
+    <!-- ===== View: Settings ===== -->
+    <div id="view-settings" class="view hidden">
+      <!-- Settings header -->
+      <div class="settings-header">
+        <button id="settings-back-btn" class="settings-back-btn" title="Back">
+          <i class="ph ph-caret-left"></i>
+        </button>
+        <span id="settings-user-email" class="settings-user-email"></span>
+      </div>
+
+      <!-- Settings: Main menu -->
+      <div id="settings-main" class="settings-menu">
+        <button id="settings-upgrade" class="settings-item">
+          <i class="ph ph-crown-simple settings-item-icon"></i>
+          <span>Upgrade plan</span>
+        </button>
+
+        <button id="settings-date-format" class="settings-item">
+          <i id="settings-date-icon" class="ph ph-football-helmet settings-item-icon"></i>
+          <span>Date format</span>
+          <span id="settings-date-value" class="settings-value">MM/DD/YYYY</span>
+        </button>
+
+        <button id="settings-theme" class="settings-item">
+          <i id="settings-theme-icon" class="ph ph-flashlight settings-item-icon"></i>
+          <span id="settings-theme-label">Auto theme</span>
+        </button>
+
+        <button id="settings-integrations-btn" class="settings-item">
+          <i class="ph ph-calendar settings-item-icon"></i>
+          <span>Manage integrations</span>
+        </button>
+      </div>
+
+      <!-- Settings: Integrations sub-view -->
+      <div id="settings-integrations-view" class="settings-menu hidden">
+        <div id="settings-providers-list"></div>
+      </div>
+
+      <!-- Settings footer -->
+      <div class="settings-footer">
+        <button id="settings-logout" class="settings-item settings-logout-item">
+          <i class="ph ph-sign-out settings-item-icon"></i>
+          <span>Log out</span>
+        </button>
+        <button id="settings-disconnect-btn" class="settings-item settings-logout-item hidden">
+          <i class="ph ph-plugs settings-item-icon"></i>
+          <span>Disconnect providers</span>
+        </button>
+        <button id="settings-disconnect-back" class="settings-item settings-footer-nav hidden">
+          <i class="ph ph-caret-left settings-item-icon"></i>
+          <span>Manage integrations</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

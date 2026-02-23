@@ -1,5 +1,6 @@
 import type { SessionRecord } from '../types';
 import { initTheme } from '../theme';
+import { api, storage, panel } from '../compat';
 
 const API_URL = 'https://api.dropcal.ai';
 
@@ -34,9 +35,6 @@ function showView(view: View): void {
   for (const v of allViews) v.classList.add('hidden');
   popupHeader.classList.toggle('hidden', view === 'auth' || view === 'settings');
 
-  // Lock body to fixed height for views with scrollable content
-  document.body.classList.toggle('view-locked', view === 'input' || view === 'processing');
-
   if (view === 'auth') {
     viewAuth.classList.remove('hidden');
   } else if (view === 'input') {
@@ -59,7 +57,7 @@ const headerBrand = document.getElementById('header-brand')!;
 
 headerBrand.addEventListener('click', (e) => {
   e.preventDefault();
-  chrome.tabs.create({ url: 'https://dropcal.ai' });
+  api.tabs.create({ url: 'https://dropcal.ai' });
 });
 
 const btnSettings = document.getElementById('btn-settings')!;
@@ -79,7 +77,7 @@ btnSettings.addEventListener('click', () => {
 const btnSignin = document.getElementById('btn-signin')!;
 
 btnSignin.addEventListener('click', () => {
-  chrome.runtime.sendMessage({ type: 'SIGN_IN' });
+  api.runtime.sendMessage({ type: 'SIGN_IN' });
   window.close();
 });
 
@@ -109,19 +107,18 @@ for (const btn of allButtons) {
   btn.addEventListener('click', (e) => e.stopPropagation());
 }
 
-function openDropcal(mode?: string): void {
-  const url = mode ? `https://dropcal.ai?input=${mode}` : 'https://dropcal.ai';
-  chrome.tabs.create({ url });
+function openDropcalInput(mode: string): void {
+  api.tabs.create({ url: `https://dropcal.ai?input=${mode}` });
   window.close();
 }
 
-btnLink.addEventListener('click', () => openDropcal('link'));
-btnImages.addEventListener('click', () => openDropcal());
-btnFiles.addEventListener('click', () => openDropcal());
-btnCenter.addEventListener('click', () => openDropcal());
-btnAudio.addEventListener('click', () => openDropcal('audio'));
-btnText.addEventListener('click', () => openDropcal('text'));
-btnEmail.addEventListener('click', () => openDropcal('email'));
+btnLink.addEventListener('click', () => openDropcalInput('link'));
+btnImages.addEventListener('click', () => openDropcalInput('image'));
+btnFiles.addEventListener('click', () => openDropcalInput('document'));
+btnCenter.addEventListener('click', () => openDropcalInput('upload'));
+btnAudio.addEventListener('click', () => openDropcalInput('audio'));
+btnText.addEventListener('click', () => openDropcalInput('text'));
+btnEmail.addEventListener('click', () => openDropcalInput('email'));
 
 // ----- Drag & drop -----
 
@@ -456,12 +453,12 @@ dropZone.addEventListener('click', async () => {
     locallyDismissed.add(sid);
     await openSidebar(sid);
     await new Promise<void>((resolve) => {
-      chrome.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: sid }, () => resolve());
+      api.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: sid }, () => resolve());
     });
     window.close();
   } else if (dropZone.classList.contains('error') && feedbackSessionId) {
     locallyDismissed.add(feedbackSessionId);
-    chrome.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: feedbackSessionId });
+    api.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: feedbackSessionId });
     feedbackSessionId = null;
     showView('input');
     refresh();
@@ -472,7 +469,7 @@ btnDismissSuccess.addEventListener('click', (e) => {
   e.stopPropagation();
   if (feedbackSessionId) {
     locallyDismissed.add(feedbackSessionId);
-    chrome.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: feedbackSessionId });
+    api.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: feedbackSessionId });
   }
   feedbackSessionId = null;
   showView('input');
@@ -482,7 +479,7 @@ btnDismissSuccess.addEventListener('click', (e) => {
 btnDismissError.addEventListener('click', () => {
   if (feedbackSessionId) {
     locallyDismissed.add(feedbackSessionId);
-    chrome.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: feedbackSessionId });
+    api.runtime.sendMessage({ type: 'DISMISS_SESSION', sessionId: feedbackSessionId });
     feedbackSessionId = null;
   }
   showView('input');
@@ -543,7 +540,7 @@ function showSettingsSubView(sub: SettingsSubView): void {
 }
 
 function loadSettingsData(): void {
-  chrome.runtime.sendMessage({ type: 'GET_USER_PROFILE' }, (response) => {
+  api.runtime.sendMessage({ type: 'GET_USER_PROFILE' }, (response) => {
     if (response?.ok && response.profile) {
       const p = response.profile;
       settingsUserEmailEl.textContent = p.email || '';
@@ -584,7 +581,7 @@ function updateThemeUI(): void {
 }
 
 function loadCalendarProviders(): void {
-  chrome.runtime.sendMessage({ type: 'GET_CALENDAR_PROVIDERS' }, (response) => {
+  api.runtime.sendMessage({ type: 'GET_CALENDAR_PROVIDERS' }, (response) => {
     if (response?.ok && response.providers) {
       settingsProviders = response.providers;
       renderProviders();
@@ -671,13 +668,13 @@ function renderProviders(): void {
     // Click handlers
     if (isConnected && inDisconnect) {
       row.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'DISCONNECT_PROVIDER', provider: def.key }, (resp) => {
+        api.runtime.sendMessage({ type: 'DISCONNECT_PROVIDER', provider: def.key }, (resp) => {
           if (resp?.ok) loadCalendarProviders();
         });
       });
     } else if (isConnected) {
       row.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ type: 'SET_PRIMARY_PROVIDER', provider: def.key }, (resp) => {
+        api.runtime.sendMessage({ type: 'SET_PRIMARY_PROVIDER', provider: def.key }, (resp) => {
           if (resp?.ok) {
             // Optimistic update
             for (const p of settingsProviders) {
@@ -690,7 +687,7 @@ function renderProviders(): void {
     } else if (!inDisconnect) {
       // Not connected — open dropcal.ai to connect
       row.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'https://dropcal.ai' });
+        api.tabs.create({ url: 'https://dropcal.ai' });
       });
     }
 
@@ -710,13 +707,13 @@ settingsBackBtn.addEventListener('click', () => {
 });
 
 settingsUpgrade.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://dropcal.ai/plans' });
+  api.tabs.create({ url: 'https://dropcal.ai/plans' });
 });
 
 settingsDateFormatBtn.addEventListener('click', () => {
   settingsDateFormat = settingsDateFormat === 'MM/DD/YYYY' ? 'DD/MM/YYYY' : 'MM/DD/YYYY';
   updateDateFormatUI();
-  chrome.runtime.sendMessage({
+  api.runtime.sendMessage({
     type: 'UPDATE_PREFERENCES',
     preferences: { date_format: settingsDateFormat },
   });
@@ -728,19 +725,19 @@ settingsThemeBtn.addEventListener('click', () => {
   const idx = cycle.indexOf(settingsThemeMode);
   settingsThemeMode = cycle[(idx + 1) % 3];
   updateThemeUI();
-  chrome.runtime.sendMessage({
+  api.runtime.sendMessage({
     type: 'UPDATE_PREFERENCES',
     preferences: { theme_mode: settingsThemeMode },
   });
 });
 
 settingsIntegrationsBtn.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://dropcal.ai/?settings=integrations' });
+  api.tabs.create({ url: 'https://dropcal.ai/?settings=integrations' });
   window.close();
 });
 
 settingsLogout.addEventListener('click', () => {
-  chrome.runtime.sendMessage({ type: 'SIGN_OUT' }, () => {
+  api.runtime.sendMessage({ type: 'SIGN_OUT' }, () => {
     showView('auth');
   });
 });
@@ -761,7 +758,7 @@ settingsDisconnectBack.addEventListener('click', () => {
 
 function submitText(text: string): void {
   showView('processing');
-  chrome.runtime.sendMessage({ type: 'SUBMIT_TEXT', text }, (response) => {
+  api.runtime.sendMessage({ type: 'SUBMIT_TEXT', text }, (response) => {
     if (response && !response.ok) {
       showFeedbackError(response.error || 'Failed to process text');
     } else {
@@ -773,7 +770,9 @@ function submitText(text: string): void {
 async function handleFiles(files: FileList): Promise<void> {
   showView('processing');
 
-  const authResult = await chrome.storage.local.get('auth');
+  const authResult = await new Promise<Record<string, any>>((resolve) => {
+    storage.local.get('auth', (items) => resolve(items));
+  });
   const token = authResult.auth?.accessToken;
   if (!token) {
     showFeedbackError('Not authenticated. Please sign in.');
@@ -800,7 +799,7 @@ async function handleFiles(files: FileList): Promise<void> {
       const { session } = await response.json();
 
       // Tell background to track and poll this session (lightweight message, no file data)
-      chrome.runtime.sendMessage({
+      api.runtime.sendMessage({
         type: 'TRACK_SESSION',
         sessionId: session.id,
         inputType: file.type.startsWith('image/') ? 'image' : 'file',
@@ -815,10 +814,12 @@ async function handleFiles(files: FileList): Promise<void> {
 }
 
 async function openSidebar(sessionId: string): Promise<void> {
-  await chrome.storage.session.set({ sidebarSessionId: sessionId });
-  const win = await chrome.windows.getCurrent();
+  await new Promise<void>((resolve) => {
+    storage.session.set({ sidebarSessionId: sessionId }, resolve);
+  });
+  const win = await api.windows.getCurrent();
   if (win.id) {
-    await (chrome.sidePanel as any).open({ windowId: win.id });
+    await panel.open({ windowId: win.id, sessionId });
   }
 }
 
@@ -857,7 +858,7 @@ function syncNotifications(sessions: SessionRecord[], queue: string[]): void {
 // ============================================================
 
 function refresh(): void {
-  chrome.storage.local.get(['sessionHistory', 'notificationQueue'], (result) => {
+  storage.local.get(['sessionHistory', 'notificationQueue'], (result) => {
     const sessions =
       (result.sessionHistory as { sessions: SessionRecord[] } | undefined)?.sessions || [];
     const queue: string[] = result.notificationQueue || [];
@@ -870,12 +871,12 @@ function refresh(): void {
 // Storage Listeners
 // ============================================================
 
-chrome.storage.local.onChanged.addListener((changes) => {
+storage.local.onChanged.addListener((changes) => {
   if (changes.sessionHistory || changes.notificationQueue) {
     refresh();
   }
   if (changes.auth) {
-    chrome.runtime.sendMessage({ type: 'GET_AUTH' }, (response) => {
+    api.runtime.sendMessage({ type: 'GET_AUTH' }, (response) => {
       if (response?.isAuthenticated) {
         showView('input');
         refresh();
@@ -886,7 +887,7 @@ chrome.storage.local.onChanged.addListener((changes) => {
   }
 });
 
-chrome.storage.session.onChanged.addListener(() => {
+storage.session.onChanged.addListener(() => {
   refresh();
 });
 
@@ -896,7 +897,7 @@ chrome.storage.session.onChanged.addListener(() => {
 
 initTheme();
 
-chrome.runtime.sendMessage({ type: 'GET_AUTH' }, (response) => {
+api.runtime.sendMessage({ type: 'GET_AUTH' }, (response) => {
   const isAuth = response?.isAuthenticated ?? false;
   if (!isAuth) {
     showView('auth');
@@ -907,7 +908,7 @@ chrome.runtime.sendMessage({ type: 'GET_AUTH' }, (response) => {
   showView('input');
   renderSkeletons();
 
-  chrome.storage.local.get(['sessionHistory', 'notificationQueue'], (result) => {
+  storage.local.get(['sessionHistory', 'notificationQueue'], (result) => {
     const sessions =
       (result.sessionHistory as { sessions: SessionRecord[] } | undefined)?.sessions || [];
     const queue: string[] = result.notificationQueue || [];

@@ -1,5 +1,14 @@
 // Content script that runs on dropcal.ai / www.dropcal.ai
 // Reads the Supabase session from localStorage and sends it to the extension
+//
+// Note: This is bundled as IIFE (not ES module), so compat/ is not importable.
+// Content scripts only use chrome.runtime.sendMessage which works identically
+// across all browsers (Firefox's chrome.* compat shim covers it).
+
+declare const browser: { runtime: typeof chrome.runtime } | undefined;
+
+const runtime =
+  typeof browser !== 'undefined' ? browser.runtime : chrome.runtime;
 
 const SUPABASE_STORAGE_KEY = 'sb-bdpiluwfhfmitvrcdrlr-auth-token';
 const THEME_STORAGE_KEY = 'theme-mode';
@@ -13,7 +22,7 @@ function readAndSendToken(): void {
     if (!raw) {
       if (lastSentToken !== null) {
         lastSentToken = null;
-        chrome.runtime.sendMessage({ type: 'AUTH_SIGNED_OUT' }).catch(() => {});
+        runtime.sendMessage({ type: 'AUTH_SIGNED_OUT' }).catch(() => {});
       }
       return;
     }
@@ -27,7 +36,7 @@ function readAndSendToken(): void {
       // Only send if token changed (avoid spamming the background)
       if (accessToken !== lastSentToken) {
         lastSentToken = accessToken;
-        chrome.runtime.sendMessage({
+        runtime.sendMessage({
           type: 'AUTH_TOKEN',
           accessToken,
           refreshToken,
@@ -36,7 +45,7 @@ function readAndSendToken(): void {
       }
     } else if (lastSentToken !== null) {
       lastSentToken = null;
-      chrome.runtime.sendMessage({ type: 'AUTH_SIGNED_OUT' }).catch(() => {});
+      runtime.sendMessage({ type: 'AUTH_SIGNED_OUT' }).catch(() => {});
     }
   } catch {
     // localStorage read or sendMessage failed — ignore
@@ -48,7 +57,7 @@ function readAndSendTheme(): void {
     const theme = localStorage.getItem(THEME_STORAGE_KEY) || 'auto';
     if (theme !== lastSentTheme) {
       lastSentTheme = theme;
-      chrome.runtime.sendMessage({ type: 'THEME_CHANGED', themeMode: theme }).catch(() => {});
+      runtime.sendMessage({ type: 'THEME_CHANGED', themeMode: theme }).catch(() => {});
     }
   } catch {
     // ignore

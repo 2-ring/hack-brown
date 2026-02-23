@@ -2,6 +2,8 @@
 // Mirrors the frontend's ThemeProvider behavior: reads the user's theme_mode
 // preference ('light' | 'dark' | 'auto') and applies matching CSS variables.
 
+import { storage } from './compat';
+
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';
 
@@ -29,20 +31,20 @@ function resolve(mode: ThemeMode): ResolvedTheme {
 
 /**
  * Initialize theming for a popup or sidebar page.
- * - Reads the stored theme_mode from chrome.storage.local
+ * - Reads the stored theme_mode from storage.local
  * - Applies the resolved theme immediately
  * - Listens for storage changes (background updates theme_mode on auth)
  * - Listens for system theme changes when mode is 'auto'
  */
 export function initTheme(): void {
   // 1. Apply immediately from storage
-  chrome.storage.local.get(STORAGE_KEY, (result) => {
+  storage.local.get(STORAGE_KEY, (result) => {
     const mode: ThemeMode = result[STORAGE_KEY] || 'auto';
     applyTheme(resolve(mode));
   });
 
   // 2. Listen for theme_mode changes in storage (e.g. background fetched new prefs)
-  chrome.storage.local.onChanged.addListener((changes) => {
+  storage.local.onChanged.addListener((changes) => {
     if (changes[STORAGE_KEY]) {
       const mode: ThemeMode = changes[STORAGE_KEY].newValue || 'auto';
       applyTheme(resolve(mode));
@@ -52,7 +54,7 @@ export function initTheme(): void {
   // 3. Listen for OS-level theme changes (matters when mode === 'auto')
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   mq.addEventListener('change', () => {
-    chrome.storage.local.get(STORAGE_KEY, (result) => {
+    storage.local.get(STORAGE_KEY, (result) => {
       const mode: ThemeMode = result[STORAGE_KEY] || 'auto';
       if (mode === 'auto') {
         applyTheme(getSystemTheme());

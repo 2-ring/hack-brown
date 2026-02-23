@@ -4,10 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs && npm run copy",
-    "copy": "mkdir -p dist/popup dist/sidebar dist/icons dist/fonts && cp manifest.json dist/ && cp -r icons/* dist/icons/ && cp -r fonts/* dist/fonts/ && cp popup/popup.html dist/popup/ && cp popup/popup.css dist/popup/ && cp sidebar/sidebar.html dist/sidebar/ && cp sidebar/sidebar.css dist/sidebar/",
-    "watch": "node build.mjs --watch",
-    "clean": "rm -rf dist"
+    "build": "npm run build:chrome",
+    "build:chrome": "node build.mjs --browser=chrome",
+    "build:firefox": "node build.mjs --browser=firefox",
+    "build:safari": "node build.mjs --browser=safari",
+    "build:all": "npm run build:chrome && npm run build:firefox && npm run build:safari",
+    "watch": "node build.mjs --watch --browser=chrome",
+    "watch:firefox": "node build.mjs --watch --browser=firefox",
+    "clean": "rm -rf dist-chrome dist-firefox dist-safari"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

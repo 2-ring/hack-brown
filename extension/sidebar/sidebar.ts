@@ -1,5 +1,6 @@
 import type { SessionRecord, CalendarEvent } from '../types';
 import { initTheme } from '../theme';
+import { api, storage } from '../compat';
 
 const DROPCAL_URL = 'https://dropcal.ai';
 
@@ -186,7 +187,7 @@ function renderEvents(events: CalendarEvent[]): void {
       // Click → open session on dropcal.ai
       card.addEventListener('click', () => {
         if (currentSessionId) {
-          chrome.runtime.sendMessage({
+          api.runtime.sendMessage({
             type: 'OPEN_SESSION',
             sessionId: currentSessionId,
           });
@@ -220,7 +221,7 @@ function loadSession(sessionId: string): void {
   showState('loading');
 
   // Find session in history
-  chrome.storage.local.get('sessionHistory', (result) => {
+  storage.local.get('sessionHistory', (result) => {
     const history = result.sessionHistory as { sessions: SessionRecord[] } | undefined;
     const session = history?.sessions.find((s) => s.sessionId === sessionId);
 
@@ -261,7 +262,7 @@ btnBack.addEventListener('click', () => {
 
 btnOpenDropcal.addEventListener('click', () => {
   if (currentSessionId) {
-    chrome.runtime.sendMessage({
+    api.runtime.sendMessage({
       type: 'OPEN_SESSION',
       sessionId: currentSessionId,
     });
@@ -270,7 +271,7 @@ btnOpenDropcal.addEventListener('click', () => {
 
 // ===== Live Updates =====
 
-chrome.storage.local.onChanged.addListener((changes) => {
+storage.local.onChanged.addListener((changes) => {
   if (changes.sessionHistory && currentSessionId) {
     const history = changes.sessionHistory.newValue as { sessions: SessionRecord[] } | undefined;
     const session = history?.sessions.find((s) => s.sessionId === currentSessionId);
@@ -294,17 +295,25 @@ chrome.storage.local.onChanged.addListener((changes) => {
 initTheme();
 
 // Read which session to display from session storage
-chrome.storage.session.get('sidebarSessionId', (result) => {
-  const sessionId = result.sidebarSessionId as string | undefined;
-  if (sessionId) {
-    loadSession(sessionId);
-  } else {
-    showState('empty');
-  }
-});
+// Also support ?session= query param (popup window fallback on Safari)
+const urlParams = new URLSearchParams(window.location.search);
+const querySessionId = urlParams.get('session');
+
+if (querySessionId) {
+  loadSession(querySessionId);
+} else {
+  storage.session.get('sidebarSessionId', (result) => {
+    const sessionId = result.sidebarSessionId as string | undefined;
+    if (sessionId) {
+      loadSession(sessionId);
+    } else {
+      showState('empty');
+    }
+  });
+}
 
 // Also listen for session changes (if popup opens a different session)
-chrome.storage.session.onChanged.addListener((changes) => {
+storage.session.onChanged.addListener((changes) => {
   if (changes.sidebarSessionId) {
     const newSessionId = changes.sidebarSessionId.newValue as string | undefined;
     if (newSessionId && newSessionId !== currentSessionId) {

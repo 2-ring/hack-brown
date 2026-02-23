@@ -12,23 +12,41 @@ import {
   setPrimaryCalendarProvider,
   disconnectCalendarProvider,
 } from './api';
+import {
+  api,
+  storage,
+  clearSessionFallback,
+  notifications,
+  action,
+  panel,
+  onPollTick,
+  startPolling,
+  stopPolling,
+} from './compat';
 
-const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 5 * 60 * 1000;
 const MAX_HISTORY_SESSIONS = 10;
 const CONTEXT_MENU_ID = 'send-to-dropcal';
 const DROPCAL_URL = 'https://dropcal.ai';
 const FEEDBACK_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
+// Clear emulated session storage on startup (no-ops if real session storage exists)
+clearSessionFallback();
+
 // ===== Auth State Management =====
 
 async function getAuth(): Promise<AuthState | null> {
-  const result = await chrome.storage.local.get('auth');
-  return result.auth || null;
+  return new Promise((resolve) => {
+    storage.local.get('auth', (result) => {
+      resolve(result.auth || null);
+    });
+  });
 }
 
 async function setAuth(auth: AuthState): Promise<void> {
-  await chrome.storage.local.set({ auth });
+  await new Promise<void>((resolve) => {
+    storage.local.set({ auth }, resolve);
+  });
   setAuthToken(auth.accessToken);
   fetchAndStoreTheme();
 }
@@ -37,14 +55,16 @@ async function fetchAndStoreTheme(): Promise<void> {
   try {
     const prefs = await getUserPreferences();
     const themeMode = prefs.theme_mode || 'auto';
-    await chrome.storage.local.set({ themeMode });
+    storage.local.set({ themeMode });
   } catch {
     // If preferences fetch fails (e.g. token expired), default to auto
   }
 }
 
 async function clearAuth(): Promise<void> {
-  await chrome.storage.local.remove(['auth', 'themeMode']);
+  await new Promise<void>((resolve) => {
+    storage.local.remove(['auth', 'themeMode'], resolve);
+  });
   setAuthToken(null);
 }
 
@@ -65,13 +85,18 @@ async function ensureAuth(): Promise<boolean> {
 // ===== Session History Management =====
 
 async function getHistory(): Promise<SessionHistory> {
-  const result = await chrome.storage.local.get('sessionHistory');
-  return result.sessionHistory || { sessions: [] };
+  return new Promise((resolve) => {
+    storage.local.get('sessionHistory', (result) => {
+      resolve(result.sessionHistory || { sessions: [] });
+    });
+  });
 }
 
 async function saveHistory(history: SessionHistory): Promise<void> {
   history.sessions = history.sessions.slice(0, MAX_HISTORY_SESSIONS);
-  await chrome.storage.local.set({ sessionHistory: history });
+  await new Promise<void>((resolve) => {
+    storage.local.set({ sessionHistory: history }, resolve);
+  });
   syncBadge();
 }
 
@@ -98,12 +123,17 @@ async function updateSessionRecord(
 // Tracks session IDs that need the user's attention (completion order).
 
 async function getNotificationQueue(): Promise<string[]> {
-  const result = await chrome.storage.local.get('notificationQueue');
-  return result.notificationQueue || [];
+  return new Promise((resolve) => {
+    storage.local.get('notificationQueue', (result) => {
+      resolve(result.notificationQueue || []);
+    });
+  });
 }
 
 async function saveNotificationQueue(queue: string[]): Promise<void> {
-  await chrome.storage.local.set({ notificationQueue: queue });
+  await new Promise<void>((resolve) => {
+    storage.local.set({ notificationQueue: queue }, resolve);
+  });
   syncBadge();
 }
 
@@ -122,8 +152,8 @@ async function removeNotification(sessionId: string): Promise<void> {
 
 // ===== Context Menu Setup =====
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
+api.runtime.onInstalled.addListener(() => {
+  api.contextMenus.create({
     id: CONTEXT_MENU_ID,
     title: 'Send to DropCal',
     contexts: ['selection', 'image'],
@@ -134,28 +164,34 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 async function migratePhase1Job(): Promise<void> {
-  const result = await chrome.storage.session.get('activeJob');
-  const job = result.activeJob as ActiveJob | undefined;
-  if (job && job.sessionId && job.status === 'processed') {
-    const record: SessionRecord = {
-      sessionId: job.sessionId,
-      status: 'processed',
-      title: job.sessionTitle || null,
-      eventCount: job.eventCount,
-      addedToCalendar: false,
-      eventSummaries: (job.events || []).slice(0, 3).map((e) => e.summary),
-      events: job.events || [],
-      createdAt: job.createdAt,
-      inputType: 'text',
-    };
-    await addSessionRecord(record);
-    await chrome.storage.session.remove('activeJob');
-  }
+  return new Promise((resolve) => {
+    storage.session.get('activeJob', (result) => {
+      const job = result.activeJob as ActiveJob | undefined;
+      if (job && job.sessionId && job.status === 'processed') {
+        const record: SessionRecord = {
+          sessionId: job.sessionId,
+          status: 'processed',
+          title: job.sessionTitle || null,
+          eventCount: job.eventCount,
+          addedToCalendar: false,
+          eventSummaries: (job.events || []).slice(0, 3).map((e) => e.summary),
+          events: job.events || [],
+          createdAt: job.createdAt,
+          inputType: 'text',
+        };
+        addSessionRecord(record).then(() => {
+          storage.session.remove('activeJob', () => resolve());
+        });
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 // ===== Context Menu Click Handler =====
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+api.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== CONTEXT_MENU_ID) return;
 
   const hasAuth = await ensureAuth();
@@ -190,7 +226,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     };
     await addSessionRecord(record);
 
-    pollSession(session.id);
+    startPolling(session.id);
   } catch (error) {
     console.error('DropCal: Failed to create session', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -211,73 +247,81 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 
 // ===== Polling Logic =====
 
-async function pollSession(sessionId: string): Promise<void> {
-  const startTime = Date.now();
+// Track poll start times for timeout detection
+const pollStartTimes = new Map<string, number>();
 
-  const poll = async () => {
-    if (Date.now() - startTime > MAX_POLL_DURATION_MS) {
+onPollTick(async (sessionId) => {
+  if (!pollStartTimes.has(sessionId)) {
+    pollStartTimes.set(sessionId, Date.now());
+  }
+
+  const startTime = pollStartTimes.get(sessionId)!;
+
+  if (Date.now() - startTime > MAX_POLL_DURATION_MS) {
+    stopPolling(sessionId);
+    pollStartTimes.delete(sessionId);
+    await updateSessionRecord(sessionId, {
+      status: 'error',
+      errorMessage: 'Processing timed out. Please try again.',
+    });
+    await pushNotification(sessionId);
+    return;
+  }
+
+  try {
+    const session = await getSession(sessionId);
+
+    if (session.status === 'processed') {
+      stopPolling(sessionId);
+      pollStartTimes.delete(sessionId);
+
+      const { events, count } = await getSessionEvents(sessionId);
+
+      await updateSessionRecord(sessionId, {
+        status: 'processed',
+        title: session.title || null,
+        icon: session.icon || null,
+        eventCount: count,
+        addedToCalendar: session.added_to_calendar,
+        eventSummaries: events.slice(0, 3).map((e) => e.summary),
+        events,
+      });
+      await pushNotification(sessionId);
+
+      notifications.create(`dropcal-${sessionId}`, {
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: 'DropCal',
+        message: count === 1 ? '1 event scheduled' : `${count} events scheduled`,
+      });
+
+      action.tryOpenPopup();
+      return;
+    }
+
+    if (session.status === 'error') {
+      stopPolling(sessionId);
+      pollStartTimes.delete(sessionId);
       await updateSessionRecord(sessionId, {
         status: 'error',
-        errorMessage: 'Processing timed out. Please try again.',
+        errorMessage: session.error_message || 'Processing failed',
       });
       await pushNotification(sessionId);
       return;
     }
 
-    try {
-      const session = await getSession(sessionId);
-
-      if (session.status === 'processed') {
-        const { events, count } = await getSessionEvents(sessionId);
-
-        await updateSessionRecord(sessionId, {
-          status: 'processed',
-          title: session.title || null,
-          icon: session.icon || null,
-          eventCount: count,
-          addedToCalendar: session.added_to_calendar,
-          eventSummaries: events.slice(0, 3).map((e) => e.summary),
-          events,
-        });
-        await pushNotification(sessionId);
-
-        chrome.notifications.create(`dropcal-${sessionId}`, {
-          type: 'basic',
-          iconUrl: 'icons/icon128.png',
-          title: 'DropCal',
-          message: count === 1 ? '1 event scheduled' : `${count} events scheduled`,
-        });
-
-        chrome.action.openPopup().catch(() => {});
-        return;
-      }
-
-      if (session.status === 'error') {
-        await updateSessionRecord(sessionId, {
-          status: 'error',
-          errorMessage: session.error_message || 'Processing failed',
-        });
-        await pushNotification(sessionId);
-        return;
-      }
-
-      // Update title and icon mid-processing if available
-      const midUpdates: Partial<import('./types').SessionRecord> = {};
-      if (session.title) midUpdates.title = session.title;
-      if (session.icon) midUpdates.icon = session.icon;
-      if (Object.keys(midUpdates).length > 0) {
-        await updateSessionRecord(sessionId, midUpdates);
-      }
-
-      setTimeout(poll, POLL_INTERVAL_MS);
-    } catch (error) {
-      console.error('DropCal: Poll error', error);
-      setTimeout(poll, POLL_INTERVAL_MS);
+    // Update title and icon mid-processing if available
+    const midUpdates: Partial<SessionRecord> = {};
+    if (session.title) midUpdates.title = session.title;
+    if (session.icon) midUpdates.icon = session.icon;
+    if (Object.keys(midUpdates).length > 0) {
+      await updateSessionRecord(sessionId, midUpdates);
     }
-  };
-
-  poll();
-}
+  } catch (error) {
+    console.error('DropCal: Poll error', error);
+    // Don't stop — let the next tick retry
+  }
+});
 
 // ===== Badge Helpers =====
 
@@ -287,11 +331,11 @@ function setBadgeProcessing(): void {
   if (badgeSpinnerInterval !== null) return; // already spinning
   const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   let i = 0;
-  chrome.action.setBadgeBackgroundColor({ color: '#1170C5' });
-  chrome.action.setBadgeText({ text: frames[0] });
+  action.setBadgeBackgroundColor({ color: '#1170C5' });
+  action.setBadgeText({ text: frames[0] });
   badgeSpinnerInterval = setInterval(() => {
     i = (i + 1) % frames.length;
-    chrome.action.setBadgeText({ text: frames[i] });
+    action.setBadgeText({ text: frames[i] });
   }, 350);
 }
 
@@ -304,19 +348,19 @@ function clearBadgeSpinner(): void {
 
 function setBadgeCount(count: number): void {
   clearBadgeSpinner();
-  chrome.action.setBadgeText({ text: String(count) });
-  chrome.action.setBadgeBackgroundColor({ color: '#2e7d32' });
+  action.setBadgeText({ text: String(count) });
+  action.setBadgeBackgroundColor({ color: '#2e7d32' });
 }
 
 function setBadgeError(): void {
   clearBadgeSpinner();
-  chrome.action.setBadgeText({ text: '!' });
-  chrome.action.setBadgeBackgroundColor({ color: '#c41e3a' });
+  action.setBadgeText({ text: '!' });
+  action.setBadgeBackgroundColor({ color: '#c41e3a' });
 }
 
 function clearBadge(): void {
   clearBadgeSpinner();
-  chrome.action.setBadgeText({ text: '' });
+  action.setBadgeText({ text: '' });
 }
 
 // Derives badge state from notification queue + session history.
@@ -360,7 +404,7 @@ async function syncBadge(): Promise<void> {
 
 // ===== Message Handler =====
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Content script sends auth token from dropcal.ai
   if (message.type === 'AUTH_TOKEN') {
     const { accessToken, refreshToken, expiresAt } = message;
@@ -373,7 +417,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Content script sends theme mode changes from dropcal.ai
   if (message.type === 'THEME_CHANGED') {
     const themeMode = message.themeMode || 'auto';
-    chrome.storage.local.set({ themeMode });
+    storage.local.set({ themeMode });
     sendResponse({ ok: true });
     return false;
   }
@@ -386,7 +430,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Popup queries
   if (message.type === 'GET_STATUS') {
     Promise.all([
-      chrome.storage.session.get('activeJob'),
+      new Promise<Record<string, any>>((resolve) => {
+        storage.session.get('activeJob', resolve);
+      }),
       getAuth(),
     ]).then(([jobResult, auth]) => {
       sendResponse({ job: jobResult.activeJob || null, isAuthenticated: !!auth });
@@ -403,7 +449,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === 'SIGN_IN') {
     const heading = encodeURIComponent('Sign in to start creating events.');
-    chrome.tabs.create({ url: `${DROPCAL_URL}/?auth=${heading}` });
+    api.tabs.create({ url: `${DROPCAL_URL}/?auth=${heading}` });
     sendResponse({ ok: true });
     return false;
   }
@@ -411,13 +457,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'OPEN_SESSION') {
     const { sessionId } = message;
     const url = `${DROPCAL_URL}/s/${sessionId}`;
-    chrome.tabs.create({ url });
+    api.tabs.create({ url });
     sendResponse({ ok: true });
     return false;
   }
 
   if (message.type === 'CLEAR_JOB') {
-    chrome.storage.session.remove('activeJob');
+    storage.session.remove('activeJob');
     clearBadge();
     sendResponse({ ok: true });
     return false;
@@ -445,7 +491,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           inputType: 'text',
         };
         await addSessionRecord(record);
-        pollSession(session.id);
+        startPolling(session.id);
         sendResponse({ ok: true });
       } catch (error) {
         console.error('DropCal: Submit text failed', error);
@@ -472,7 +518,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       inputType: inputType || 'file',
     };
     addSessionRecord(record).then(() => {
-      pollSession(sessionId);
+      startPolling(sessionId);
       sendResponse({ ok: true });
     });
     return true;
@@ -485,16 +531,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  // Phase 2 — sidebar (fallback — popup handles this directly now)
+  // Sidebar
   if (message.type === 'OPEN_SIDEBAR') {
     const { sessionId } = message;
-    chrome.storage.session.set({ sidebarSessionId: sessionId });
-    chrome.windows.getLastFocused().then((window) => {
+    api.windows.getLastFocused().then((window) => {
       if (window.id) {
-        (chrome.sidePanel as any).open({ windowId: window.id }).catch(() => {});
+        panel.open({ windowId: window.id, sessionId }).catch(() => {});
       }
     });
-
     sendResponse({ ok: true });
     return false;
   }
@@ -528,7 +572,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         const result = await updateUserPreferences(message.preferences);
         // If theme_mode was updated, also update local storage for immediate theme change
         if (message.preferences.theme_mode) {
-          await chrome.storage.local.set({ themeMode: message.preferences.theme_mode });
+          storage.local.set({ themeMode: message.preferences.theme_mode });
         }
         sendResponse({ ok: true, preferences: result.preferences });
       } catch (error) {
@@ -618,12 +662,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 // ===== Notification Click =====
 
-chrome.notifications.onClicked.addListener(async (notificationId) => {
+notifications.onClicked.addListener(async (notificationId: string) => {
   if (!notificationId.startsWith('dropcal-')) return;
   const sessionId = notificationId.replace('dropcal-', '');
-  await chrome.storage.session.set({ sidebarSessionId: sessionId });
+  storage.session.set({ sidebarSessionId: sessionId });
   // Notification click is a user gesture — open session in DropCal instead
   // (sidePanel.open from service worker without user gesture context is unreliable)
   const url = `${DROPCAL_URL}/s/${sessionId}`;
-  chrome.tabs.create({ url });
+  api.tabs.create({ url });
 });

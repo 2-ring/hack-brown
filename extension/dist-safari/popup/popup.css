@@ -76,10 +76,29 @@ body {
   overflow: hidden;
 }
 
+body.view-locked {
+  height: 600px;
+}
+
 #root {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+body.view-locked #root {
+  height: 100%;
+}
+
+body.view-locked #view-input {
+  flex: 1;
+  min-height: 0;
+}
+
+body.view-locked .results-section {
+  flex: 1;
+  min-height: 0;
 }
 
 .hidden {
@@ -516,7 +535,6 @@ body {
 .results-section {
   margin-top: 16px;
   overflow-y: auto;
-  max-height: 340px;
 }
 
 .results-list {
