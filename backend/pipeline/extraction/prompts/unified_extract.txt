@@ -29,6 +29,7 @@ Key behaviors:
 - **Recurring events**: start_date = first occurrence. end_date = when they stop. Use excluded_dates for skipped dates.
 - **Don't hallucinate**: If it's not in the input, leave it null.
 - **Zero events**: The user submitted this input expecting calendar events, so investigate anything that could possibly be interpreted as an event before returning an empty list.
+- **Output format**: Omit any field that would be null — do not include it. Only output fields with actual values. Required fields per event: summary, is_all_day.
 
 Examples:
 

@@ -202,16 +202,9 @@ class CalendarEvent(BaseModel):
     location: Optional[str] = Field(default=None, description="Physical location (standardized)")
     description: Optional[str] = Field(default=None, description="Event description/notes")
     recurrence: Optional[List[str]] = Field(default=None, description="RRULE strings for recurring events")
-    attendees: Optional[List[str]] = Field(default=None, description="Attendee email addresses")
-
-    # Metadata from extraction
-    meeting_url: Optional[str] = Field(default=None, description="Virtual meeting link (Zoom, Teams, etc.)")
-    people: Optional[List[str]] = Field(default=None, description="People mentioned by name")
-    instructions: Optional[str] = Field(default=None, description="User's explicit requests: 'remind me 1 hour before', 'high priority'")
 
     # Set by EXTRACT (if explicit) or PERSONALIZE stage
     calendar: Optional[str] = Field(default=None, description="Target calendar ID (provider calendar ID). None = primary calendar.")
-    colorId: Optional[str] = Field(default=None, description="Calendar color ID. Set by PERSONALIZE stage.")
 
     @field_validator('summary')
     @classmethod

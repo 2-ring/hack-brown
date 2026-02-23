@@ -28,27 +28,6 @@ import time as _time
 
 logger = logging.getLogger(__name__)
 
-# LangChain message type → OpenAI-style role
-_ROLE_MAP = {"system": "system", "human": "user", "ai": "assistant"}
-
-
-def _serialize_messages(messages):
-    """Serialize LangChain messages to role/content dicts for PostHog spans."""
-    return [
-        {"role": _ROLE_MAP.get(m.type, m.type), "content": m.content}
-        for m in messages
-    ]
-
-
-def _serialize_raw_output(raw_msg):
-    """Extract raw model output from a LangChain AIMessage for PostHog spans."""
-    if raw_msg is None:
-        return None
-    output = {"role": "assistant", "content": raw_msg.content}
-    if hasattr(raw_msg, 'tool_calls') and raw_msg.tool_calls:
-        output["tool_calls"] = raw_msg.tool_calls
-    return output
-
 
 class SessionProcessor:
     """Processes sessions through the EXTRACT → RESOLVE → PERSONALIZE pipeline."""
@@ -279,8 +258,6 @@ class SessionProcessor:
                 result['calendarColor'] = primary_calendar['color']
         if cal_event.recurrence:
             result['recurrence'] = cal_event.recurrence
-        if cal_event.attendees:
-            result['attendees'] = cal_event.attendees
         return result
 
     def _load_personalization_context(self, user_id: str, is_guest: bool):
@@ -413,13 +390,10 @@ class SessionProcessor:
 
             # ── EXTRACT: single LLM call ────────────────────────────────
             t_extract = _time.time()
-            with stage_span("extraction") as span:
-                extraction_result, extract_messages, extract_raw = self.extractor.execute(
-                    text, input_type=input_type, metadata=metadata
-                )
-                extracted_events = extraction_result.events
-                span.input = _serialize_messages(extract_messages)
-                span.output = _serialize_raw_output(extract_raw)
+            extraction_result, _, _ = self.extractor.execute(
+                text, input_type=input_type, metadata=metadata
+            )
+            extracted_events = extraction_result.events
             logger.info(f"[timing] extract: {_time.time() - t_extract:.2f}s")
 
             # Update session title from extraction result
@@ -498,17 +472,9 @@ class SessionProcessor:
                 flush_posthog()
                 return
 
-            # Stream resolved events to frontend immediately
+            # ── PERSONALIZE: single batched call (or skip) ──────────────
             calendars_lookup = context_result.get('calendars_lookup', {})
             primary_calendar = context_result.get('primary_calendar')
-            stream = get_stream(session_id)
-            if stream:
-                for cal_event in calendar_events:
-                    stream.push_event(self._calendar_event_to_frontend(
-                        cal_event, calendars_lookup, primary_calendar
-                    ))
-
-            # ── PERSONALIZE: single batched call (or skip) ──────────────
             patterns = context_result.get('patterns')
             historical_events = context_result.get('historical_events')
             use_personalization = patterns is not None
@@ -526,26 +492,24 @@ class SessionProcessor:
 
                 input_summary = getattr(extraction_result, 'input_summary', '') or ''
 
-                with stage_span("personalization") as span:
-                    calendar_events, _, pers_messages, pers_raw = self.personalize_agent.execute_batch(
-                        events=calendar_events,
-                        discovered_patterns=patterns,
-                        historical_events=historical_events,
-                        user_id=user_id,
-                        input_summary=input_summary,
-                    )
-                    span.input = _serialize_messages(pers_messages)
-                    span.output = _serialize_raw_output(pers_raw)
+                calendar_events, _, _, _ = self.personalize_agent.execute_batch(
+                    events=calendar_events,
+                    discovered_patterns=patterns,
+                    historical_events=historical_events,
+                    user_id=user_id,
+                    input_summary=input_summary,
+                )
 
                 logger.info(f"[timing] personalize: {_time.time() - t_personalize:.2f}s")
 
-                # Stream personalized versions (replace resolved events)
-                if stream:
-                    stream.clear_events()
-                    for cal_event in calendar_events:
-                        stream.push_event(self._calendar_event_to_frontend(
-                            cal_event, calendars_lookup, primary_calendar
-                        ))
+            # Stream events to frontend (after personalization so titles,
+            # calendar assignments, and formatting are final)
+            stream = get_stream(session_id)
+            if stream:
+                for cal_event in calendar_events:
+                    stream.push_event(self._calendar_event_to_frontend(
+                        cal_event, calendars_lookup, primary_calendar
+                    ))
 
             # ── SAVE: write events to DB (batch insert) ─────────────────
             # Frontend already has events via SSE. Save to DB, signal
@@ -563,12 +527,10 @@ class SessionProcessor:
                     'description': calendar_event.description,
                     'location': calendar_event.location,
                     'calendar_name': calendar_event.calendar,
-                    'color_id': calendar_event.colorId,
                     'original_input': '',
                     'extracted_facts': calendar_event.model_dump(),
                     'system_suggestion': calendar_event.model_dump(),
                     'recurrence': calendar_event.recurrence,
-                    'attendees': calendar_event.attendees,
                 })
 
             with stage_span("save"):

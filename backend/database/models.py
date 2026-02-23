@@ -1190,13 +1190,11 @@ class Event:
         location: Optional[str] = None,
         timezone: Optional[str] = None,
         calendar_name: Optional[str] = None,
-        color_id: Optional[str] = None,
         original_input: Optional[str] = None,
         extracted_facts: Optional[Dict] = None,
         system_suggestion: Optional[Dict] = None,
         event_embedding: Optional[List[float]] = None,
         recurrence: Optional[List] = None,
-        attendees: Optional[List] = None
     ) -> Dict[str, Any]:
         """
         Create a new event.
@@ -1217,7 +1215,6 @@ class Event:
             location: Event location
             timezone: IANA timezone
             calendar_name: Provider calendar ID (DB column named 'calendar_name' for legacy reasons)
-            color_id: Color ID
             original_input: Original raw input (for dropcal events)
             extracted_facts: EXTRACT output (for dropcal events)
             system_suggestion: PERSONALIZE output (for dropcal events)
@@ -1257,8 +1254,6 @@ class Event:
             data["timezone"] = timezone
         if calendar_name:
             data["calendar_name"] = calendar_name
-        if color_id:
-            data["color_id"] = color_id
         if original_input:
             data["original_input"] = original_input
         if extracted_facts:
@@ -1269,8 +1264,6 @@ class Event:
             data["event_embedding"] = event_embedding
         if recurrence:
             data["recurrence"] = recurrence
-        if attendees:
-            data["attendees"] = attendees
 
         response = supabase.table("events").insert(data).execute()
         return response.data[0]

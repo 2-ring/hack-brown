@@ -21,7 +21,6 @@ export interface CalendarEvent {
   location?: string;
   description?: string;
   recurrence?: string[];
-  attendees?: string[];
   calendar?: string;
 }
 

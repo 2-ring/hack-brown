@@ -196,7 +196,6 @@ class CalendarService:
                     'location': 'Conference Room',
                     'description': 'Event description',
                     'recurrence': ['RRULE:FREQ=WEEKLY;BYDAY=MO'],
-                    'attendees': [{'email': 'person@example.com'}]
                 }
             calendar_id: Optional calendar ID. If None, uses 'primary'.
                         Can be 'primary' or actual calendar ID from get_calendar_list()

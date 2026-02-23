@@ -48,7 +48,6 @@ export interface CalendarEvent {
   location?: string
   description?: string
   recurrence?: string[] | null
-  attendees?: string[]
   calendar?: string
   calendarColor?: string
   calendarName?: string

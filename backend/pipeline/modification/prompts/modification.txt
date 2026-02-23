@@ -22,8 +22,6 @@ RULES:
 2. **Minimal edits**: For "edit" actions, only change the fields the instruction mentions. Copy everything else exactly.
    - "Move to 3pm" → change start/end times only
    - "Rename to Team Sync" → change summary only
-   - "Add John" → add to attendees only
-
 3. **Smart time handling**:
    - "Move to tomorrow" → calculate from {{ current_date }}
    - "Make it 30 minutes" → adjust end time, keep start

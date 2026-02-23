@@ -493,7 +493,6 @@ export async function editEvent(
     location?: string;
     description?: string;
     recurrence?: string[];
-    attendees?: string[];
     calendar?: string;
   },
   instruction: string
@@ -505,7 +504,6 @@ export async function editEvent(
     location?: string;
     description?: string;
     recurrence?: string[];
-    attendees?: string[];
     calendar?: string;
   };
 }> {
@@ -537,7 +535,6 @@ export async function refineEvents(
     location?: string;
     description?: string;
     recurrence?: string[];
-    attendees?: string[];
     calendar?: string;
   }>;
 }> {

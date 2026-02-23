@@ -163,14 +163,6 @@ def create_calendar_event():
         if calendar_value:
             calendar_id = resolve_calendar_to_id(calendar_value, calendar_service)
 
-        # Format attendees if provided (convert list of strings to list of dicts)
-        if 'attendees' in event_data and event_data['attendees']:
-            attendees_list = event_data['attendees']
-            if isinstance(attendees_list, list) and len(attendees_list) > 0:
-                # Convert strings to email dict format if needed
-                if isinstance(attendees_list[0], str):
-                    event_data['attendees'] = [{'email': email} for email in attendees_list]
-
         # Create event in Google Calendar with optional calendar_id
         created_event = calendar_service.create_event(event_data, calendar_id=calendar_id)
 

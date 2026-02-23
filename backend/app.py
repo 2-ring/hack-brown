@@ -454,11 +454,9 @@ def update_event(event_id):
             if 'date' in end:
                 updates['end_date'] = end['date']
 
-        # Recurrence and attendees stored as top-level columns
+        # Recurrence stored as top-level column
         if 'recurrence' in data:
             updates['recurrence'] = data['recurrence']  # list of RRULE strings or None
-        if 'attendees' in data:
-            updates['attendees'] = data['attendees']  # list of email strings or None
 
         if updates:
             updates['user_modified'] = True

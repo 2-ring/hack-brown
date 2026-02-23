@@ -454,14 +454,11 @@ function AppContent() {
             ))
           },
           onComplete: () => {
-            // 'complete' means events are persisted — refetch session to
-            // hydrate local events with DB IDs before dropping loading state.
             const fetchSession = user ? getSession(session.id) : getGuestSession(session.id)
             fetchSession
               .then(updated => {
+                // Merge DB event IDs into the SSE-delivered events
                 const eventIds = updated.event_ids || []
-                // Silently assign DB IDs to local events (same pipeline order).
-                // isProcessing is still true so EventsWorkspace syncs from this prop.
                 setCalendarEvents(prev => prev.map((event, i) => ({
                   ...event,
                   id: eventIds[i] || event.id,
@@ -479,8 +476,6 @@ function AppContent() {
               .finally(() => {
                 streamingSessionRef.current = null
                 setExpectedEventCount(null)
-                // Defer so the event ID update above commits while isLoading
-                // is still true — EventsWorkspace syncs IDs into editedEvents.
                 setTimeout(() => {
                   setIsProcessing(false)
                   resolve()
@@ -586,8 +581,6 @@ function AppContent() {
             ))
           },
           onComplete: () => {
-            // 'complete' means events are persisted — refetch session to
-            // hydrate local events with DB IDs before dropping loading state.
             const fetchSession = user ? getSession(session.id) : getGuestSession(session.id)
             fetchSession
               .then(updated => {

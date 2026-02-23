@@ -52,7 +52,12 @@
       "Bash(tail *)",
       "Bash(head *)",
       "Bash(sort *)",
-      "Bash(jq *)"
+      "Bash(jq *)",
+      "Bash(grep *)",
+
+      "Bash(lsof *)",
+      "Bash(kill *)",
+      "Bash(docker-compose *)"
     ],
     "deny": [
       "Bash(rm -rf *)",

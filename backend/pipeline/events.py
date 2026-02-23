@@ -32,12 +32,10 @@ class EventService:
         location: Optional[str] = None,
         timezone: Optional[str] = None,
         calendar_name: Optional[str] = None,
-        color_id: Optional[str] = None,
         original_input: Optional[str] = None,
         extracted_facts: Optional[Dict] = None,
         system_suggestion: Optional[Dict] = None,
         recurrence: Optional[list] = None,
-        attendees: Optional[list] = None
     ) -> Dict[str, Any]:
         """
         Create a DropCal event (draft or confirmed).
@@ -55,7 +53,6 @@ class EventService:
             location: Event location
             timezone: IANA timezone
             calendar_name: Provider calendar ID (stored in DB column 'calendar_name')
-            color_id: Color ID
             original_input: Original raw text input
             extracted_facts: EXTRACT output
             system_suggestion: PERSONALIZE output
@@ -86,13 +83,11 @@ class EventService:
             location=location,
             timezone=timezone,
             calendar_name=calendar_name,
-            color_id=color_id,
             original_input=original_input,
             extracted_facts=extracted_facts,
             system_suggestion=system_suggestion,
             event_embedding=event_embedding,
             recurrence=recurrence,
-            attendees=attendees
         )
 
         # Link to session
@@ -135,8 +130,8 @@ class EventService:
             for key in (
                 'summary', 'start_time', 'end_time', 'start_date', 'end_date',
                 'is_all_day', 'description', 'location', 'calendar_name',
-                'color_id', 'original_input', 'extracted_facts',
-                'system_suggestion', 'recurrence', 'attendees',
+                'original_input', 'extracted_facts',
+                'system_suggestion', 'recurrence',
             ):
                 if data.get(key) is not None:
                     row[key] = data[key]
@@ -193,7 +188,6 @@ class EventService:
         location: Optional[str] = None,
         timezone: Optional[str] = None,
         calendar_name: Optional[str] = None,
-        color_id: Optional[str] = None,
         compute_embedding_now: bool = False
     ) -> Dict[str, Any]:
         """
@@ -212,7 +206,6 @@ class EventService:
             is_all_day: All-day flag
             description, location, timezone: Event details
             calendar_name: Provider calendar ID (stored in DB column 'calendar_name')
-            color_id: Color ID
             compute_embedding_now: Whether to compute embedding synchronously (default: False)
 
         Returns:
@@ -242,7 +235,6 @@ class EventService:
             location=location,
             timezone=timezone,
             calendar_name=calendar_name,
-            color_id=color_id,
             event_embedding=event_embedding
         )
 
@@ -561,15 +553,12 @@ class EventService:
                 result['calendarName'] = primary_calendar['name']
                 result['calendarColor'] = primary_calendar['color']
 
-        # Recurrence and attendees: read from top-level columns first,
+        # Recurrence: read from top-level column first,
         # fall back to system_suggestion for events created before migration
         system_suggestion = event_row.get('system_suggestion') or {}
         recurrence = event_row.get('recurrence') or system_suggestion.get('recurrence')
-        attendees = event_row.get('attendees') or system_suggestion.get('attendees')
         if recurrence:
             result['recurrence'] = recurrence
-        if attendees:
-            result['attendees'] = attendees
 
         return result
 

@@ -371,7 +371,7 @@ class PatternDiscoveryService:
             Dict with description, event_types, examples, never_contains
         """
 
-        # Prepare event summaries (exclude colorId - not relevant for patterns)
+        # Prepare event summaries for pattern discovery
         event_summaries = []
         for e in events[:PatternDiscoveryConfig.LLM_MAX_EVENTS]:
             event_summaries.append({

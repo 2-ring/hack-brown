@@ -429,7 +429,6 @@ class SmartSyncService:
             'is_all_day': 'date' in event.get('start', {}),
             'timezone': event.get('start', {}).get('timeZone'),
             'calendar_name': calendar_id,
-            'color_id': event.get('colorId')
         }
 
         # Create or update

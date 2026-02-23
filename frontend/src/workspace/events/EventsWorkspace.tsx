@@ -509,7 +509,7 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   return (
     <div className="event-confirmation">
       <TopBar
-        eventCount={events.filter(e => e !== null).length}
+        eventCount={isLoading && expectedEventCount ? expectedEventCount : events.filter(e => e !== null).length}
         isScrollable={isScrollable}
         inputType={inputType}
         inputContent={inputContent}

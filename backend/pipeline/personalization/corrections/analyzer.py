@@ -81,16 +81,7 @@ class CorrectionAnalyzer:
             changes['calendar_change'] = calendar_change
             fields_changed.append('calendar')
 
-        # 5. Color comparison
-        color_change = self._analyze_color_change(
-            system_event.get('colorId'),
-            user_event.get('colorId')
-        )
-        if color_change:
-            changes['color_change'] = color_change
-            fields_changed.append('color')
-
-        # 6. Location comparison
+        # 5. Location comparison
         location_change = self._analyze_location_change(
             system_event.get('location'),
             user_event.get('location')
@@ -336,21 +327,6 @@ class CorrectionAnalyzer:
             'from': system_calendar or 'primary',
             'to': user_calendar or 'primary',
             'change_type': 'category_mismatch'
-        }
-
-    def _analyze_color_change(
-        self,
-        system_color: Optional[str],
-        user_color: Optional[str]
-    ) -> Optional[Dict]:
-        """Analyze color assignment changes"""
-        if system_color == user_color:
-            return None
-
-        return {
-            'from': system_color or 'default',
-            'to': user_color or 'default',
-            'change_type': 'preference'
         }
 
     def _analyze_location_change(
