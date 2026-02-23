@@ -402,6 +402,42 @@ def edit_event():
         return jsonify({'error': f'Event modification failed: {str(e)}'}), 500
 
 
+@app.route('/sessions/<session_id>/modifications', methods=['POST'])
+@require_auth
+def apply_modifications(session_id):
+    """
+    Apply a batch of event modifications (edit/delete/create) to a session.
+
+    Accepts the actions array from the modification agent, with indices
+    resolved to event_ids by the frontend.
+
+    Body: { actions: [{ event_id?, action, event? }, ...] }
+    Returns: { success, events: [...updated CalendarEvent list...] }
+    """
+    try:
+        user_id = request.user_id
+        data = request.get_json()
+        actions = data.get('actions', [])
+
+        if not actions:
+            return jsonify({'error': 'No actions provided'}), 400
+
+        updated_events = EventService.apply_modifications(
+            user_id=user_id,
+            session_id=session_id,
+            actions=actions,
+        )
+
+        return jsonify({
+            'success': True,
+            'events': updated_events,
+        })
+
+    except Exception as e:
+        logger.error(f"Apply modifications failed: {e}\n{traceback.format_exc()}")
+        return jsonify({'error': f'Failed to apply modifications: {str(e)}'}), 500
+
+
 @app.route('/events/<event_id>', methods=['PATCH'])
 @require_auth
 def update_event(event_id):

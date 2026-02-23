@@ -14,7 +14,7 @@ import {
   listContainerVariants,
   eventItemVariants
 } from './animations'
-import { updateEvent, deleteEvent, pushEvents, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
+import { updateEvent, deleteEvent, applyModifications, pushEvents, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
 import type { SyncCalendar } from '../../api/sync'
 import { useAuth } from '../../auth/AuthContext'
@@ -233,18 +233,23 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
         const result = await response.json()
         const actions: { index: number; action: 'edit' | 'delete' | 'create'; edited_event?: CalendarEvent }[] = result.actions ?? []
 
-        // Build updated events list by applying actions
+        // Build optimistic UI update + batch persistence actions
         const deleteIndices = new Set<number>()
         const editMap = new Map<number, CalendarEvent>()
         const newEvents: CalendarEvent[] = []
+        const batchActions: { event_id?: string; action: 'edit' | 'delete' | 'create'; event?: CalendarEvent }[] = []
 
         for (const a of actions) {
           if (a.action === 'delete') {
             deleteIndices.add(a.index)
+            const original = validEvents[a.index]
+            if (original?.id) {
+              batchActions.push({ event_id: original.id, action: 'delete' })
+            }
           } else if (a.action === 'create' && a.edited_event) {
             newEvents.push({ ...a.edited_event, version: 1 })
+            batchActions.push({ action: 'create', event: a.edited_event })
           } else if (a.action === 'edit' && a.edited_event) {
-            // Carry over id/version/provider_syncs from original so persistence and sync badges work
             const original = validEvents[a.index]
             editMap.set(a.index, {
               ...a.edited_event,
@@ -252,66 +257,33 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
               provider_syncs: original?.provider_syncs,
               version: (original?.version ?? 1) + 1,
             })
+            if (original?.id) {
+              batchActions.push({ event_id: original.id, action: 'edit', event: a.edited_event })
+            }
           }
         }
 
-        // Phase 1: Apply deletes immediately, show skeleton for edited events
-        const affectedIds = new Set<string>()
-        for (const [i] of editMap) {
-          const id = validEvents[i]?.id
-          if (id) affectedIds.add(id)
-        }
+        // Optimistic UI update: apply changes immediately
+        let optimistic = validEvents.map((event, i) => {
+          if (deleteIndices.has(i)) return null
+          const edited = editMap.get(i)
+          return edited ?? event
+        }).filter((e): e is CalendarEvent => e !== null)
+        optimistic = [...optimistic, ...newEvents]
 
-        // Remove deleted events and append new events
-        const afterDeletes = validEvents.filter((_, i) => !deleteIndices.has(i))
-        const withCreates = [...afterDeletes, ...newEvents]
-        setEditedEvents(withCreates)
+        setEditedEvents(optimistic)
         setActiveLoading(null)
         setIsChatExpanded(false)
+        onEventsChanged?.(optimistic)
 
-        if (affectedIds.size > 0) {
-          setEditedEvents(prev => {
-            const updated = prev.map(event => {
-              if (!event?.id) return event
-              // Find the edited version by matching id
-              for (const [, edited] of editMap) {
-                if (edited.id === event.id) return edited
-              }
-              return event
+        // Persist all modifications in one batch call
+        if (sessionId && batchActions.length > 0) {
+          applyModifications(sessionId, batchActions)
+            .then(persistedEvents => {
+              setEditedEvents(persistedEvents)
+              onEventsChanged?.(persistedEvents)
             })
-            const valid = updated.filter((e): e is CalendarEvent => e !== null)
-            onEventsChanged?.(valid)
-            return updated
-          })
-        } else {
-          onEventsChanged?.(withCreates.filter((e): e is CalendarEvent => e !== null))
-        }
-
-        // Persist edits
-        for (const [i, edited] of editMap) {
-          const original = validEvents[i]
-          if (original?.id) {
-            updateEvent(original.id, edited)
-              .then(persisted => {
-                setEditedEvents(prev => {
-                  const updated = prev.map(e => e?.id === persisted.id ? persisted : e)
-                  const valid = updated.filter((e): e is CalendarEvent => e !== null)
-                  onEventsChanged?.(valid)
-                  return updated
-                })
-              })
-              .catch(err => console.error('Failed to persist AI edit:', err))
-          }
-        }
-
-        // Persist deletes
-        for (const i of deleteIndices) {
-          const original = validEvents[i]
-          if (original?.id) {
-            deleteEvent(original.id)
-              .then(res => onEventDeleted?.(original.id!, res.session_id, res.remaining_event_count))
-              .catch(err => console.error('Failed to persist AI delete:', err))
-          }
+            .catch(err => console.error('Failed to persist modifications:', err))
         }
 
         addNotification(createSuccessNotification(result.message || 'Done, changes applied!'))

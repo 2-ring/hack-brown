@@ -19,6 +19,131 @@ class EventService:
     """Service for managing events in the unified events table."""
 
     @staticmethod
+    def calendar_event_to_db_params(cal_event: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Map a frontend/pipeline CalendarEvent dict to flat DB column params.
+
+        Accepts the Google Calendar API shape ({start: {dateTime, timeZone}, ...})
+        and returns the flat keys used by create_dropcal_event / Event.update.
+        """
+        params: Dict[str, Any] = {}
+
+        params['summary'] = cal_event.get('summary', '')
+
+        start = cal_event.get('start', {})
+        if start.get('dateTime'):
+            params['start_time'] = start['dateTime']
+        if start.get('date'):
+            params['start_date'] = start['date']
+            params['is_all_day'] = True
+        if start.get('timeZone'):
+            params['timezone'] = start['timeZone']
+
+        end = cal_event.get('end', {})
+        if end.get('dateTime'):
+            params['end_time'] = end['dateTime']
+        if end.get('date'):
+            params['end_date'] = end['date']
+
+        if cal_event.get('is_all_day'):
+            params['is_all_day'] = True
+
+        for field in ('location', 'description'):
+            if cal_event.get(field) is not None:
+                params[field] = cal_event[field]
+
+        if cal_event.get('calendar') is not None:
+            params['calendar_name'] = cal_event['calendar']
+
+        if cal_event.get('recurrence') is not None:
+            params['recurrence'] = cal_event['recurrence']
+
+        return params
+
+    @staticmethod
+    def create_from_calendar_event(
+        user_id: str,
+        session_id: str,
+        cal_event: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Create a DB event from a CalendarEvent dict and link it to a session.
+
+        Used by both the pipeline (batch) and the modification agent (single creates).
+        Returns the created event row.
+        """
+        params = EventService.calendar_event_to_db_params(cal_event)
+        return EventService.create_dropcal_event(
+            user_id=user_id,
+            session_id=session_id,
+            **params,
+        )
+
+    @staticmethod
+    def apply_modifications(
+        user_id: str,
+        session_id: str,
+        actions: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply a batch of modification actions (edit/delete/create) to a session's events.
+
+        Args:
+            user_id: User's UUID (for ownership checks)
+            session_id: Session UUID
+            actions: List of {event_id?, action, event?} dicts where:
+                - edit:   {event_id, action="edit", event={...CalendarEvent}}
+                - delete: {event_id, action="delete"}
+                - create: {action="create", event={...CalendarEvent}}
+
+        Returns:
+            List of CalendarEvent dicts for the full updated session
+        """
+        for act in actions:
+            action_type = act.get('action')
+
+            if action_type == 'edit':
+                event_id = act.get('event_id')
+                cal_event = act.get('event', {})
+                if not event_id or not cal_event:
+                    continue
+
+                event = Event.get_by_id(event_id)
+                if not event or event.get('user_id') != user_id:
+                    continue
+
+                updates = EventService.calendar_event_to_db_params(cal_event)
+                if updates:
+                    updates['user_modified'] = True
+                    Event.update(event_id, updates)
+                    Event.increment_version(event_id)
+
+            elif action_type == 'delete':
+                event_id = act.get('event_id')
+                if not event_id:
+                    continue
+
+                event = Event.get_by_id(event_id)
+                if not event or event.get('user_id') != user_id:
+                    continue
+
+                Event.soft_delete(event_id)
+                try:
+                    Session.remove_event(session_id, event_id)
+                except Exception:
+                    pass
+
+            elif action_type == 'create':
+                cal_event = act.get('event', {})
+                if not cal_event.get('summary'):
+                    continue
+
+                EventService.create_from_calendar_event(user_id, session_id, cal_event)
+
+        # Return the full updated event list for this session
+        return EventService.get_events_by_session(session_id)
+
+    @staticmethod
     def create_dropcal_event(
         user_id: str,
         session_id: str,

@@ -553,6 +553,26 @@ export async function deleteEvent(
   return handleResponse(response);
 }
 
+/**
+ * Apply a batch of modifications (edit/delete/create) to a session's events.
+ * Returns the full updated event list.
+ */
+export async function applyModifications(
+  sessionId: string,
+  actions: { event_id?: string; action: 'edit' | 'delete' | 'create'; event?: Partial<CalendarEvent> }[]
+): Promise<CalendarEvent[]> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/sessions/${sessionId}/modifications`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ actions }),
+  });
+
+  const data = await handleResponse<{ events: CalendarEvent[] }>(response);
+  return data.events;
+}
+
 // ============================================================================
 // Conflict Detection
 // ============================================================================
