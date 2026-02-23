@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { DesktopButtonMenu } from './DesktopButtonMenu'
 import { useInputHandlers } from '../shared/hooks'
@@ -19,10 +20,37 @@ export function DesktopDropArea({
   const [isLinkInput, setIsLinkInput] = useState(false)
   const [isEmailInput, setIsEmailInput] = useState(false)
   const dragCounterRef = useRef(0)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { handleImageClick, handleDocumentClick, handleAudioFileUpload } = useInputHandlers({
     onFileUpload
   })
+
+  // Open a specific input mode from ?input= query param (used by browser extension).
+  // Only handles overlay inputs — file-picker modes (image, document, upload) just
+  // navigate to the site where the user can click the button directly.
+  useEffect(() => {
+    const inputParam = searchParams.get('input')
+    if (!inputParam || isProcessing) return
+
+    searchParams.delete('input')
+    setSearchParams(searchParams, { replace: true })
+
+    switch (inputParam) {
+      case 'link':
+        setIsLinkInput(true)
+        break
+      case 'text':
+        setIsTextInput(true)
+        break
+      case 'audio':
+        setIsRecording(true)
+        break
+      case 'email':
+        setIsEmailInput(true)
+        break
+    }
+  }, [searchParams])
 
   // Global paste handler: Ctrl+V anywhere on the page routes content into the drop area
   useEffect(() => {

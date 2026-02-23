@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FirstAid as FirstAidIcon, CheckFat as CheckIcon, ChatCircleDots as ChatIcon, PaperPlaneTilt as SendIcon, CalendarStar as CalendarStarIcon, Images, Files, Microphone, Pen, CalendarDots, CaretLeft } from '@phosphor-icons/react'
 import Skeleton from 'react-loading-skeleton'
@@ -144,7 +144,7 @@ function AnimatedDots() {
   )
 }
 
-function TypingText({ text }: { text: string }) {
+function TypingText({ text, onComplete }: { text: string; onComplete?: () => void }) {
   // Strip trailing "..." from message for separate animation
   const baseText = text.replace(/\.{2,}$/, '')
   const hasDots = text !== baseText
@@ -153,7 +153,10 @@ function TypingText({ text }: { text: string }) {
 
   useEffect(() => {
     setDisplayedLength(0)
-    if (baseText.length === 0) return
+    if (baseText.length === 0) {
+      onComplete?.()
+      return
+    }
 
     let frame: number
     let current = 0
@@ -164,6 +167,8 @@ function TypingText({ text }: { text: string }) {
       setDisplayedLength(current)
       if (current < baseText.length) {
         frame = window.setTimeout(animate, charDelay)
+      } else {
+        onComplete?.()
       }
     }
 
@@ -176,6 +181,69 @@ function TypingText({ text }: { text: string }) {
       {baseText.slice(0, displayedLength)}
       {hasDots && displayedLength >= baseText.length && <AnimatedDots />}
     </span>
+  )
+}
+
+/** Queues stage transitions so the current typing animation finishes before the next begins. */
+function QueuedLoadingStep({ step }: { step: LoadingStateConfig }) {
+  const [activeStep, setActiveStep] = useState(step)
+  const [pending, setPending] = useState<LoadingStateConfig | null>(null)
+  const [typingDone, setTypingDone] = useState(false)
+
+  // New step arrived from parent
+  useEffect(() => {
+    if (step.message === activeStep.message) return
+
+    if (typingDone) {
+      // Current animation finished — transition immediately
+      setActiveStep(step)
+      setTypingDone(false)
+      setPending(null)
+    } else {
+      // Still typing — queue (latest wins)
+      setPending(step)
+    }
+  }, [step.message])
+
+  // Current typing finished and there's a queued step
+  useEffect(() => {
+    if (typingDone && pending) {
+      setActiveStep(pending)
+      setTypingDone(false)
+      setPending(null)
+    }
+  }, [typingDone, pending])
+
+  const handleTypingComplete = useCallback(() => {
+    setTypingDone(true)
+  }, [])
+
+  return (
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeStep.message}
+          className="loading-progress-icon"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          {activeStep.icon && <activeStep.icon size={20} weight="duotone" />}
+        </motion.div>
+      </AnimatePresence>
+      <div className="loading-progress-text">
+        <div className="loading-progress-message">
+          <TypingText key={activeStep.message} text={activeStep.message} onComplete={handleTypingComplete} />
+        </div>
+        {activeStep.submessage && (
+          <div className="loading-progress-submessage">{activeStep.submessage}</div>
+        )}
+      </div>
+      {activeStep.count && (
+        <div className="loading-progress-count">{activeStep.count}</div>
+      )}
+    </>
   )
 }
 
@@ -248,38 +316,11 @@ export function BottomBar({
           /* Loading Progress */
           <div className="loading-progress-container">
             <div className="loading-progress-steps">
-              <AnimatePresence mode="wait">
-                {loadingConfig.map((step) => {
-                  const IconComponent = step.icon
-                  return (
-                    <motion.div
-                      key={step.message}
-                      className="loading-progress-step"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                      {IconComponent && (
-                        <div className="loading-progress-icon">
-                          <IconComponent size={20} weight="duotone" />
-                        </div>
-                      )}
-                      <div className="loading-progress-text">
-                        <div className="loading-progress-message">
-                          <TypingText text={step.message} />
-                        </div>
-                        {step.submessage && (
-                          <div className="loading-progress-submessage">{step.submessage}</div>
-                        )}
-                      </div>
-                      {step.count && (
-                        <div className="loading-progress-count">{step.count}</div>
-                      )}
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
+              {loadingConfig.map((step) => (
+                <div key="loading-step" className="loading-progress-step">
+                  <QueuedLoadingStep step={step} />
+                </div>
+              ))}
             </div>
           </div>
         ) : (

@@ -233,6 +233,12 @@ function AppContent() {
         .then(async session => {
           setCurrentSession(session)
 
+          // Session is still processing — keep loading state, polling effect will handle completion
+          if (session.status === 'processing' || session.status === 'pending') {
+            setLoadingConfig(LOADING_MESSAGES.EXTRACTING_EVENTS)
+            return
+          }
+
           // Fetch events from events table (falls back to processed_events on backend)
           try {
             const events = await getSessionEvents(session.id, !user && isGuestSession)

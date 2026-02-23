@@ -93,11 +93,11 @@ const btnLink = document.getElementById('btn-link')!;
 const btnImages = document.getElementById('btn-images')!;
 const btnFiles = document.getElementById('btn-files')!;
 const btnCenter = document.getElementById('btn-center')!;
-const btnCapture = document.getElementById('btn-capture')!;
-const btnPaste = document.getElementById('btn-paste')!;
+const btnAudio = document.getElementById('btn-audio')!;
+const btnText = document.getElementById('btn-text')!;
 const btnEmail = document.getElementById('btn-email')!;
 
-const allButtons = [btnLink, btnImages, btnFiles, btnCenter, btnCapture, btnPaste, btnEmail];
+const allButtons = [btnLink, btnImages, btnFiles, btnCenter, btnAudio, btnText, btnEmail];
 
 const resultsSection = document.getElementById('results-section')!;
 const resultsList = document.getElementById('results-list')!;
@@ -109,36 +109,19 @@ for (const btn of allButtons) {
   btn.addEventListener('click', (e) => e.stopPropagation());
 }
 
-btnLink.addEventListener('click', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (text && text.trim()) submitText(text.trim());
-  } catch {
-    // Clipboard access denied
-  }
-});
+function openDropcal(mode?: string): void {
+  const url = mode ? `https://dropcal.ai?input=${mode}` : 'https://dropcal.ai';
+  chrome.tabs.create({ url });
+  window.close();
+}
 
-// Disabled: <input type="file">.click() from an extension popup crashes all of
-// Chrome due to a known Chromium bug (https://issues.chromium.org/issues/364825891).
-// These buttons are no-ops until a workaround is implemented.
-btnImages.addEventListener('click', () => {});
-btnFiles.addEventListener('click', () => {});
-btnCenter.addEventListener('click', () => {});
-
-btnCapture.addEventListener('click', () => {});
-
-btnPaste.addEventListener('click', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (text && text.trim()) submitText(text.trim());
-  } catch {
-    // Clipboard access denied
-  }
-});
-
-btnEmail.addEventListener('click', () => {
-  // TODO: email forwarding flow
-});
+btnLink.addEventListener('click', () => openDropcal('link'));
+btnImages.addEventListener('click', () => openDropcal());
+btnFiles.addEventListener('click', () => openDropcal());
+btnCenter.addEventListener('click', () => openDropcal());
+btnAudio.addEventListener('click', () => openDropcal('audio'));
+btnText.addEventListener('click', () => openDropcal('text'));
+btnEmail.addEventListener('click', () => openDropcal('email'));
 
 // ----- Drag & drop -----
 
