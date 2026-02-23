@@ -1,11 +1,11 @@
 ---
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git commit:*), Bash(git reset HEAD:*), Bash(wc:*), Bash(git ls-files:*)
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git commit:*), Bash(git reset HEAD:*), Bash(git ls-files:*)
 description: Analyze staged changes and commit with a descriptive paragraph
 ---
 
 ## Context
 
-- Staged files with sizes: !`git diff --cached --name-only | while read f; do echo "$(wc -c < "$f" 2>/dev/null || echo 0) $f"; done`
+- Staged files with sizes: !`git diff --cached --stat`
 - Staged changes: !`git diff --cached`
 - Current branch: !`git branch --show-current`
 - Recent commits for style reference: !`git log --oneline -5`

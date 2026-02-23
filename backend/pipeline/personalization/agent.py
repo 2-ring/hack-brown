@@ -26,10 +26,10 @@ from datetime import datetime
 
 from pydantic import BaseModel, create_model, Field as PydanticField
 
-from core.base_agent import BaseAgent
-from core.prompt_loader import load_prompt
-from extraction.models import CalendarEvent, CalendarDateTime
-from preferences.similarity import ProductionSimilaritySearch
+from pipeline.base_agent import BaseAgent
+from pipeline.prompt_loader import load_prompt
+from pipeline.models import CalendarEvent, CalendarDateTime
+from pipeline.personalization.similarity import ProductionSimilaritySearch
 from config.posthog import get_invoke_config
 
 logger = logging.getLogger(__name__)
@@ -50,27 +50,27 @@ DEFAULT_DURATIONS = [
 # Only tasks in the batch's union get included in the prompt and output model.
 TASK_DEFINITIONS = {
     'title': {
-        'file': 'preferences/tasks/title.txt',
+        'file': 'pipeline/personalization/tasks/title.txt',
         'field_type': (str, PydanticField(description="Output of the title task")),
         'merge_field': 'summary',
     },
     'description': {
-        'file': 'preferences/tasks/description.txt',
+        'file': 'pipeline/personalization/tasks/description.txt',
         'field_type': (Optional[str], PydanticField(default=None, description="Output of the description task")),
         'merge_field': 'description',
     },
     'calendar': {
-        'file': 'preferences/tasks/calendar.txt',
+        'file': 'pipeline/personalization/tasks/calendar.txt',
         'field_type': (Optional[str], PydanticField(default=None, description="Output of the calendar task")),
         'merge_field': 'calendar',
     },
     'end_time': {
-        'file': 'preferences/tasks/end_time.txt',
+        'file': 'pipeline/personalization/tasks/end_time.txt',
         'field_type': (Optional[CalendarDateTime], PydanticField(default=None, description="Output of the end_time task")),
         'merge_field': 'end',
     },
     'location': {
-        'file': 'preferences/tasks/location.txt',
+        'file': 'pipeline/personalization/tasks/location.txt',
         'field_type': (Optional[str], PydanticField(default=None, description="Output of the location task")),
         'merge_field': 'location',
     },
@@ -207,7 +207,7 @@ class PersonalizationAgent(BaseAgent):
 
         # --- Build prompt ---
         system_prompt = load_prompt(
-            "preferences/prompts/preferences_batch.txt",
+            "pipeline/personalization/prompts/preferences_batch.txt",
             input_summary=input_summary or 'No summary available.',
             task_descriptions=task_descriptions,
             reference_events_display=self._build_reference_events_display(
@@ -616,7 +616,7 @@ class PersonalizationAgent(BaseAgent):
             return []
 
         try:
-            from events.service import EventService
+            from pipeline.events import EventService
             return EventService.get_surrounding_events(
                 user_id=user_id,
                 target_time=target_time,
@@ -635,7 +635,7 @@ class PersonalizationAgent(BaseAgent):
             return []
 
         try:
-            from events.service import EventService
+            from pipeline.events import EventService
             return EventService.search_location_history(
                 user_id=user_id,
                 query_location=event.location,
@@ -658,7 +658,7 @@ class PersonalizationAgent(BaseAgent):
             return []
 
         try:
-            from feedback.correction_query_service import CorrectionQueryService
+            from pipeline.personalization.corrections.query_service import CorrectionQueryService
             query_service = CorrectionQueryService()
             return query_service.query_for_preference_application(
                 user_id=user_id,

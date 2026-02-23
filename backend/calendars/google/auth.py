@@ -227,7 +227,7 @@ def store_google_tokens_from_supabase(user_id: str, provider_token: dict) -> Non
             from . import fetch
             settings = fetch.get_calendar_settings(user_id)
             if settings and settings.get('timezone'):
-                from preferences.service import PersonalizationService
+                from pipeline.personalization.service import PersonalizationService
                 PersonalizationService.save_timezone(user_id, settings['timezone'])
         except Exception as e:
             print(f"Warning: Could not fetch/store timezone for user {user_id}: {e}")

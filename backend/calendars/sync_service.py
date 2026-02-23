@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Set
 
 from datetime import datetime, timedelta
 from database.models import Event, User, Calendar
-from events.service import EventService
+from pipeline.events import EventService
 from config.calendar import SyncConfig
 from config.limits import EventLimits
 

@@ -10,9 +10,9 @@ See backend/PIPELINE.md for architecture overview.
 import time as _time
 from typing import List, Optional
 
-from core.base_agent import BaseAgent
-from core.prompt_loader import load_prompt
-from extraction.models import ExtractedEvent, ExtractedEventBatch, IdentifiedEvent
+from pipeline.base_agent import BaseAgent
+from pipeline.prompt_loader import load_prompt
+from pipeline.models import ExtractedEvent, ExtractedEventBatch, IdentifiedEvent
 from config.posthog import capture_llm_generation
 
 # Human-readable labels for input types, shown in user message
@@ -53,7 +53,7 @@ class EventExtractionAgent(BaseAgent):
         self.provider = provider
         self.max_retries = max_retries
 
-        self._prompt_path = "extraction/prompts/extraction.txt"
+        self._prompt_path = "pipeline/extraction/prompts/extraction.txt"
 
     def execute(
         self,
@@ -228,7 +228,7 @@ class EventExtractionAgent(BaseAgent):
         if not events:
             raise ValueError("No events provided for batch extraction")
 
-        system_prompt = load_prompt("extraction/prompts/extraction_batch.txt")
+        system_prompt = load_prompt("pipeline/extraction/prompts/extraction_batch.txt")
         user_message = self._build_batch_user_message(
             events=events,
             cross_event_context=cross_event_context,

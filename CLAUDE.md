@@ -8,7 +8,23 @@ Production: dropcal.ai (frontend) / api.dropcal.ai (backend)
 
 ### Pipeline
 
-The core is a 3-stage pipeline: one LLM call for extraction, deterministic date resolution, then optional personalization. Stages inherit from `BaseAgent` (`backend/core/base_agent.py`), use `.with_structured_output(PydanticModel)` for typed returns, and load prompts from a `prompts/` directory relative to their module.
+The core is a 3-stage pipeline: one LLM call for extraction, deterministic date resolution, then optional personalization. Stages inherit from `BaseAgent` (`backend/pipeline/base_agent.py`), use `.with_structured_output(PydanticModel)` for typed returns, and load prompts from a `prompts/` directory relative to their module.
+
+All pipeline code lives under `backend/pipeline/`:
+
+```
+pipeline/
+├── input/              # Input preprocessing (audio, image, pdf, text, email)
+├── extraction/         # EXTRACT stage (identify, consolidate, structure)
+├── resolution/         # RESOLVE stage (Duckling temporal parsing)
+├── personalization/    # PERSONALIZE stage (patterns, similarity, corrections)
+├── modification/       # MODIFY (user edits, separate from main pipeline)
+├── orchestrator.py     # SessionProcessor — runs the pipeline
+├── models.py           # All Pydantic pipeline models
+├── stream.py           # SSE stream management
+├── events.py           # EventService (pipeline output CRUD)
+└── session_routes.py   # SSE streaming routes
+```
 
 ```
 EXTRACT (1 LLM call) → RESOLVE (0 LLM, Duckling) → PERSONALIZE (0-1 LLM)
@@ -18,12 +34,12 @@ MODIFY ← user edits (separate from pipeline)
 
 | Stage | File | Input → Output | Job |
 |-------|------|---------------|-----|
-| EXTRACT | `extraction/extract.py` | raw text/image → `ExtractedEventBatch` (NL temporal) | Find all events, dedup, extract structured facts in a single LLM call |
-| RESOLVE | `extraction/temporal_resolver.py` | `ExtractedEvent` → `CalendarEvent` (ISO 8601) | Deterministic date resolution via Duckling, EXDATE generation |
-| PERSONALIZE | `preferences/agent.py` | `CalendarEvent` + patterns → personalized `CalendarEvent` | Apply learned preferences (calendar routing, title formatting) |
-| MODIFY | `modification/agent.py` | user edit request → modified event | Handle user corrections (not part of main pipeline) |
+| EXTRACT | `pipeline/extraction/extract.py` | raw text/image → `ExtractedEventBatch` (NL temporal) | Find all events, dedup, extract structured facts in a single LLM call |
+| RESOLVE | `pipeline/resolution/temporal_resolver.py` | `ExtractedEvent` → `CalendarEvent` (ISO 8601) | Deterministic date resolution via Duckling, EXDATE generation |
+| PERSONALIZE | `pipeline/personalization/agent.py` | `CalendarEvent` + patterns → personalized `CalendarEvent` | Apply learned preferences (calendar routing, title formatting) |
+| MODIFY | `pipeline/modification/agent.py` | user edit request → modified event | Handle user corrections (not part of main pipeline) |
 
-All Pydantic models live in `backend/extraction/models.py`. EXTRACT processes everything in a single LLM call, RESOLVE runs per-event (deterministic), PERSONALIZE runs as a single batched LLM call if the user has enough history for personalization patterns.
+All Pydantic models live in `backend/pipeline/models.py`. EXTRACT processes everything in a single LLM call, RESOLVE runs per-event (deterministic), PERSONALIZE runs as a single batched LLM call if the user has enough history for personalization patterns.
 
 ### LLM Provider Config
 
@@ -43,7 +59,7 @@ Each stage can use a different provider. `create_text_model(component)` returns 
 
 ### Factory Patterns
 
-- **Input processors** (`backend/processors/factory.py`): `InputProcessorFactory` routes to `AudioProcessor`, `ImageProcessor`, `PDFProcessor`, `TextFileProcessor`. All inherit `BaseInputProcessor` with `process()` and `supports_file()`.
+- **Input processors** (`backend/pipeline/input/factory.py`): `InputProcessorFactory` routes to `AudioProcessor`, `ImageProcessor`, `PDFProcessor`, `TextFileProcessor`. All inherit `BaseInputProcessor` with `process()` and `supports_file()`.
 - **Calendar providers** (`backend/calendars/factory.py`): Routes to `google/`, `microsoft/`, `apple/` subdirectories. Each has `auth`, `fetch`, `create` modules. Auto-routes to user's `primary_calendar_provider`.
 
 ## Database
@@ -92,7 +108,7 @@ supabase migration new <name>                  # Create migration
 
 - **Python**: PascalCase classes, snake_case functions, Pydantic models for all structured LLM output. Pipeline stages use `ChatPromptTemplate` → `chain.invoke()` or Instructor. Flask blueprints for route groups.
 - **TypeScript**: PascalCase components, camelCase functions/hooks. API client in `frontend/src/api/backend-client.ts`. Types in `frontend/src/api/types.ts`.
-- **New pipeline stages**: Inherit `BaseAgent`, implement `execute()`, add Pydantic model to `extraction/models.py`, put prompt in `prompts/` dir next to the stage's module.
+- **New pipeline stages**: Inherit `BaseAgent`, implement `execute()`, add Pydantic model to `pipeline/models.py`, put prompt in `prompts/` dir next to the stage's module.
 - **New calendar providers**: Add `auth.py`, `fetch.py`, `create.py` in `backend/calendars/<provider>/`, register in `factory.py`.
 - **New input processors**: Inherit `BaseInputProcessor`, register in `app.py` via `input_processor_factory.register_processor()`.
 
@@ -104,7 +120,7 @@ PostHog tracks LLM costs, latency, token usage, and product analytics. Project I
 
 **Backend (LLM observability):**
 - `backend/config/posthog.py` — client init, thread-local tracking context, `get_invoke_config()` helper
-- Callbacks attached in: `extraction/extract.py`, `modification/agent.py`, `preferences/agent.py`, `pattern_discovery_service.py`
+- Callbacks attached in: `pipeline/extraction/extract.py`, `pipeline/modification/agent.py`, `pipeline/personalization/agent.py`, `pipeline/personalization/pattern_discovery.py`
 
 **Frontend (product analytics):**
 - `frontend/src/main.tsx` — PostHog init + `PostHogProvider` wrapper. Autocapture, pageviews, and pageleave enabled.
@@ -134,4 +150,4 @@ curl -H "Authorization: Bearer $POSTHOG_PERSONAL_API_KEY" \
 - AWS CLI (`aws`) and Supabase CLI (`supabase`) are installed and authenticated. Use them directly.
 - PostHog personal API key (`POSTHOG_PERSONAL_API_KEY`) is set in `backend/.env`. Use it to query the PostHog API directly (events, insights, dashboards, feature flags, experiments) as needed.
 - Don't modify `utils/encryption.py` or token encryption logic without explicit request.
-- When adding new endpoints, follow the blueprint pattern (see `auth/routes.py`, `calendars/routes.py`, `sessions/routes.py`).
+- When adding new endpoints, follow the blueprint pattern (see `auth/routes.py`, `calendars/routes.py`, `pipeline/session_routes.py`).

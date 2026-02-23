@@ -11,8 +11,8 @@ import time as _time
 import logging
 from typing import List
 
-from core.prompt_loader import load_prompt
-from extraction.models import IdentifiedEvent, ConsolidationResult
+from pipeline.prompt_loader import load_prompt
+from pipeline.models import IdentifiedEvent, ConsolidationResult
 from config.posthog import capture_llm_generation
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def consolidate_events(
     Returns:
         ConsolidationResult with group assignments and cross-event context
     """
-    system_prompt = load_prompt("extraction/prompts/consolidation.txt")
+    system_prompt = load_prompt("pipeline/extraction/prompts/consolidation.txt")
     user_message = _build_event_summary(events)
 
     start = _time.time()

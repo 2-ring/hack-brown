@@ -229,7 +229,7 @@ def store_microsoft_tokens(user_id: str, token_data: dict) -> None:
             from . import fetch
             tz = fetch.get_mailbox_timezone(user_id)
             if tz:
-                from preferences.service import PersonalizationService
+                from pipeline.personalization.service import PersonalizationService
                 PersonalizationService.save_timezone(user_id, tz)
         except Exception as e:
             print(f"Warning: Could not fetch/store timezone for user {user_id}: {e}")

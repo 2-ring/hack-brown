@@ -9,9 +9,9 @@ from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from typing import List, Optional
 
-from extraction.agents.identification import EventIdentificationAgent
-from extraction.models import IdentifiedEvent, IdentificationResult
-from processing.text_chunker import split_text
+from pipeline.extraction.identification import EventIdentificationAgent
+from pipeline.models import IdentifiedEvent, IdentificationResult
+from pipeline.input.text_chunker import split_text
 from config.processing import ProcessingConfig
 from config.posthog import set_tracking_context, capture_agent_error
 

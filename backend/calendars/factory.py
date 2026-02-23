@@ -7,7 +7,7 @@ Provides a unified interface for calendar operations across all providers.
 
 from typing import Any, Dict, List, Optional, Tuple
 from database.models import User, Event, Session as DBSession
-from events.service import EventService
+from pipeline.events import EventService
 from config.calendar import CollectionConfig
 
 

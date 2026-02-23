@@ -810,7 +810,7 @@ def push_events():
         extracted_facts_list = request_data.get('extracted_facts')
 
         if user_submitted_events and session_id:
-            from feedback.correction_service import CorrectionStorageService
+            from pipeline.personalization.corrections.service import CorrectionStorageService
             correction_service = CorrectionStorageService()
             try:
                 correction_ids = correction_service.store_corrections_from_session(

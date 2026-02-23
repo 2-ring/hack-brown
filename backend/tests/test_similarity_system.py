@@ -26,7 +26,7 @@ class TestCalendarEventSimilarity:
     def similarity_service(self):
         """Create similarity service instance for testing."""
         # Import here to avoid circular imports during test discovery
-        from preferences.similarity import CalendarEventSimilarity
+        from pipeline.personalization.similarity import CalendarEventSimilarity
         return CalendarEventSimilarity()
 
     def test_semantic_similarity_high(self, similarity_service):
@@ -206,7 +206,7 @@ class TestCalendarEventSimilarity:
 
     def test_weights_validation(self):
         """Test that invalid weights are rejected."""
-        from preferences.similarity import CalendarEventSimilarity, SimilarityWeights
+        from pipeline.personalization.similarity import CalendarEventSimilarity, SimilarityWeights
 
         # Weights that don't sum to 1.0
         invalid_weights = SimilarityWeights(
@@ -243,7 +243,7 @@ class TestConvenienceFunctions:
 
     def test_event_to_text(self):
         """Test event_to_text conversion."""
-        from preferences.similarity import event_to_text
+        from pipeline.personalization.similarity import event_to_text
 
         event = {
             'summary': 'Math Homework',
@@ -261,7 +261,7 @@ class TestConvenienceFunctions:
 
     def test_event_to_text_title_fallback(self):
         """Test that event_to_text uses 'title' if 'summary' missing."""
-        from preferences.similarity import event_to_text
+        from pipeline.personalization.similarity import event_to_text
 
         event = {
             'title': 'Event Title',
@@ -274,7 +274,7 @@ class TestConvenienceFunctions:
 
     def test_event_to_text_long_description(self):
         """Test that long descriptions are truncated."""
-        from preferences.similarity import event_to_text
+        from pipeline.personalization.similarity import event_to_text
 
         event = {
             'summary': 'Event',

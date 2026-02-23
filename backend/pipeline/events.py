@@ -9,7 +9,7 @@ import numpy as np
 
 import logging
 from database.models import Event, Session
-from preferences.similarity import compute_embedding, compute_embeddings_batch
+from pipeline.personalization.similarity import compute_embedding, compute_embeddings_batch
 from config.database import QueryLimits
 
 logger = logging.getLogger(__name__)

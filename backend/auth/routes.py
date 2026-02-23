@@ -576,7 +576,7 @@ def delete_account():
 
         # 5. Delete all uploaded files from storage
         try:
-            from storage.file_handler import FileStorage
+            from pipeline.input.storage import FileStorage
             user_files = FileStorage.list_user_files(user_id)
             for file_info in user_files:
                 file_name = file_info.get('name', '')

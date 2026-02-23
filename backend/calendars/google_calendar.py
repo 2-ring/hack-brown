@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 
 from database.models import User, Session as DBSession
-from utils.encryption import decrypt_token
+from auth.encryption import decrypt_token
 
 
 class GoogleCalendarClient:

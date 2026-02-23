@@ -21,8 +21,8 @@ from typing import Optional, Tuple, List
 
 import pytz
 
-from extraction.models import ExtractedEvent, CalendarEvent, CalendarDateTime
-from extraction.duckling_client import DucklingClient, DucklingError
+from pipeline.models import ExtractedEvent, CalendarEvent, CalendarDateTime
+from pipeline.resolution.duckling_client import DucklingClient, DucklingError
 
 logger = logging.getLogger(__name__)
 

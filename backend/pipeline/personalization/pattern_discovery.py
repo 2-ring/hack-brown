@@ -18,7 +18,7 @@ from datetime import datetime
 import json
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel
-from core.prompt_loader import load_prompt
+from pipeline.prompt_loader import load_prompt
 from config.posthog import get_invoke_config, set_tracking_context
 from config.similarity import PatternDiscoveryConfig
 
@@ -396,7 +396,7 @@ class PatternDiscoveryService:
         )
 
         prompt = load_prompt(
-            "preferences/prompts/pattern_discovery.txt",
+            "pipeline/personalization/prompts/pattern_discovery.txt",
             category_name=category_name,
             primary_label=primary_label,
             event_count=len(event_summaries),

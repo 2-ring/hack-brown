@@ -11,11 +11,11 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from extraction.models import (
+from pipeline.models import (
     ExtractedFacts, RecurrenceInfo,
     CalendarEvent, CalendarDateTime
 )
-from extraction.validation_utils import (
+from pipeline.extraction.validation_utils import (
     is_valid_iso_date, is_valid_time, is_valid_iana_timezone,
     is_valid_iso8601_datetime, validate_rrule_basic, truncate_title, count_words
 )

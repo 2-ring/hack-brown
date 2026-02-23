@@ -8,7 +8,7 @@ from googleapiclient.errors import HttpError
 from typing import Dict, Optional, List, Tuple
 
 from database.models import Session as DBSession, Event
-from events.service import EventService
+from pipeline.events import EventService
 from . import auth, fetch
 
 

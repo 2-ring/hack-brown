@@ -10,7 +10,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Optional
 from database.supabase_client import get_supabase
-from .correction_analyzer import CorrectionAnalyzer
+from .analyzer import CorrectionAnalyzer
 
 
 class CorrectionStorageService:

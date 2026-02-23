@@ -10,14 +10,14 @@ import logging
 import threading
 import traceback
 from database.models import Session as DBSession, Event
-from processors.factory import InputProcessorFactory, InputType
-from extraction.extract import UnifiedExtractor
-from extraction.temporal_resolver import resolve_temporal
-from preferences.agent import PersonalizationAgent
-from extraction.icon_selector import get_icon_selector
-from events.service import EventService
-from preferences.service import PersonalizationService
-from processing.stream import get_stream
+from pipeline.input.factory import InputProcessorFactory, InputType
+from pipeline.extraction.extract import UnifiedExtractor
+from pipeline.resolution.temporal_resolver import resolve_temporal
+from pipeline.personalization.agent import PersonalizationAgent
+from pipeline.extraction.icon_selector import get_icon_selector
+from pipeline.events import EventService
+from pipeline.personalization.service import PersonalizationService
+from pipeline.stream import get_stream
 from config.posthog import (
     set_tracking_context, flush_posthog, capture_agent_error,
     capture_pipeline_trace, stage_span,
@@ -52,7 +52,7 @@ class SessionProcessor:
     def _transcribe_audio(self, file_path: str) -> str:
         """Download and transcribe an audio file from Supabase storage."""
         import tempfile
-        from storage.file_handler import FileStorage
+        from pipeline.input.storage import FileStorage
 
         file_bytes = FileStorage.download_file(file_path)
 
@@ -78,7 +78,7 @@ class SessionProcessor:
         """Download an image from Supabase, return (placeholder_text, metadata)."""
         import base64
         from pathlib import Path
-        from storage.file_handler import FileStorage
+        from pipeline.input.storage import FileStorage
 
         file_bytes = FileStorage.download_file(file_path)
         image_data = base64.b64encode(file_bytes).decode('utf-8')
@@ -112,7 +112,7 @@ class SessionProcessor:
         For other documents: uses Docling directly.
         """
         import tempfile
-        from storage.file_handler import FileStorage
+        from pipeline.input.storage import FileStorage
 
         file_bytes = FileStorage.download_file(file_path)
 
@@ -603,7 +603,7 @@ class SessionProcessor:
                 text = self._convert_document(file_path)
                 metadata = {'source': file_type, 'file_path': file_path}
             elif file_type in ('text', 'email'):
-                from storage.file_handler import FileStorage
+                from pipeline.input.storage import FileStorage
                 file_bytes = FileStorage.download_file(file_path)
                 text = file_bytes.decode('utf-8', errors='replace')
                 if not text.strip():

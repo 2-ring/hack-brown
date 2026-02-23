@@ -9,9 +9,9 @@ from datetime import datetime
 import time as _time
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from core.base_agent import BaseAgent
-from core.prompt_loader import load_prompt
-from extraction.models import ModificationResult
+from pipeline.base_agent import BaseAgent
+from pipeline.prompt_loader import load_prompt
+from pipeline.models import ModificationResult
 from config.posthog import capture_llm_generation
 
 
@@ -24,7 +24,7 @@ class EventModificationAgent(BaseAgent):
     def __init__(self, llm):
         super().__init__("Modify")
         self.llm = llm.with_structured_output(ModificationResult, include_raw=True)
-        self._prompt_path = "modification/prompts/modification.txt"
+        self._prompt_path = "pipeline/modification/prompts/modification.txt"
 
         # Resolve provider/model for manual PostHog capture
         from config.text import get_text_provider, get_model_specs

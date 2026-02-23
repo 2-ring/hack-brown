@@ -8,9 +8,9 @@ from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
-from core.base_agent import BaseAgent
-from core.prompt_loader import load_prompt
-from extraction.models import IdentificationResult
+from pipeline.base_agent import BaseAgent
+from pipeline.prompt_loader import load_prompt
+from pipeline.models import IdentificationResult
 from config.posthog import get_invoke_config
 
 
@@ -34,7 +34,7 @@ class EventIdentificationAgent(BaseAgent):
         self.is_anthropic = isinstance(llm, ChatAnthropic)
         self.is_openai = isinstance(llm, ChatOpenAI)
 
-        self.prompt_template = load_prompt("extraction/prompts/identification.txt")
+        self.prompt_template = load_prompt("pipeline/extraction/prompts/identification.txt")
 
     def execute(
         self,

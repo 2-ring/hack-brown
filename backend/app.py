@@ -17,40 +17,40 @@ current_dir = Path(__file__).parent.resolve()
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
 
-from processors.factory import InputProcessorFactory, InputType
-from processors.audio import AudioProcessor
-from processors.image import ImageProcessor
-from processors.text import TextFileProcessor
-from processors.pdf import PDFProcessor
+from pipeline.input.factory import InputProcessorFactory, InputType
+from pipeline.input.audio import AudioProcessor
+from pipeline.input.image import ImageProcessor
+from pipeline.input.text import TextFileProcessor
+from pipeline.input.pdf import PDFProcessor
 from calendars.service import CalendarService
-from preferences.service import PersonalizationService
+from pipeline.personalization.service import PersonalizationService
 
-from preferences.pattern_discovery_service import PatternDiscoveryService
-from services.data_collection_service import DataCollectionService
+from pipeline.personalization.pattern_discovery import PatternDiscoveryService
+from calendars.data_collection import DataCollectionService
 
 # Database and Storage imports
 from database.models import User, Session as DBSession, Event
-from storage.file_handler import FileStorage
-from events.service import EventService
+from pipeline.input.storage import FileStorage
+from pipeline.events import EventService
 
 # Import pipeline modules
-from extraction.extract import UnifiedExtractor
-from extraction.temporal_resolver import resolve_temporal
-from modification.agent import EventModificationAgent
-from preferences.agent import PersonalizationAgent
+from pipeline.extraction.extract import UnifiedExtractor
+from pipeline.resolution.temporal_resolver import resolve_temporal
+from pipeline.modification.agent import EventModificationAgent
+from pipeline.personalization.agent import PersonalizationAgent
 
 # Import route blueprints
 from calendars.routes import calendar_bp
 from auth.routes import auth_bp
-from sessions.routes import sessions_bp
-from inbound_email.routes import inbound_email_bp
+from pipeline.session_routes import sessions_bp
+from pipeline.input.email.routes import inbound_email_bp
 from billing.routes import billing_bp
 
 # Import auth middleware
 from auth.middleware import require_auth
 
 # Import session processor
-from processing.session_processor import SessionProcessor
+from pipeline.orchestrator import SessionProcessor
 
 from config.processing import ProcessingConfig
 from config.posthog import init_posthog, set_tracking_context, flush_posthog, capture_agent_error
@@ -189,12 +189,12 @@ pdf_processor = PDFProcessor()
 input_processor_factory.register_processor(InputType.PDF, pdf_processor)
 
 # Register document processor (docx, pptx, xlsx, html, csv, epub, etc.)
-from processors.document import DocumentProcessor
+from pipeline.input.document import DocumentProcessor
 document_processor = DocumentProcessor()
 input_processor_factory.register_processor(InputType.DOCUMENT, document_processor)
 
 # Initialize Pattern Refresh service (incremental background refresh)
-from preferences.pattern_refresh_service import PatternRefreshService
+from pipeline.personalization.pattern_refresh import PatternRefreshService
 pattern_refresh_service = PatternRefreshService(
     pattern_discovery_service=pattern_discovery_service,
 )
@@ -538,7 +538,7 @@ def check_event_conflicts():
     - Candidate events with RRULEs: expands occurrences, checks each against DB
     - Existing recurring events in DB: expands occurrences, checks against candidates
     """
-    from utils.rrule_utils import expand_rrule, parse_event_times, times_overlap
+    from pipeline.resolution.rrule_utils import expand_rrule, parse_event_times, times_overlap
 
     try:
         user_id = request.user_id
@@ -676,7 +676,7 @@ def apply_preferences_endpoint():
     Returns personalized event with user preferences applied.
     """
     try:
-        from extraction.models import CalendarEvent
+        from pipeline.models import CalendarEvent
 
         data = request.get_json()
         event_dict = data.get('event') or data.get('facts')  # Accept both for backwards compat
@@ -848,7 +848,7 @@ def create_text_session():
         )
 
         # Init SSE stream before spawning pipeline
-        from processing.stream import init_stream
+        from pipeline.stream import init_stream
         init_stream(session['id'])
 
         # Start processing in background thread
@@ -945,7 +945,7 @@ def upload_file_endpoint():
             raise
 
         # Init SSE stream before spawning pipeline
-        from processing.stream import init_stream
+        from pipeline.stream import init_stream
         init_stream(session['id'])
 
         # Start processing in background thread
@@ -1114,7 +1114,7 @@ def create_guest_text_session():
         )
 
         # Init SSE stream before spawning pipeline
-        from processing.stream import init_stream
+        from pipeline.stream import init_stream
         init_stream(session['id'])
 
         # Start processing in background thread
@@ -1191,7 +1191,7 @@ def upload_guest_file():
             raise
 
         # Init SSE stream before spawning pipeline
-        from processing.stream import init_stream
+        from pipeline.stream import init_stream
         init_stream(session['id'])
 
         # Start processing in background thread

@@ -347,7 +347,7 @@ class IconSelector:
     """
 
     def __init__(self):
-        from preferences.similarity.service import get_embedding_model
+        from pipeline.personalization.similarity.service import get_embedding_model
 
         self._model = get_embedding_model()
         self._icons: list[str] = []

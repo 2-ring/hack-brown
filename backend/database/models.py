@@ -7,7 +7,7 @@ import secrets
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from .supabase_client import get_supabase
-from utils.encryption import encrypt_token, decrypt_token
+from auth.encryption import encrypt_token, decrypt_token
 from config.database import QueryLimits
 
 
@@ -1067,7 +1067,7 @@ class Session:
         input_content = session.get('input_content', '')
         if input_type != 'text' and input_content and '/' in input_content:
             try:
-                from storage.file_handler import FileStorage
+                from pipeline.input.storage import FileStorage
                 FileStorage.delete_file(input_content)
             except Exception as e:
                 print(f"Warning: Failed to delete file {input_content} for session {session_id}: {e}")

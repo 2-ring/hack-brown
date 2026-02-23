@@ -18,9 +18,9 @@ from typing import List, Optional, Dict
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from core.base_agent import BaseAgent
-from core.prompt_loader import load_prompt
-from extraction.models import ExtractedEvent, ExtractedEventBatch
+from pipeline.base_agent import BaseAgent
+from pipeline.prompt_loader import load_prompt
+from pipeline.models import ExtractedEvent, ExtractedEventBatch
 from config.posthog import get_invoke_config
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class UnifiedExtractor(BaseAgent):
 
     def _execute_text(self, text: str, input_type: str) -> ExtractedEventBatch:
         """Text path: single structured output call."""
-        system_prompt = load_prompt("extraction/prompts/unified_extract.txt")
+        system_prompt = load_prompt("pipeline/extraction/prompts/unified_extract.txt")
 
         source_label = _INPUT_TYPE_LABELS.get(input_type, input_type or 'text')
         user_message = f"[SOURCE TYPE: {source_label}]\n\n{text}"
@@ -99,7 +99,7 @@ class UnifiedExtractor(BaseAgent):
 
     def _execute_vision(self, text: str, metadata: Dict) -> ExtractedEventBatch:
         """Vision path: multimodal message with image."""
-        system_prompt = load_prompt("extraction/prompts/unified_extract.txt")
+        system_prompt = load_prompt("pipeline/extraction/prompts/unified_extract.txt")
 
         image_data = metadata.get('image_data', '')
         media_type = metadata.get('media_type', 'image/jpeg')

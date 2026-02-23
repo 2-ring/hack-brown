@@ -6,7 +6,7 @@ import threading
 from flask import Blueprint, jsonify, request, current_app
 
 from database.models import User, Session as DBSession
-from inbound_email.parser import build_email_text
+from pipeline.input.email.parser import build_email_text
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ import requests
 
 from . import auth, fetch, transform
 from database.models import Session, Event
-from events.service import EventService
+from pipeline.events import EventService
 
 
 def create_event(

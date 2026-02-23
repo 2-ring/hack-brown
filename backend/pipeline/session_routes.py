@@ -7,8 +7,8 @@ to the frontend — no polling or DB round-trips needed.
 
 from flask import Blueprint, Response, jsonify
 from database.models import Session as DBSession
-from processing.stream import get_stream, cleanup_stream
-from events.service import EventService
+from pipeline.stream import get_stream, cleanup_stream
+from pipeline.events import EventService
 import json
 import time
 

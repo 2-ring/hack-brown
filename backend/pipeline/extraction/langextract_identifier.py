@@ -14,7 +14,7 @@ from typing import Optional
 import langextract as lx
 from langextract.providers import load_builtins_once
 
-from extraction.models import IdentifiedEvent, IdentificationResult
+from pipeline.models import IdentifiedEvent, IdentificationResult
 from config.langextract import (
     get_langextract_config,
     EXAMPLES, PROMPT_DESCRIPTION, MAX_CHAR_BUFFER, MAX_WORKERS,

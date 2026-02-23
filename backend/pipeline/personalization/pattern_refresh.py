@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import calendars.factory as calendar_factory
 from database.models import Calendar
-from preferences.pattern_discovery_service import PatternDiscoveryService
+from pipeline.personalization.pattern_discovery import PatternDiscoveryService
 from config.calendar import RefreshConfig
 from config.posthog import set_tracking_context, flush_posthog
 from config.similarity import PatternDiscoveryConfig
