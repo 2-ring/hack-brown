@@ -92,13 +92,21 @@ def resolve_temporal(
     else:
         start_dt, end_dt = _resolve_timed(extracted, tz_obj, now, client)
 
+    # Build recurrence list, converting excluded_dates to EXDATE entries
+    recurrence = list(extracted.recurrence) if extracted.recurrence else None
+    if extracted.excluded_dates and recurrence:
+        recurrence = _add_exdates(
+            recurrence, extracted.excluded_dates, extracted.is_all_day,
+            start_dt, user_timezone, tz_obj, now, client,
+        )
+
     return CalendarEvent(
         summary=extracted.summary,
         start=start_dt,
         end=end_dt,
         location=extracted.location,
         description=extracted.description,
-        recurrence=extracted.recurrence,
+        recurrence=recurrence,
     )
 
 
@@ -159,6 +167,48 @@ def _parse_duckling_value(iso_str: Optional[str], tz_obj) -> Optional[datetime]:
     except (ValueError, TypeError) as e:
         logger.warning(f"Could not parse Duckling datetime '{iso_str}': {e}")
         return None
+
+
+def _add_exdates(
+    recurrence: list,
+    excluded_dates: list,
+    is_all_day: bool,
+    start_dt: CalendarDateTime,
+    user_timezone: str,
+    tz_obj,
+    now: datetime,
+    client: DucklingClient,
+) -> list:
+    """
+    Convert natural language excluded_dates into iCalendar EXDATE entries
+    and append them to the recurrence list.
+
+    For timed events: EXDATE;TZID=America/New_York:20260323T100000
+    For all-day events: EXDATE;VALUE=DATE:20260323
+    """
+    for date_str in excluded_dates:
+        exc_dt = _duckling_parse_datetime(date_str, client, tz_obj, now)
+        if exc_dt is None:
+            logger.warning(f"Could not resolve excluded date: '{date_str}'")
+            continue
+
+        if is_all_day:
+            recurrence.append(
+                f"EXDATE;VALUE=DATE:{exc_dt.strftime('%Y%m%d')}"
+            )
+        else:
+            # Combine excluded date with event's start time
+            start_time = datetime.fromisoformat(
+                start_dt.dateTime[:19]
+            ).time()
+            exc_full = tz_obj.localize(
+                datetime.combine(exc_dt.date(), start_time)
+            )
+            recurrence.append(
+                f"EXDATE;TZID={user_timezone}:{exc_full.strftime('%Y%m%dT%H%M%S')}"
+            )
+
+    return recurrence
 
 
 def _resolve_all_day(

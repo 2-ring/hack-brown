@@ -58,6 +58,12 @@ class ExtractedEvent(BaseModel):
         description="RRULE strings if repeating: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE']. "
                     "None for one-time events."
     )
+    excluded_dates: Optional[List[str]] = Field(
+        default=None,
+        description="Dates when a recurring event does NOT occur (holidays, breaks, cancellations): "
+                    "['March 23, 2026', 'March 25, 2026']. "
+                    "Only for recurring events. Null if no exclusions or one-time event."
+    )
 
     @field_validator('summary')
     @classmethod
@@ -381,38 +387,50 @@ class CalendarEvent(BaseModel):
     @field_validator('recurrence')
     @classmethod
     def validate_recurrence(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        """Validate RRULE format"""
+        """Validate iCalendar recurrence properties (RRULE, EXDATE, RDATE)."""
         if v is None:
             return v
 
         if not isinstance(v, list):
-            raise ValueError("Recurrence must be a list of RRULE strings")
+            raise ValueError("Recurrence must be a list of iCalendar recurrence strings")
 
         for rule in v:
             if not isinstance(rule, str):
-                raise ValueError(f"Each RRULE must be a string, got {type(rule).__name__}")
+                raise ValueError(f"Each entry must be a string, got {type(rule).__name__}")
 
-            if not rule.startswith('RRULE:'):
-                raise ValueError(f"RRULE must start with 'RRULE:', got '{rule}'")
+            if rule.startswith('RRULE:'):
+                rrule_content = rule[6:]
 
-            rrule_content = rule[6:]
+                if 'FREQ=' not in rrule_content:
+                    raise ValueError(f"RRULE must contain FREQ parameter, got '{rule}'")
 
-            if 'FREQ=' not in rrule_content:
-                raise ValueError(f"RRULE must contain FREQ parameter, got '{rule}'")
+                valid_freq = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
+                freq_match = re.search(r'FREQ=(\w+)', rrule_content)
+                if freq_match and freq_match.group(1) not in valid_freq:
+                    raise ValueError(f"Invalid FREQ value '{freq_match.group(1)}', must be one of {valid_freq}")
 
-            valid_freq = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
-            freq_match = re.search(r'FREQ=(\w+)', rrule_content)
-            if freq_match and freq_match.group(1) not in valid_freq:
-                raise ValueError(f"Invalid FREQ value '{freq_match.group(1)}', must be one of {valid_freq}")
+                if 'BYDAY=' in rrule_content:
+                    valid_days = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+                    byday_match = re.search(r'BYDAY=([A-Z,]+)', rrule_content)
+                    if byday_match:
+                        for day in byday_match.group(1).split(','):
+                            day_code = re.sub(r'^\d+', '', day)
+                            if day_code not in valid_days:
+                                raise ValueError(f"Invalid BYDAY code '{day}', must be one of {valid_days}")
 
-            if 'BYDAY=' in rrule_content:
-                valid_days = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
-                byday_match = re.search(r'BYDAY=([A-Z,]+)', rrule_content)
-                if byday_match:
-                    for day in byday_match.group(1).split(','):
-                        day_code = re.sub(r'^\d+', '', day)
-                        if day_code not in valid_days:
-                            raise ValueError(f"Invalid BYDAY code '{day}', must be one of {valid_days}")
+            elif rule.startswith('EXDATE'):
+                # EXDATE entries: EXDATE;TZID=America/New_York:20260323T100000
+                # or EXDATE;VALUE=DATE:20260323
+                if ':' not in rule:
+                    raise ValueError(f"EXDATE must contain a colon separator, got '{rule}'")
+
+            elif rule.startswith(('RDATE', 'EXRULE:')):
+                pass  # Accept other iCalendar recurrence properties
+
+            else:
+                raise ValueError(
+                    f"Recurrence entry must start with RRULE:, EXDATE, RDATE, or EXRULE:, got '{rule}'"
+                )
 
         return v
 

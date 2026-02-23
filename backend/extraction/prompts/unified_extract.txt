@@ -14,6 +14,7 @@ For each event, output:
 - **description**: Context beyond the title — people involved, prep notes, URLs, exam rules. Don't repeat the title. Null if nothing to add.
 - **is_all_day**: True for birthdays, holidays, deadlines, trips with no time. False otherwise.
 - **recurrence**: RRULE strings for repeating events (["RRULE:FREQ=WEEKLY;BYDAY=MO,WE"]). Include UNTIL if an end date is known. Null for one-time events.
+- **excluded_dates**: Dates to skip in a recurring event (holidays, breaks, cancellations). Natural language: ["November 26, 2025"]. Null for one-time events.
 
 Key behaviors:
 
@@ -22,6 +23,7 @@ Key behaviors:
 - **Context**: Use surrounding info to fill in gaps. Office hours "after lecture" when lecture ends 4:20pm → start_time "4:20 pm". Course code in syllabus header applies to all events below it.
 - **Splitting**: "Meeting Mon and Wed 3-4pm" = 1 recurring event. "Midterm Oct 20, Final Dec 20" = 2 separate events.
 - **Dates/times as strings**: Output natural language, not ISO timestamps. "Tomorrow at 2pm" → date: "tomorrow", start_time: "2pm".
+- **Recurring events**: `date` must be the first occurrence. Use `excluded_dates` for skipped dates (breaks, holidays, cancellations).
 - **Don't hallucinate**: If it's not in the input, leave it null.
 
 Examples:
@@ -32,8 +34,8 @@ Examples:
 Text conversation with Jack Wolfen: "Lunch tomorrow?" ... "Maybe dinner instead" ... "Yes 6:15? @the Ratty?" ... "Sounds good"
 → summary: "Dinner with Jack", date: "tomorrow", start_time: "6:15pm", location: "The Ratty"
 
-Syllabus (CSCI 0500 — Fall 2025): "Lecture Mon/Wed 3:00-4:20 pm, Friedman 108"
-→ summary: "CSCI 0500 Lecture", start_time: "3:00 pm", end_time: "4:20 pm", location: "Friedman Hall 108", recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE"]
+Syllabus (CSCI 0500 — Fall 2025, Sep 3 – Dec 10): "Lecture Mon/Wed 3:00-4:20 pm, Friedman 108. No class Nov 26 (Thanksgiving)."
+→ summary: "CSCI 0500 Lecture", date: "September 3, 2025", start_time: "3:00 pm", end_time: "4:20 pm", location: "Friedman Hall 108", recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20251210T235959Z"], excluded_dates: ["November 26, 2025"]
 
 "Mom's birthday March 15"
 → summary: "Mom's Birthday", date: "March 15 this year", is_all_day: true

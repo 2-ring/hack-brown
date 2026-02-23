@@ -23,6 +23,7 @@ from config.posthog import (
     capture_pipeline_trace, stage_span,
     get_tracking_property, CLEAR,
 )
+from core.prompt_loader import load_prompt
 import time as _time
 
 logger = logging.getLogger(__name__)
@@ -384,7 +385,17 @@ class SessionProcessor:
             # ── EXTRACT: single LLM call ────────────────────────────────
             t_extract = _time.time()
             with stage_span("extraction") as span:
-                span.input = {"text": text, "input_type": input_type}
+                # Capture the full prompt the LLM sees (mirrors extract.py)
+                system_prompt = load_prompt("extraction/prompts/unified_extract.txt")
+                source_label = {
+                    'text': 'Plain text', 'image': 'Image (screenshot, photo)',
+                    'pdf': 'PDF document', 'audio': 'Audio transcription',
+                    'email': 'Email', 'document': 'Document',
+                }.get(input_type, input_type or 'text')
+                span.input = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"[SOURCE TYPE: {source_label}]\n\n{text}"},
+                ]
                 extraction_result = self.extractor.execute(
                     text, input_type=input_type, metadata=metadata
                 )
@@ -486,14 +497,17 @@ class SessionProcessor:
 
                 with stage_span("personalization") as span:
                     span.input = [e.model_dump() for e in calendar_events]
-                    calendar_events = self.personalize_agent.execute_batch(
+                    calendar_events, task_output = self.personalize_agent.execute_batch(
                         events=calendar_events,
                         discovered_patterns=patterns,
                         historical_events=historical_events,
                         user_id=user_id,
                         input_summary=input_summary,
                     )
-                    span.output = [e.model_dump() for e in calendar_events]
+                    span.output = {
+                        'task_output': task_output,
+                        'merged': [e.model_dump() for e in calendar_events],
+                    }
 
                 logger.info(f"[timing] personalize: {_time.time() - t_personalize:.2f}s")
 

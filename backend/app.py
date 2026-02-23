@@ -719,7 +719,7 @@ def apply_preferences_endpoint():
         except Exception as e:
             logger.warning(f"Could not fetch historical events: {e}")
 
-        personalized_events = personalize_agent.execute_batch(
+        personalized_events, _ = personalize_agent.execute_batch(
             events=[event],
             discovered_patterns=patterns,
             historical_events=historical_events,

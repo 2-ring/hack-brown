@@ -48,9 +48,9 @@ class AudioConfig:
 # ACTIVE CONFIGURATION - CHANGE THIS LINE TO SWITCH
 # ============================================================================
 
-AUDIO_CONFIG = AudioConfig.use_deepgram()
+# AUDIO_CONFIG = AudioConfig.use_deepgram()
 # AUDIO_CONFIG = AudioConfig.use_openai()
-# AUDIO_CONFIG = AudioConfig.use_grok()
+AUDIO_CONFIG = AudioConfig.use_grok()
 # AUDIO_CONFIG = AudioConfig.use_vapi()
 
 

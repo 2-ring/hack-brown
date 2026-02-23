@@ -98,6 +98,10 @@ class PersonalizationAgent(BaseAgent):
         self.llm = llm
         self.similarity_search = None
 
+    def execute(self, *args, **kwargs):
+        """Delegate to execute_batch — personalization is batch-only."""
+        return self.execute_batch(*args, **kwargs)
+
     def build_similarity_index(self, historical_events: Optional[List[Dict]] = None):
         """Pre-build the similarity search index (call before execute_batch)."""
         if historical_events and len(historical_events) >= 3 and self.similarity_search is None:
@@ -230,6 +234,7 @@ class PersonalizationAgent(BaseAgent):
             messages, config=get_invoke_config("personalization")
         )
         result = raw_result['parsed']
+        task_output = [e.model_dump() for e in result.events]
 
         # --- Merge results back into events ---
         for event_output, event, tasks in zip(result.events, events, per_event_tasks):
@@ -238,13 +243,17 @@ class PersonalizationAgent(BaseAgent):
                 merge_field = task_def['merge_field']
                 value = getattr(event_output, task_name, None)
 
+                # Treat empty strings as null for optional fields
+                if isinstance(value, str) and not value.strip():
+                    value = None
+
                 if task_name == 'calendar' and value is not None:
                     value = self._resolve_calendar_id(value, category_patterns)
 
                 if value is not None or task_name != 'title':
                     setattr(event, merge_field, value)
 
-        return events
+        return events, task_output
 
     @staticmethod
     def _assign_tasks(event: CalendarEvent, show_calendar: bool) -> List[str]:
