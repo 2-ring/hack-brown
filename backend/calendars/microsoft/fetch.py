@@ -120,6 +120,55 @@ def list_events(
         raise ValueError(f"Failed to fetch Microsoft Calendar events: {str(e)}")
 
 
+def get_event(
+    user_id: str,
+    provider_event_id: str,
+    calendar_id: str = 'primary'
+) -> Optional[Dict[str, Any]]:
+    """
+    Fetch a single event from Microsoft Calendar by its event ID.
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: Microsoft Graph event ID
+        calendar_id: Calendar ID (unused — Microsoft event IDs are globally unique)
+
+    Returns:
+        Event dict in universal format, or None if not found/deleted
+    """
+    credentials = auth.load_credentials(user_id)
+    if not credentials:
+        raise ValueError(f"User {user_id} not authenticated with Microsoft Calendar")
+
+    if not auth.refresh_if_needed(user_id, credentials):
+        raise ValueError(f"Failed to refresh Microsoft Calendar credentials for user {user_id}")
+
+    credentials = auth.load_credentials(user_id)
+    access_token = credentials['access_token']
+
+    url = f'https://graph.microsoft.com/v1.0/me/events/{provider_event_id}'
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        ms_event = response.json()
+
+        if ms_event.get('isCancelled'):
+            return None
+
+        return transform.to_universal(ms_event)
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching Microsoft Calendar event {provider_event_id}: {e}")
+        return None
+
+
 def check_conflicts(
     user_id: str,
     start_time: str,

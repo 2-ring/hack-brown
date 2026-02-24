@@ -853,6 +853,88 @@ class EventService:
         return Event.update(event_id, {'provider_syncs': syncs})
 
     @staticmethod
+    def merge_from_external(
+        event_id: str,
+        external_event: Dict[str, Any],
+        provider: str
+    ) -> bool:
+        """
+        Merge external calendar changes into a DropCal event (last-write-wins).
+
+        Compares the external event's updated timestamp against the local
+        updated_at. If the external version is newer, overwrites event fields
+        and marks provider_syncs as in sync. Does NOT increment version since
+        this is an inbound sync, not a user edit.
+
+        Args:
+            event_id: DropCal event UUID
+            external_event: Event dict in universal (Google Calendar API) format
+            provider: Provider name ('google', 'microsoft', 'apple')
+
+        Returns:
+            True if the event was updated from external, False if skipped
+        """
+        event = Event.get_by_id(event_id)
+        if not event:
+            return False
+
+        # Parse external updated timestamp
+        # Google: 'updated' (RFC3339), Microsoft: 'lastModifiedDateTime'
+        external_updated_str = (
+            external_event.get('updated') or
+            external_event.get('lastModifiedDateTime')
+        )
+
+        if external_updated_str:
+            try:
+                external_updated = datetime.fromisoformat(
+                    external_updated_str.replace('Z', '+00:00')
+                )
+            except (ValueError, TypeError):
+                external_updated = None
+        else:
+            external_updated = None
+
+        # Parse local updated_at
+        local_updated_str = event.get('updated_at')
+        if local_updated_str:
+            try:
+                if isinstance(local_updated_str, str):
+                    local_updated = datetime.fromisoformat(
+                        local_updated_str.replace('Z', '+00:00')
+                    )
+                else:
+                    local_updated = local_updated_str
+            except (ValueError, TypeError):
+                local_updated = None
+        else:
+            local_updated = None
+
+        # Last-write-wins: skip if local is newer or equal
+        if external_updated and local_updated and external_updated <= local_updated:
+            return False
+
+        # Map external event to DB columns
+        updates = EventService.calendar_event_to_db_params(external_event)
+        if not updates:
+            return False
+
+        # Apply field updates
+        Event.update(event_id, updates)
+
+        # Update provider_syncs to mark as in-sync at current version
+        current_version = event.get('version', 1)
+        syncs = list(event.get('provider_syncs') or [])
+        for s in syncs:
+            if s.get('provider') == provider:
+                s['synced_version'] = current_version
+                s['synced_at'] = datetime.utcnow().isoformat()
+                break
+        Event.update(event_id, {'provider_syncs': syncs})
+
+        return True
+
+    @staticmethod
     def get_conflicting_events(
         user_id: str,
         start_time: str,

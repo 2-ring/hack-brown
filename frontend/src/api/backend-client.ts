@@ -484,6 +484,31 @@ export async function pushEvents(
   return handleResponse(response);
 }
 
+/**
+ * Sync published events in a session from the external calendar.
+ * Fetches current state of published events and updates DropCal if changed externally.
+ * Includes a 5-minute staleness check on the backend to avoid redundant fetches.
+ */
+export async function syncSessionInbound(
+  sessionId: string
+): Promise<{
+  success: boolean;
+  checked: number;
+  updated: number;
+  deleted: number;
+  skipped_stale: boolean;
+  events: CalendarEvent[];
+}> {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_URL}/sessions/${sessionId}/sync-inbound`, {
+    method: 'POST',
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
 // ============================================================================
 // Events API
 // ============================================================================

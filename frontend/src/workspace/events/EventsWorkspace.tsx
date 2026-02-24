@@ -14,7 +14,7 @@ import {
   listContainerVariants,
   eventItemVariants
 } from './animations'
-import { updateEvent, deleteEvent, applyModifications, pushEvents, getSessionEvents, checkEventConflicts } from '../../api/backend-client'
+import { updateEvent, deleteEvent, applyModifications, pushEvents, getSessionEvents, checkEventConflicts, syncSessionInbound } from '../../api/backend-client'
 import type { ConflictInfo } from '../../api/backend-client'
 import type { SyncCalendar } from '../../api/sync'
 import { useAuth } from '../../auth/AuthContext'
@@ -66,6 +66,71 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
   const { user, primaryCalendarProvider } = useAuth()
 
   const calendars = propCalendars && propCalendars.length > 0 ? propCalendars : DEFAULT_CALENDARS
+
+  // Debounced auto-push: after editing a published event, push to calendar after 3s
+  const pushTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  const scheduleDebouncedPush = (eventId: string, providerSyncs: CalendarEvent['provider_syncs']) => {
+    if (!providerSyncs || providerSyncs.length === 0) return // Draft, no push needed
+    if (!primaryCalendarProvider) return // No calendar connected
+
+    const existing = pushTimersRef.current.get(eventId)
+    if (existing) clearTimeout(existing)
+
+    const timer = setTimeout(async () => {
+      pushTimersRef.current.delete(eventId)
+      try {
+        const result = await pushEvents([eventId])
+        // Silently update provider_syncs so badge shows "synced"
+        if (sessionId && (result.created.length > 0 || result.updated.length > 0)) {
+          const freshEvents = await getSessionEvents(sessionId)
+          setEditedEvents(freshEvents)
+          onEventsChanged?.(freshEvents)
+        }
+      } catch (err) {
+        console.error(`Auto-push failed for event ${eventId}:`, err)
+      }
+    }, 3000)
+
+    pushTimersRef.current.set(eventId, timer)
+  }
+
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      pushTimersRef.current.forEach(timer => clearTimeout(timer))
+    }
+  }, [])
+
+  // Inbound sync: check published events against external calendar on session load
+  const inboundSyncedSessionRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!sessionId || !user || isLoading) return
+    if (inboundSyncedSessionRef.current === sessionId) return
+
+    const validEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
+    const hasPublishedEvents = validEvents.some(
+      e => e.provider_syncs && e.provider_syncs.length > 0
+    )
+    if (!hasPublishedEvents) return
+
+    inboundSyncedSessionRef.current = sessionId
+
+    syncSessionInbound(sessionId)
+      .then(result => {
+        if (result.updated > 0 || result.deleted > 0) {
+          setEditedEvents(result.events)
+          onEventsChanged?.(result.events)
+          addNotification(createSuccessNotification(
+            `Updated ${result.updated + result.deleted} event${(result.updated + result.deleted) !== 1 ? 's' : ''} from calendar`
+          ))
+        }
+      })
+      .catch(err => {
+        console.error('Inbound sync failed:', err)
+      })
+  }, [sessionId, editedEvents, isLoading, user])
 
   const runConflictCheck = async () => {
     if (!sessionId) return
@@ -179,6 +244,10 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
             return updated
           })
           addNotification(createSuccessNotification('Got it, changes saved!'))
+          // Auto-push to calendar if event is published
+          if (persisted.id && persisted.provider_syncs?.length) {
+            scheduleDebouncedPush(persisted.id, persisted.provider_syncs)
+          }
         })
         .catch(err => {
           console.error('Failed to persist event edit:', err)
@@ -282,6 +351,12 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
             .then(persistedEvents => {
               setEditedEvents(persistedEvents)
               onEventsChanged?.(persistedEvents)
+              // Auto-push any published events that were modified
+              for (const evt of persistedEvents) {
+                if (evt.id && evt.provider_syncs?.length) {
+                  scheduleDebouncedPush(evt.id, evt.provider_syncs)
+                }
+              }
             })
             .catch(err => console.error('Failed to persist modifications:', err))
         }

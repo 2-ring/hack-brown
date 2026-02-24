@@ -146,6 +146,49 @@ def list_calendars(user_id: str) -> List[Dict]:
         return []
 
 
+def get_event(
+    user_id: str,
+    provider_event_id: str,
+    calendar_id: str = 'primary'
+) -> Optional[Dict]:
+    """
+    Fetch a single event from Google Calendar by its event ID.
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: Google Calendar event ID
+        calendar_id: Calendar to fetch from (default: 'primary')
+
+    Returns:
+        Event dict in Google Calendar API format, or None if not found/deleted
+    """
+    credentials = auth.load_credentials(user_id)
+
+    if not credentials:
+        raise Exception("Not authenticated with Google Calendar")
+
+    if not auth.refresh_if_needed(user_id, credentials):
+        raise Exception("Failed to refresh Google Calendar credentials")
+
+    try:
+        service = build('calendar', 'v3', credentials=credentials)
+        event = service.events().get(
+            calendarId=calendar_id,
+            eventId=provider_event_id
+        ).execute()
+
+        if event.get('status') == 'cancelled':
+            return None
+
+        return event
+
+    except HttpError as error:
+        if error.resp.status == 404:
+            return None
+        print(f"Error fetching Google Calendar event {provider_event_id}: {error}")
+        return None
+
+
 def get_calendar_settings(user_id: str) -> Optional[Dict]:
     """
     Fetch user's Google Calendar settings including timezone.

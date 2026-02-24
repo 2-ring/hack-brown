@@ -164,6 +164,31 @@ def check_conflicts(
     return fetch_module.check_conflicts(user_id, start_time, end_time)
 
 
+def get_event(
+    user_id: str,
+    provider_event_id: str,
+    calendar_id: str = 'primary',
+    provider: Optional[str] = None
+) -> Optional[Dict]:
+    """
+    Fetch a single event from the user's calendar provider.
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: Provider's event ID
+        calendar_id: Calendar to fetch from (default: 'primary')
+        provider: Provider to use, or None to use primary
+
+    Returns:
+        Event dict in universal format, or None if not found/deleted
+    """
+    if not provider:
+        provider = get_user_primary_provider(user_id)
+
+    _, fetch_module, _ = get_provider_modules(provider)
+    return fetch_module.get_event(user_id, provider_event_id, calendar_id)
+
+
 def create_event(
     user_id: str,
     event_data: Dict,

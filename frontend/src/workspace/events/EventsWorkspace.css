@@ -681,7 +681,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .loading-progress-text {
@@ -693,8 +693,8 @@
 
 .loading-progress-message {
   font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: var(--text-primary);
   font-family: inherit;
 }
 

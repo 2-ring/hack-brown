@@ -184,21 +184,29 @@ function TypingText({ text, onComplete }: { text: string; onComplete?: () => voi
   )
 }
 
+/** Minimum time (ms) a completed message stays visible before transitioning */
+const READ_DELAY_MS = 600
+
 /** Queues stage transitions so the current typing animation finishes before the next begins. */
 function QueuedLoadingStep({ step }: { step: LoadingStateConfig }) {
   const [activeStep, setActiveStep] = useState(step)
   const [pending, setPending] = useState<LoadingStateConfig | null>(null)
   const [typingDone, setTypingDone] = useState(false)
 
+  const transition = useCallback((next: LoadingStateConfig) => {
+    setActiveStep(next)
+    setTypingDone(false)
+    setPending(null)
+  }, [])
+
   // New step arrived from parent
   useEffect(() => {
     if (step.message === activeStep.message) return
 
     if (typingDone) {
-      // Current animation finished — transition immediately
-      setActiveStep(step)
-      setTypingDone(false)
-      setPending(null)
+      // Current animation finished — hold for read delay then transition
+      const timer = setTimeout(() => transition(step), READ_DELAY_MS)
+      return () => clearTimeout(timer)
     } else {
       // Still typing — queue (latest wins)
       setPending(step)
@@ -208,9 +216,8 @@ function QueuedLoadingStep({ step }: { step: LoadingStateConfig }) {
   // Current typing finished and there's a queued step
   useEffect(() => {
     if (typingDone && pending) {
-      setActiveStep(pending)
-      setTypingDone(false)
-      setPending(null)
+      const timer = setTimeout(() => transition(pending), READ_DELAY_MS)
+      return () => clearTimeout(timer)
     }
   }, [typingDone, pending])
 
@@ -229,7 +236,7 @@ function QueuedLoadingStep({ step }: { step: LoadingStateConfig }) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
         >
-          {activeStep.icon && <activeStep.icon size={20} weight="duotone" />}
+          {activeStep.icon && <activeStep.icon size={20} weight="bold" />}
         </motion.div>
       </AnimatePresence>
       <div className="loading-progress-text">

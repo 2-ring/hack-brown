@@ -883,3 +883,170 @@ def push_events():
         return jsonify({'error': str(e)}), 403
     except Exception as e:
         return jsonify({'error': f'Failed to push events: {str(e)}'}), 500
+
+
+INBOUND_SYNC_COOLDOWN_MINUTES = 5
+
+
+@calendar_bp.route('/sessions/<session_id>/sync-inbound', methods=['POST'])
+@require_auth
+def sync_session_inbound(session_id):
+    """
+    Fetch the current state of published events from the external calendar
+    and update DropCal if they've been modified externally.
+
+    Only checks events that have provider_syncs entries (published events).
+    Uses last-write-wins: compares external updated timestamp vs local updated_at.
+    Skips if the most recent sync was within INBOUND_SYNC_COOLDOWN_MINUTES.
+
+    Returns:
+        {
+            "success": true,
+            "checked": 5,
+            "updated": 1,
+            "deleted": 0,
+            "skipped_stale": false,
+            "events": [... updated CalendarEvent list ...]
+        }
+    """
+    from datetime import datetime, timezone
+    from database.models import Event, Session as DBSession
+    from pipeline.events import EventService
+
+    try:
+        user_id = request.user_id
+
+        session = DBSession.get_by_id(session_id)
+        if not session:
+            return jsonify({'error': 'Session not found'}), 404
+        if session.get('user_id') != user_id:
+            return jsonify({'error': 'Session does not belong to user'}), 403
+
+        event_ids = session.get('event_ids') or []
+        if not event_ids:
+            return jsonify({
+                'success': True, 'checked': 0, 'updated': 0,
+                'deleted': 0, 'skipped_stale': False,
+                'events': []
+            })
+
+        # Fetch all events
+        event_rows = Event.get_by_ids(event_ids)
+
+        # Filter to published events (those with provider_syncs entries)
+        published = [
+            row for row in event_rows
+            if (row.get('provider_syncs') or []) and not row.get('deleted_at')
+        ]
+
+        if not published:
+            events = EventService.get_events_by_session(session_id, event_ids)
+            return jsonify({
+                'success': True, 'checked': 0, 'updated': 0,
+                'deleted': 0, 'skipped_stale': False,
+                'events': events
+            })
+
+        # Staleness check: skip if most recent synced_at across all published
+        # events is within the cooldown window
+        now = datetime.now(timezone.utc)
+        most_recent_sync = None
+        for row in published:
+            for sync in (row.get('provider_syncs') or []):
+                synced_at_str = sync.get('synced_at')
+                if synced_at_str:
+                    try:
+                        synced_at = datetime.fromisoformat(
+                            synced_at_str.replace('Z', '+00:00')
+                        )
+                        if not synced_at.tzinfo:
+                            synced_at = synced_at.replace(tzinfo=timezone.utc)
+                        if most_recent_sync is None or synced_at > most_recent_sync:
+                            most_recent_sync = synced_at
+                    except (ValueError, TypeError):
+                        pass
+
+        if most_recent_sync:
+            minutes_since = (now - most_recent_sync).total_seconds() / 60
+            if minutes_since < INBOUND_SYNC_COOLDOWN_MINUTES:
+                events = EventService.get_events_by_session(session_id, event_ids)
+                return jsonify({
+                    'success': True, 'checked': 0, 'updated': 0,
+                    'deleted': 0, 'skipped_stale': True,
+                    'events': events
+                })
+
+        # Check if user is authenticated with their calendar provider
+        try:
+            provider = factory.get_user_primary_provider(user_id)
+        except ValueError:
+            events = EventService.get_events_by_session(session_id, event_ids)
+            return jsonify({
+                'success': True, 'checked': 0, 'updated': 0,
+                'deleted': 0, 'skipped_stale': False,
+                'events': events
+            })
+
+        if not factory.is_authenticated(user_id, provider):
+            events = EventService.get_events_by_session(session_id, event_ids)
+            return jsonify({
+                'success': True, 'checked': 0, 'updated': 0,
+                'deleted': 0, 'skipped_stale': False,
+                'events': events
+            })
+
+        # Fetch each published event from the external calendar
+        checked = 0
+        updated_count = 0
+        deleted_count = 0
+
+        for row in published:
+            syncs = row.get('provider_syncs') or []
+            # Use the first sync entry (primary provider)
+            sync_entry = next(
+                (s for s in syncs if s.get('provider') == provider), None
+            )
+            if not sync_entry:
+                continue
+
+            provider_event_id = sync_entry.get('provider_event_id')
+            calendar_id = sync_entry.get('calendar_id', 'primary')
+            if not provider_event_id:
+                continue
+
+            checked += 1
+
+            try:
+                external_event = factory.get_event(
+                    user_id, provider_event_id, calendar_id, provider
+                )
+
+                if external_event is None:
+                    # Event deleted externally — soft-delete locally
+                    Event.soft_delete(row['id'])
+                    deleted_count += 1
+                else:
+                    # Merge if external is newer (last-write-wins)
+                    was_updated = EventService.merge_from_external(
+                        row['id'], external_event, provider
+                    )
+                    if was_updated:
+                        updated_count += 1
+
+            except Exception as e:
+                print(f"[inbound-sync] Error fetching event {row['id']}: {e}")
+                continue
+
+        # Return updated event list
+        events = EventService.get_events_by_session(session_id, event_ids)
+        return jsonify({
+            'success': True,
+            'checked': checked,
+            'updated': updated_count,
+            'deleted': deleted_count,
+            'skipped_stale': False,
+            'events': events
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Inbound sync failed: {str(e)}'}), 500

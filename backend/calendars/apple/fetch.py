@@ -153,6 +153,48 @@ def list_events(
         raise ValueError(f"Failed to fetch Apple Calendar events: {str(e)}")
 
 
+def get_event(
+    user_id: str,
+    provider_event_id: str,
+    calendar_id: str = 'primary'
+) -> Optional[Dict[str, Any]]:
+    """
+    Fetch a single event from Apple Calendar by its iCal UID.
+
+    Args:
+        user_id: User's UUID
+        provider_event_id: iCalendar UID of the event
+        calendar_id: Calendar ID (unused — UID lookup searches all calendars)
+
+    Returns:
+        Event dict in universal format, or None if not found/deleted
+    """
+    client = auth.get_caldav_client(user_id)
+    if not client:
+        raise ValueError(f"User {user_id} not authenticated with Apple Calendar")
+
+    try:
+        calendar = auth.get_default_calendar(client)
+        event = calendar.event_by_uid(provider_event_id)
+
+        if not event or not event.data:
+            return None
+
+        parsed = transform.parse_ical_string(event.data)
+        if not parsed:
+            return None
+
+        result = parsed[0]
+        if result.get('status') == 'cancelled':
+            return None
+
+        return result
+
+    except Exception as e:
+        print(f"Error fetching Apple Calendar event {provider_event_id}: {e}")
+        return None
+
+
 def check_conflicts(
     user_id: str,
     start_time: str,
