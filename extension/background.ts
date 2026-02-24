@@ -653,33 +653,29 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Sidebar — push all session events to calendar
   if (message.type === 'PUSH_ALL_EVENTS') {
     const { sessionId } = message;
-    ensureAuth().then(async (hasAuth) => {
-      if (!hasAuth) {
-        sendResponse({ ok: false, error: 'Not authenticated' });
-        return;
+    (async () => {
+      const hasAuth = await ensureAuth();
+      if (!hasAuth) return { ok: false, error: 'Not authenticated' };
+
+      const history = await getHistory();
+      const session = history.sessions.find((s) => s.sessionId === sessionId);
+      const eventIds = (session?.events || [])
+        .map((e) => e.id)
+        .filter((id): id is string => !!id);
+
+      if (eventIds.length === 0) return { ok: false, error: 'No events to add' };
+
+      const result = await pushEvents(sessionId, eventIds);
+      if (result.success) {
+        await updateSessionRecord(sessionId, { addedToCalendar: true });
       }
-      try {
-        const history = await getHistory();
-        const session = history.sessions.find((s) => s.sessionId === sessionId);
-        const eventIds = (session?.events || [])
-          .map((e) => e.id)
-          .filter((id): id is string => !!id);
-
-        if (eventIds.length === 0) {
-          sendResponse({ ok: false, error: 'No events to add' });
-          return;
-        }
-
-        const result = await pushEvents(sessionId, eventIds);
-        if (result.success) {
-          await updateSessionRecord(sessionId, { addedToCalendar: true });
-        }
-        sendResponse({ ok: result.success, message: result.message });
-      } catch (error) {
+      return { ok: result.success, message: result.message };
+    })()
+      .then((resp) => sendResponse(resp))
+      .catch((error) => {
         console.error('DropCal: Push events failed', error);
         sendResponse({ ok: false, error: 'Failed to add events to calendar' });
-      }
-    });
+      });
     return true;
   }
 

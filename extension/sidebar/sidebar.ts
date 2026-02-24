@@ -63,8 +63,13 @@ function formatTimeRange(start: CalendarEvent['start'], end: CalendarEvent['end'
 }
 
 function getEventDate(event: CalendarEvent): Date {
-  const str = event.start.dateTime || event.start.date || '';
-  return new Date(str);
+  if (event.start.date && !event.start.dateTime) {
+    // Date-only strings ("YYYY-MM-DD") are parsed as UTC by JS,
+    // which shifts the day back in timezones behind UTC. Append
+    // T00:00:00 so it's treated as local midnight instead.
+    return new Date(event.start.date + 'T00:00:00');
+  }
+  return new Date(event.start.dateTime || '');
 }
 
 function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
@@ -276,21 +281,36 @@ btnBack.addEventListener('click', () => {
 btnAddAll.addEventListener('click', () => {
   if (!currentSessionId || btnAddAll.classList.contains('loading') || btnAddAll.classList.contains('added')) return;
 
+  const resetButton = () => {
+    btnAddAll.classList.remove('loading');
+    btnAddAll.innerHTML = `<i class="ph-duotone ph-calendar-star btn-icon" style="font-size: 18px"></i> Add to Calendar`;
+  };
+
   btnAddAll.classList.add('loading');
   btnAddAll.innerHTML = `<i class="ph ph-spinner btn-icon" style="font-size: 18px"></i> Adding...`;
 
-  api.runtime.sendMessage(
-    { type: 'PUSH_ALL_EVENTS', sessionId: currentSessionId },
-    (response) => {
-      btnAddAll.classList.remove('loading');
-      if (response?.ok) {
-        btnAddAll.classList.add('added');
-        btnAddAll.innerHTML = `<i class="ph ph-check-circle btn-icon" style="font-size: 18px"></i> Added to calendar`;
-      } else {
-        btnAddAll.innerHTML = `<i class="ph-duotone ph-calendar-star btn-icon" style="font-size: 18px"></i> Add to Calendar`;
-      }
-    },
-  );
+  try {
+    api.runtime.sendMessage(
+      { type: 'PUSH_ALL_EVENTS', sessionId: currentSessionId },
+      (response) => {
+        if (api.runtime.lastError) {
+          console.error('DropCal: sendMessage error', api.runtime.lastError);
+          resetButton();
+          return;
+        }
+        btnAddAll.classList.remove('loading');
+        if (response?.ok) {
+          btnAddAll.classList.add('added');
+          btnAddAll.innerHTML = `<i class="ph ph-check-circle btn-icon" style="font-size: 18px"></i> Added to calendar`;
+        } else {
+          resetButton();
+        }
+      },
+    );
+  } catch (err) {
+    console.error('DropCal: sendMessage threw', err);
+    resetButton();
+  }
 });
 
 btnOpenDropcal.addEventListener('click', () => {
