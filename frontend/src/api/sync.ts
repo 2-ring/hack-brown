@@ -1,144 +1,19 @@
 /**
  * Calendar Sync API client.
- * Handles synchronization with calendar providers (Google, Microsoft, Apple).
+ * Thin wrapper over the shared sync client with platform-specific config.
  */
 
+import { createSyncClient, shouldSync } from '@dropcal/shared';
+import type { SyncCalendar, SyncResult } from '@dropcal/shared';
 import { getAccessToken } from '../auth/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export interface SyncCalendar {
-  id: string;
-  summary: string;
-  backgroundColor: string;
-  foregroundColor?: string;
-  primary?: boolean;
-  description?: string;
-}
+const syncClient = createSyncClient({
+  baseUrl: API_URL,
+  getAccessToken,
+});
 
-export interface SyncResult {
-  success: boolean;
-  strategy: 'incremental' | 'full' | 'skip' | 'fast_incremental';
-  synced_at: string;
-  last_synced_at?: string;
-  minutes_since_last_sync?: number;
-  total_events_in_db: number;
-  most_recent_event?: string;
-  is_first_sync: boolean;
-  has_sync_token: boolean;
-  provider: string;
-  calendar_id: string;
-  calendars?: SyncCalendar[];
-  events_added: number;
-  events_updated: number;
-  events_deleted: number;
-  skipped?: boolean;
-  reason?: string;
-}
-
-/**
- * Sync calendar with provider.
- * Backend automatically chooses the best sync strategy based on:
- * - Last sync time
- * - Whether we have a sync token
- * - Number of existing events
- *
- * Call this when:
- * - App opens
- * - User navigates to events view
- * - User manually clicks refresh
- *
- * @returns Sync results with statistics
- */
-export const syncCalendar = async (): Promise<SyncResult> => {
-  const token = await getAccessToken();
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_URL}/calendar/sync`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({}),
-  });
-
-  // Calendar not connected yet (tokens not stored or expired) — not an error,
-  // just means token storage hasn't completed. Return a skip result silently.
-  if (response.status === 401 || response.status === 400) {
-    return {
-      success: true,
-      strategy: 'skip' as const,
-      synced_at: new Date().toISOString(),
-      total_events_in_db: 0,
-      is_first_sync: false,
-      has_sync_token: false,
-      provider: 'unknown',
-      calendar_id: 'primary',
-      events_added: 0,
-      events_updated: 0,
-      events_deleted: 0,
-      skipped: true,
-      reason: 'Calendar not connected yet',
-    };
-  }
-
-  if (!response.ok) {
-    // response.statusText is empty under HTTP/2 — read the body for details
-    const body = await response.json().catch(() => null);
-    const detail = body?.error || response.statusText || `status ${response.status}`;
-    throw new Error(`Sync failed: ${detail}`);
-  }
-
-  return response.json();
-};
-
-/**
- * Fetch the user's calendar list from the database.
- * Fast endpoint — no provider API calls, just reads stored calendars.
- * Use this to populate calendar selectors immediately on load.
- */
-export const getCalendars = async (): Promise<SyncCalendar[]> => {
-  const token = await getAccessToken();
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_URL}/calendar/list`, {
-    method: 'GET',
-    headers,
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const data = await response.json();
-  return data.calendars || [];
-};
-
-/**
- * Check if sync is needed based on last sync time.
- *
- * @param lastSyncedAt - ISO timestamp of last sync
- * @returns true if sync is needed (> 5 minutes ago or never synced)
- */
-export const shouldSync = (lastSyncedAt?: string): boolean => {
-  if (!lastSyncedAt) return true;
-
-  const lastSync = new Date(lastSyncedAt);
-  const now = new Date();
-  const minutesSinceSync = (now.getTime() - lastSync.getTime()) / 1000 / 60;
-
-  // Sync if last sync was > 5 minutes ago
-  return minutesSinceSync > 5;
-};
+export const { syncCalendar, getCalendars } = syncClient;
+export { shouldSync };
+export type { SyncCalendar, SyncResult };

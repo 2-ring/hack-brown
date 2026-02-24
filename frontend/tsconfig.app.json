@@ -16,6 +16,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path aliases */
+    "paths": {
+      "@dropcal/shared": ["../shared/src/index.ts"],
+      "@dropcal/shared/*": ["../shared/src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

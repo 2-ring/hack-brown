@@ -1,74 +1,24 @@
 /**
- * Manages guest sessions in localStorage.
- * Tracks session count, IDs, and enforces 3-session limit.
+ * GuestSessionManager — static wrapper over the shared instance.
+ *
+ * The shared package uses an instance class with DI for storage.
+ * This module creates a singleton with localStorage and re-exports
+ * a static-style class so existing call sites don't need to change.
  */
 
-const GUEST_STORAGE_KEY = 'dropcal_guest_sessions';
-const GUEST_LIMIT = 3;
-const TOAST_DISMISSED_KEY = 'dropcal_guest_toast_dismissed';
+import { GuestSessionManager as SharedGuestSessionManager } from '@dropcal/shared';
 
-interface GuestSession {
-  id: string;
-  timestamp: number;
-  accessToken: string; // Secure token for session access
-}
-
-interface GuestStorage {
-  sessions: GuestSession[];
-  count: number;
-}
+const instance = new SharedGuestSessionManager(localStorage);
 
 export class GuestSessionManager {
-  static getGuestSessions(): GuestStorage {
-    const stored = localStorage.getItem(GUEST_STORAGE_KEY);
-    if (!stored) {
-      return { sessions: [], count: 0 };
-    }
-    return JSON.parse(stored);
-  }
-
-  static addGuestSession(sessionId: string, accessToken: string): void {
-    const storage = this.getGuestSessions();
-    storage.sessions.push({
-      id: sessionId,
-      timestamp: Date.now(),
-      accessToken
-    });
-    storage.count += 1;
-    localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(storage));
-  }
-
-  static getAccessToken(sessionId: string): string | null {
-    const storage = this.getGuestSessions();
-    const session = storage.sessions.find(s => s.id === sessionId);
-    return session?.accessToken || null;
-  }
-
-  static getSessionCount(): number {
-    return this.getGuestSessions().count;
-  }
-
-  static hasReachedLimit(): boolean {
-    return this.getSessionCount() >= GUEST_LIMIT;
-  }
-
-  static getRemainingCount(): number {
-    return Math.max(0, GUEST_LIMIT - this.getSessionCount());
-  }
-
-  static getSessionIds(): string[] {
-    return this.getGuestSessions().sessions.map((s) => s.id);
-  }
-
-  static clearGuestSessions(): void {
-    localStorage.removeItem(GUEST_STORAGE_KEY);
-  }
-
-  static isToastDismissed(): boolean {
-    return localStorage.getItem(TOAST_DISMISSED_KEY) === 'true';
-  }
-
-  static dismissToast(): void {
-    localStorage.setItem(TOAST_DISMISSED_KEY, 'true');
-  }
+  static getGuestSessions() { return instance.getGuestSessions(); }
+  static addGuestSession(sessionId: string, accessToken: string) { return instance.addGuestSession(sessionId, accessToken); }
+  static getAccessToken(sessionId: string) { return instance.getAccessToken(sessionId); }
+  static getSessionCount() { return instance.getSessionCount(); }
+  static hasReachedLimit() { return instance.hasReachedLimit(); }
+  static getRemainingCount() { return instance.getRemainingCount(); }
+  static getSessionIds() { return instance.getSessionIds(); }
+  static clearGuestSessions() { return instance.clearGuestSessions(); }
+  static isToastDismissed() { return instance.isToastDismissed(); }
+  static dismissToast() { return instance.dismissToast(); }
 }
