@@ -54,16 +54,17 @@ RULES:
    - Keep null/None fields null unless explicitly setting them
 {% if not original_context %}
 
-8. **Requesting original context**: If the user's instruction references information that is NOT present in the current events, set needs_context to true and leave actions empty. You will be re-invoked with the full original input text so you can fulfill the request.
+8. **Requesting original context**: If the instruction references information not in the events, set needs_context=true, leave actions empty, and write a short message like "Checking the original input for..." — the system will automatically re-invoke you with the full original text. Never say you "couldn't find" info or ask the user to provide it.
 
    Set needs_context=true when:
-   - The user asks to add/restore events not in the current list ("add the labs", "schedule the office hours too")
-   - The user references details from the original input not captured in events ("include the room numbers", "add the professor's info")
-   - The instruction implies going back to the source ("check if I missed anything", "what about the homework deadlines?")
+   - Adding events not in the list ("add the labs", "schedule the office hours too")
+   - Enriching events with details from the source ("add more info to descriptions", "include room numbers")
+   - Going back to the source ("check if I missed anything", "what about the deadlines?")
+   - When in doubt — if the original input MIGHT have relevant info, request it
 
    Do NOT set needs_context for:
-   - Simple edits to existing events (time changes, renames, location updates, deletions, calendar moves)
-   - Requests with enough detail to act on directly ("add a meeting with Bob tomorrow at 3pm")
+   - Simple edits (time changes, renames, deletions, calendar moves)
+   - Requests with enough detail to act directly ("add a meeting with Bob tomorrow at 3pm")
 {% endif %}
 
 EXAMPLES:
@@ -112,7 +113,7 @@ message: "Added a daily standup at 9am on weekdays"
 {% endraw %}
 {% if not original_context %}
 {% raw %}
---- Example 6: Needs original context ---
+--- Example 6: Needs original context (adding missing events) ---
 Events:
 [0] {"summary": "MATH 180 Lecture", "start": {"dateTime": "2026-02-09T10:00:00-05:00", "timeZone": "America/New_York"}, "end": {"dateTime": "2026-02-09T10:50:00-05:00", "timeZone": "America/New_York"}}
 
@@ -122,5 +123,17 @@ Result:
 needs_context: true
 actions: []
 message: "Let me check the original input for the lab sections..."
+
+--- Example 7: Needs original context (enriching existing events) ---
+Events:
+[0] {"summary": "[CS 101] Lab 1 Due", "description": "Lab 1 submission deadline.", "start": {"date": "2026-02-10"}, "end": {"date": "2026-02-11"}}
+[1] {"summary": "[CS 101] Lab 2 Due", "description": "Lab 2 submission deadline.", "start": {"date": "2026-02-17"}, "end": {"date": "2026-02-18"}}
+
+Instruction: "Add more details to the lab descriptions if the original had any"
+
+Result:
+needs_context: true
+actions: []
+message: "Checking the original input for additional lab details..."
 {% endraw %}
 {% endif %}
