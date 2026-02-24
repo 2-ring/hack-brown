@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../fonts/phosphor.css">
+  <link rel="stylesheet" href="../fonts/phosphor-duotone.css">
+  <link rel="stylesheet" href="sidebar.css">
+  <title>DropCal</title>
+</head>
+<body>
+  <div id="root">
+    <!-- Header -->
+    <div class="sidebar-header">
+      <button id="btn-back" class="header-btn" title="Back">
+        <i class="ph ph-arrow-left" style="font-size: 20px"></i>
+      </button>
+      <span id="sidebar-title" class="sidebar-title">Events</span>
+      <img src="../icons/icon48.png" alt="DropCal" class="sidebar-logo">
+    </div>
+
+    <!-- Loading state -->
+    <div id="state-loading" class="sidebar-content">
+      <div id="skeleton-list" class="event-list"></div>
+    </div>
+
+    <!-- Events list -->
+    <div id="state-events" class="sidebar-content hidden">
+      <div id="events-list" class="event-list"></div>
+    </div>
+
+    <!-- Error state -->
+    <div id="state-error" class="sidebar-content hidden">
+      <div class="sidebar-error">
+        <p id="sidebar-error-message" class="sidebar-error-text">Something went wrong.</p>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="state-empty" class="sidebar-content hidden">
+      <div class="sidebar-empty">
+        <p class="sidebar-empty-text">No events found.</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <button id="btn-add-all" class="btn-cta btn-add-all">
+        <i class="ph-duotone ph-calendar-star btn-icon" style="font-size: 18px"></i>
+        Add to Calendar
+      </button>
+      <button id="btn-open-dropcal" class="btn-secondary">
+        <i class="ph-fill ph-drop btn-icon" style="font-size: 16px"></i>
+        Open in DropCal
+        <i class="ph ph-arrow-square-out btn-icon" style="font-size: 14px"></i>
+      </button>
+    </div>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>
