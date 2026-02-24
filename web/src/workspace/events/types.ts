@@ -21,6 +21,7 @@ import {
   Calendar,
   CalendarCheck,
   Pen,
+  Database,
 } from '@phosphor-icons/react'
 
 export interface LoadingStateConfig {
@@ -76,6 +77,9 @@ export const LOADING_MESSAGES = {
 
   // Syncing to calendar
   ADDING_TO_CALENDAR: { message: 'Syncing to calendar...', icon: CalendarCheck },
+
+  // Waiting for events to be saved to database
+  SAVING_TO_DATABASE: { message: 'Connecting to database...', icon: Database },
 
   // AI edit processing
   APPLYING_EDITS: { message: 'Applying changes...', icon: Pen },

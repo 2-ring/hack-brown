@@ -42,6 +42,7 @@ interface WorkspaceProps {
   onNewSession?: () => void
   onAuthRequired?: () => void
   sessionId?: string
+  waitForEventsSaved?: () => Promise<string[]>
 }
 
 export function Workspace({
@@ -67,6 +68,7 @@ export function Workspace({
   onNewSession,
   onAuthRequired,
   sessionId,
+  waitForEventsSaved,
 }: WorkspaceProps) {
   const { user } = useAuth()
   const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name
@@ -145,6 +147,7 @@ export function Workspace({
           onAuthRequired={onAuthRequired}
           sessionId={sessionId}
           calendars={calendars}
+          waitForEventsSaved={waitForEventsSaved}
         />
       )}
     </>

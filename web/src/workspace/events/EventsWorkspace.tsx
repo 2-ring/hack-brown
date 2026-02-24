@@ -51,9 +51,10 @@ interface EventsWorkspaceProps {
   onAuthRequired?: () => void
   sessionId?: string
   calendars?: SyncCalendar[]
+  waitForEventsSaved?: () => Promise<string[]>
 }
 
-export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsChanged, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, onAuthRequired, sessionId, calendars: propCalendars }: EventsWorkspaceProps) {
+export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsChanged, isLoading = false, loadingConfig = [], expectedEventCount, inputType, inputContent, onBack, onAuthRequired, sessionId, calendars: propCalendars, waitForEventsSaved }: EventsWorkspaceProps) {
   const [changeRequest, setChangeRequest] = useState('')
   const [isChatExpanded, setIsChatExpanded] = useState(false)
   const [editingEventIndex, setEditingEventIndex] = useState<number | null>(null)
@@ -430,7 +431,20 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
         onAuthRequired?.()
         return
       }
-      const validEditedEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
+      let validEditedEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
+      const hasIds = validEditedEvents.some(e => !!e.id)
+
+      // If events haven't been saved to DB yet, wait for pipeline to finish saving
+      if (!hasIds && waitForEventsSaved) {
+        setActiveLoading(LOADING_MESSAGES.SAVING_TO_DATABASE)
+        const savedIds = await waitForEventsSaved()
+        // Patch events with their DB IDs (positional mapping from pipeline)
+        validEditedEvents = validEditedEvents.map((e, i) => ({
+          ...e,
+          id: e.id || savedIds[i],
+        }))
+      }
+
       setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
       try {
         const result = await onConfirm(validEditedEvents)
@@ -464,19 +478,33 @@ export function EventsWorkspace({ events, onConfirm, onEventDeleted, onEventsCha
 
   // Swipe right: push single event to calendar (create or update)
   const handleSwipeAdd = async (event: CalendarEvent) => {
-    if (!event.id) return
     if (!user) {
       onAuthRequired?.()
       return
     }
+
+    let eventId = event.id
+
+    // If event hasn't been saved to DB yet, wait for pipeline to finish saving
+    if (!eventId && waitForEventsSaved) {
+      setActiveLoading(LOADING_MESSAGES.SAVING_TO_DATABASE)
+      const savedIds = await waitForEventsSaved()
+      // Find this event's position in editedEvents to get its DB ID
+      const validEvents = editedEvents.filter((e): e is CalendarEvent => e !== null)
+      const index = validEvents.indexOf(event)
+      eventId = index >= 0 ? savedIds[index] : undefined
+    }
+
+    if (!eventId) return
+
     setActiveLoading(LOADING_MESSAGES.ADDING_TO_CALENDAR)
     try {
-      const result = await pushEvents([event.id])
-      if (result.created.includes(event.id)) {
+      const result = await pushEvents([eventId])
+      if (result.created.includes(eventId)) {
         addNotification(createSuccessNotification(`"${event.summary}" added to your calendar!`))
-      } else if (result.updated.includes(event.id)) {
+      } else if (result.updated.includes(eventId)) {
         addNotification(createSuccessNotification(`"${event.summary}" updated in your calendar!`))
-      } else if (result.skipped.includes(event.id)) {
+      } else if (result.skipped.includes(eventId)) {
         addNotification(createSuccessNotification(`"${event.summary}" is already up to date!`))
       } else {
         addNotification(createErrorNotification(`Hmm, couldn't sync "${event.summary}". Give it another try!`))
