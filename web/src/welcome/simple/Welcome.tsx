@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
     List, X, Mailbox, FingerprintSimple, Flask,
     Envelope, ChatCircleText, Camera, FileText, Microphone,
-    Link as LinkIcon, WhatsappLogo, SlackLogo, FigmaLogo, NotionLogo,
-    SpotifyLogo, SoundcloudLogo, TwitchLogo, DiscordLogo,
+    Link as LinkIcon, WhatsappLogo, SlackLogo, NotionLogo,
+    TelegramLogo, LinkedinLogo, DiscordLogo, Globe, Image,
     EyesIcon, ArrowSquareOut,
 } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
 import { Logo } from '../../components/Logo'
 import { FlowPath } from '../full/components/FlowPath'
 import { CTAButton } from '../full/components/CTAButton'
@@ -48,8 +49,8 @@ export function Welcome() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const iconSource = [
         Envelope, ChatCircleText, Camera, FileText, Microphone, LinkIcon,
-        WhatsappLogo, SlackLogo, FigmaLogo, NotionLogo,
-        SpotifyLogo, SoundcloudLogo, TwitchLogo, DiscordLogo,
+        WhatsappLogo, SlackLogo, Image, NotionLogo,
+        TelegramLogo, LinkedinLogo, Globe, DiscordLogo,
     ]
 
     const iconNodes = iconSource.map((Icon, i) => (
@@ -179,6 +180,11 @@ export function Welcome() {
                 />
             </section>
 
+            <div className="welcome-legal">
+                <Link to="/privacy"><span className="legal-full">Privacy Policy</span><span className="legal-short">Privacy</span></Link>
+                <span>·</span>
+                <Link to="/terms"><span className="legal-full">Terms of Service</span><span className="legal-short">Terms</span></Link>
+            </div>
         </div>
     )
 }

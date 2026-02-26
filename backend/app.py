@@ -197,10 +197,9 @@ pattern_refresh_service = PatternRefreshService(
 
 # Initialize session processor
 session_processor = SessionProcessor(
-    llm_extract, input_processor_factory,
+    extractor, input_processor_factory,
     llm_personalization=llm_personalize,
     pattern_refresh_service=pattern_refresh_service,
-    llm_vision=llm_vision,
 )
 app.session_processor = session_processor
 

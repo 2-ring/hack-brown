@@ -398,6 +398,38 @@
 }
 
 
+/* ===== Legal links — bottom left ===== */
+.welcome-legal {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #ffffff;
+  opacity: 0.5;
+}
+
+.welcome-legal a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.welcome-legal a:hover {
+  text-decoration: underline;
+}
+
+.legal-short {
+  display: none;
+}
+
+.legal-full {
+  display: inline;
+}
+
 /* ===== Desktop overrides ===== */
 @media (min-width: 1025px) {
   .omnipresence-title {
@@ -529,5 +561,19 @@
   .see-how-cta-mobile.cta-button {
     background-color: #1A1A1A !important;
     color: #ffffff !important;
+  }
+
+  .welcome-legal {
+    bottom: 4px;
+    color: var(--text-tertiary);
+    opacity: 0.5;
+  }
+
+  .legal-full {
+    display: none;
+  }
+
+  .legal-short {
+    display: inline;
   }
 }

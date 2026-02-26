@@ -32,14 +32,13 @@ logger = logging.getLogger(__name__)
 class SessionProcessor:
     """Processes sessions through the EXTRACT → RESOLVE → PERSONALIZE pipeline."""
 
-    def __init__(self, llm, input_processor_factory: InputProcessorFactory,
-                 llm_personalization=None, pattern_refresh_service=None,
-                 llm_vision=None):
+    def __init__(self, extractor: UnifiedExtractor, input_processor_factory: InputProcessorFactory,
+                 llm_personalization=None, pattern_refresh_service=None):
         self.input_processor_factory = input_processor_factory
 
         # Pipeline stages
-        self.extractor = UnifiedExtractor(llm, llm_vision=llm_vision)
-        self.personalize_agent = PersonalizationAgent(llm_personalization or llm)
+        self.extractor = extractor
+        self.personalize_agent = PersonalizationAgent(llm_personalization)
 
         # Services
         self.personalization_service = PersonalizationService()
